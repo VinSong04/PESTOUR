@@ -15,7 +15,7 @@ export default function StandingsView({ standingsData, bracketData }) {
                 <table className="w-full text-sm text-left border-collapse">
                     <thead className="text-xs text-[#8B9BB4] uppercase bg-[#181D2B] border-b border-[#222B3D]">
                         <tr>
-                            <th className="px-4 py-3 font-semibold w-10 text-center">#</th>
+                            <th className="px-4 py-3 font-semibold w-12 text-center border-l-4 border-transparent">#</th>
                             <th className="px-4 py-3 font-semibold">PLAYER</th>
                             <th className="px-3 py-3 font-semibold text-center">MP</th>
                             <th className="px-3 py-3 font-semibold text-center">W-L</th>
@@ -38,8 +38,8 @@ export default function StandingsView({ standingsData, bracketData }) {
                             }
 
                             return (
-                                <tr key={p.id} className={`${leftBorder} hover:bg-[#1A2234] transition-colors group`}>
-                                    <td className="px-4 py-4 font-bold text-[#8B9BB4] text-center">{idx + 1}</td>
+                                <tr key={p.id} className="hover:bg-[#1A2234] transition-colors group">
+                                    <td className={`px-4 py-4 font-bold text-[#8B9BB4] text-center ${leftBorder}`}>{idx + 1}</td>
                                     <td className="px-4 py-4 min-w-[200px]">
                                         <div className="flex items-center gap-3">
                                             <PlayerAvatar name={p.name} className="w-8 h-8 text-xs" />

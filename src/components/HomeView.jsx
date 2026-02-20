@@ -16,7 +16,7 @@ export default function HomeView({ data, setCurrentPage }) {
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#C084FC] opacity-[0.03] blur-[120px] pointer-events-none rounded-full"></div>
 
                 <div className="relative z-10 flex flex-col items-center">
-                    <div className="inline-block w-32 h-32 rounded-full overflow-hidden border-2 border-[#334155]/50 mb-6 shadow-[0_0_30px_rgba(71,112,255,0.2)] bg-[#0a0b10]">
+                    <div className="inline-block rounded-[30px] overflow-hidden">
                         <img src={logo} alt="Pallet Logo" className="w-full h-full object-cover p-2" />
                     </div>
                     <h1 className="text-5xl sm:text-7xl font-black tracking-tighter mb-4 text-[#E2E8F0] drop-shadow-md">

@@ -1,18 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { initializeApp } from 'firebase/app';
-import {
-    getAuth,
-    signInAnonymously,
-    signInWithCustomToken,
-    onAuthStateChanged
-} from 'firebase/auth';
-import {
-    getFirestore,
-    doc,
-    setDoc,
-    onSnapshot
-} from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { CircleDashed } from 'lucide-react';
+import { auth, db, initAuth } from './firebase';
 
 // Utils & Initial Data
 import { INITIAL_DATA } from './utils/initialData';
@@ -39,34 +29,15 @@ export default function App() {
     // 1. Firebase Initialization
     useEffect(() => {
         try {
-            if (typeof window !== 'undefined' && window.__firebase_config) {
-                const config = JSON.parse(window.__firebase_config);
-                const app = initializeApp(config);
-                const auth = getAuth(app);
-                const firestore = getFirestore(app);
-                setDb(firestore);
-
-                if (window.__app_id) setAppId(window.__app_id);
-
-                const initAuth = async () => {
-                    try {
-                        if (window.__initial_auth_token) {
-                            await signInWithCustomToken(auth, window.__initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (e) {
-                        console.error("Auth error:", e);
-                    }
-                };
+            // Check if we have env variables
+            if (import.meta.env.VITE_FIREBASE_API_KEY) {
                 initAuth();
-
                 const unsub = onAuthStateChanged(auth, (usr) => {
                     setUser(usr);
                 });
                 return () => unsub();
             } else {
-                // Run without Firebase locally if not set (for demo/dev purposes)
+                console.warn("Firebase not configured. Running without live sync locally.");
                 setLoading(false);
             }
         } catch (e) {
@@ -77,7 +48,13 @@ export default function App() {
 
     // 2. Data Fetching
     useEffect(() => {
-        if (!user || !db) return;
+        if (!user) return; // Wait until authenticated
+
+        // If firebase is missing
+        if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+            setLoading(false);
+            return;
+        }
 
         const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tournament', 'main');
 
@@ -95,12 +72,12 @@ export default function App() {
         });
 
         return () => unsubscribe();
-    }, [user, db, appId]);
+    }, [user, appId]);
 
     // 3. Update Handler
     const updateData = async (newData) => {
         setData(newData); // Optimistic UI update
-        if (db && user) {
+        if (user && import.meta.env.VITE_FIREBASE_API_KEY) {
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tournament', 'main');
                 await setDoc(docRef, newData);

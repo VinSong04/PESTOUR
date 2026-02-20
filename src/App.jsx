@@ -57,6 +57,8 @@ export default function App() {
 
     // 2. Data Fetching
     useEffect(() => {
+        if (!user) return; // Wait until authenticated
+
         // If firebase is missing
         if (!import.meta.env.VITE_FIREBASE_API_KEY) {
             setLoading(false);
@@ -69,9 +71,7 @@ export default function App() {
             if (docSnap.exists()) {
                 setData(docSnap.data());
             } else {
-                setDoc(docRef, INITIAL_DATA).catch(e => {
-                    console.warn("Could not seed initial data. Are Firestore rules public?", e);
-                });
+                setDoc(docRef, INITIAL_DATA);
                 setData(INITIAL_DATA);
             }
             setLoading(false);
@@ -81,17 +81,17 @@ export default function App() {
         });
 
         return () => unsubscribe();
-    }, [appId]);
+    }, [user, appId]);
 
     // 3. Update Handler
     const updateData = async (newData) => {
         setData(newData); // Optimistic UI update
-        if (import.meta.env.VITE_FIREBASE_API_KEY) {
+        if (user && import.meta.env.VITE_FIREBASE_API_KEY) {
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tournament', 'main');
                 await setDoc(docRef, newData);
             } catch (e) {
-                console.error("Error saving data (check Firestore rules!):", e);
+                console.error("Error saving data:", e);
             }
         }
     };

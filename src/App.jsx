@@ -31,9 +31,18 @@ export default function App() {
         try {
             // Check if we have env variables
             if (import.meta.env.VITE_FIREBASE_API_KEY) {
-                initAuth();
+                initAuth().then(success => {
+                    if (!success) {
+                        // Auth failed (e.g., Anonymous sign-in not enabled)
+                        console.warn("Auth failed, running in local fallback mode.");
+                        setLoading(false);
+                    }
+                });
+
                 const unsub = onAuthStateChanged(auth, (usr) => {
-                    setUser(usr);
+                    if (usr) {
+                        setUser(usr);
+                    }
                 });
                 return () => unsub();
             } else {

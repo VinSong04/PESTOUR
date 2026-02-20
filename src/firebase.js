@@ -20,7 +20,9 @@ export const db = getFirestore(app);
 export const initAuth = async () => {
     try {
         await signInAnonymously(auth);
+        return true;
     } catch (e) {
-        console.error("Auth error:", e);
+        console.error("Firebase Auth Error: Please enable Anonymous Sign-in in Firebase Console!", e);
+        return false;
     }
 };

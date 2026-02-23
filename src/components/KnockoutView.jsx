@@ -285,49 +285,73 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
 
             {/* Bracket Display */}
             {bracketState.length > 0 ? (
-                <div className="space-y-12">
-                    {/* Quarterfinals */}
-                    <div>
-                        <h3 className="text-xl font-bold mb-4 text-purple-400 border-b border-purple-900/50 pb-2 flex items-center gap-2"><Trophy className="w-5 h-5" /> Quarterfinals</h3>
-                        <div className="grid md:grid-cols-2 gap-6">
-                            {qfs.map((match, idx) => (
+                <div className="flex flex-col lg:flex-row justify-between items-center lg:items-center w-full min-w-max overflow-x-auto gap-12 py-16 pb-24 px-8 min-h-[700px] relative mt-12 bg-[#080b12] rounded-3xl border border-[#1E2738] shadow-2xl">
+                    {/* QF Left Column (QF-1, QF-2) */}
+                    <div className="flex flex-col justify-around w-full lg:w-80 shrink-0 space-y-24 z-10">
+                        {qfs.filter(m => m.id === 'QF-1' || m.id === 'QF-2').map((match, idx) => (
+                            <BracketMatchBox
+                                key={match.id} match={match} title={`Quarterfinal ${idx + 1}`}
+                                isAdmin={isAdmin} togglePlayed={togglePlayed} handleScoreChange={handleScoreChange}
+                            />
+                        ))}
+                    </div>
+
+                    {/* SF-1 */}
+                    {sfs.filter(m => m.id === 'SF-1').length > 0 && (
+                        <div className="flex flex-col justify-center w-full lg:w-80 shrink-0 z-10 relative px-4">
+                            {sfs.filter(m => m.id === 'SF-1').map(match => (
                                 <BracketMatchBox
-                                    key={match.id} match={match} title={`Quarterfinal ${idx + 1}`}
+                                    key={match.id} match={match} title="Semifinal 1"
                                     isAdmin={isAdmin} togglePlayed={togglePlayed} handleScoreChange={handleScoreChange}
                                 />
                             ))}
                         </div>
+                    )}
+
+                    {/* Championship + Grand Final (Center) */}
+                    {finalMatch && (
+                        <div className="flex flex-col justify-center w-full lg:w-96 shrink-0 z-20 px-4 md:scale-110 transition-transform duration-500 hover:scale-110">
+                            <div className="text-center mb-8 relative">
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#FBBF24] opacity-[0.05] blur-[80px] rounded-full pointer-events-none"></div>
+                                <Trophy className="mx-auto text-[#FBBF24] w-16 h-16 mb-4 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]" />
+                                <h3 className="font-black text-2xl text-white tracking-[0.2em] uppercase drop-shadow-md">Championship</h3>
+                                <p className="text-xs text-[#FBBF24] font-bold tracking-widest mt-2 uppercase">Best of 3 Series</p>
+                            </div>
+                            <div className="shadow-[0_0_50px_rgba(251,191,36,0.15)] rounded-2xl">
+                                <BracketMatchBox
+                                    match={finalMatch} title="Grand Final"
+                                    isAdmin={isAdmin} togglePlayed={togglePlayed} handleScoreChange={handleScoreChange}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SF-2 */}
+                    {sfs.filter(m => m.id === 'SF-2').length > 0 && (
+                        <div className="flex flex-col justify-center w-full lg:w-80 shrink-0 z-10 relative px-4">
+                            {sfs.filter(m => m.id === 'SF-2').map(match => (
+                                <BracketMatchBox
+                                    key={match.id} match={match} title="Semifinal 2"
+                                    isAdmin={isAdmin} togglePlayed={togglePlayed} handleScoreChange={handleScoreChange}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* QF Right Column (QF-3, QF-4) */}
+                    <div className="flex flex-col justify-around w-full lg:w-80 shrink-0 space-y-24 z-10">
+                        {qfs.filter(m => m.id === 'QF-3' || m.id === 'QF-4').map((match, idx) => (
+                            <BracketMatchBox
+                                key={match.id} match={match} title={`Quarterfinal ${idx + 3}`}
+                                isAdmin={isAdmin} togglePlayed={togglePlayed} handleScoreChange={handleScoreChange}
+                            />
+                        ))}
                     </div>
 
-                    {/* Semifinals */}
-                    {sfs.length > 0 && (
-                        <div>
-                            <h3 className="text-xl font-bold mb-4 text-amber-400 border-b border-amber-900/50 pb-2 flex items-center gap-2"><Flame className="w-5 h-5" /> Semifinals</h3>
-                            <div className="grid md:grid-cols-2 gap-6">
-                                {sfs.map((match, idx) => (
-                                    <BracketMatchBox
-                                        key={match.id} match={match} title={`Semifinal ${idx + 1}`}
-                                        isAdmin={isAdmin} togglePlayed={togglePlayed} handleScoreChange={handleScoreChange}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Grand Final */}
-                    {finalMatch && (
-                        <div>
-                            <h3 className="text-xl font-bold mb-4 text-yellow-400 border-b border-yellow-900/50 pb-2 flex items-center gap-2"><Trophy className="w-5 h-5" /> Grand Final</h3>
-                            <div className="flex justify-center">
-                                <div className="w-full max-w-lg">
-                                    <BracketMatchBox
-                                        match={finalMatch} title="Grand Final"
-                                        isAdmin={isAdmin} togglePlayed={togglePlayed} handleScoreChange={handleScoreChange}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {/* Background Effects */}
+                    <div className="absolute inset-0 z-0 bg-center bg-no-repeat bg-contain opacity-[0.02] pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }}></div>
+                    <div className="absolute top-0 left-0 w-96 h-96 bg-[#C084FC] opacity-[0.05] rounded-full blur-[120px] pointer-events-none"></div>
+                    <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#10B981] opacity-[0.05] rounded-full blur-[120px] pointer-events-none"></div>
                 </div>
             ) : (
                 standingsData.qualified.length >= 8 && (

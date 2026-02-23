@@ -8,7 +8,11 @@ const getAvatarUrl = (playerName) => {
 
     // Clean string for loose matching (remove spaces, lowercase)
     const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const normalName = normalize(playerName);
+    let normalName = normalize(playerName);
+
+    // Name correction map
+    const corrections = { sor3spac1: 'sor3spec1' };
+    if (corrections[normalName]) normalName = corrections[normalName];
 
     for (const path in avatarModules) {
         // Strip out the folder and extension
@@ -17,9 +21,6 @@ const getAvatarUrl = (playerName) => {
 
         const normalFileName = normalize(fileName);
 
-        // Exact or case-insensitive/space-insensitive match
-        // "sorespect.png" will match "so respec1" if we do a contains but let's do this:
-        // if normalize(fileName) == normalize(playerName) OR they loosely contain each other
         if (normalFileName === normalName || normalFileName.includes(normalName) || normalName.includes(normalFileName)) {
             return avatarModules[path].default;
         }
@@ -46,8 +47,8 @@ export default function PlayerAvatar({ name, className = "w-8 h-8 text-xs" }) {
 
     if (url) {
         return (
-            <div className={`rounded-full overflow-hidden flex-shrink-0 shadow-md border border-[#334155]/50 bg-[#0a0b10] flex items-center justify-center ${className}`}>
-                <img src={url} alt={name || 'Player avatar'} className="w-full h-full object-cover" />
+            <div className={`flex-shrink-0 flex items-center justify-center ${className.replace(/rounded-\w+/, '').replace(/shadow-\w+/, '').replace(/border\b/, '')}`}>
+                <img src={url} alt={name || 'Player avatar'} className="w-full h-full object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" />
             </div>
         );
     }

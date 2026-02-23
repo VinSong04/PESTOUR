@@ -27,14 +27,13 @@ export default function StandingsView({ standingsData, bracketData }) {
                     </thead>
                     <tbody className="bg-[#0a0b10]/50 divide-y divide-[#1E2738]">
                         {players.map((p, idx) => {
-                            // Left border logic
                             let leftBorder = "border-l-4 border-l-transparent";
                             if (!isBestThird) {
-                                if (idx < 2) leftBorder = "border-l-4 border-l-[#10B981]"; // Top 2
-                                else if (idx === 2) leftBorder = "border-l-4 border-l-[#F59E0B]"; // 3rd Place
+                                if (idx < 2) leftBorder = "border-l-4 border-l-[#10B981]";
+                                else if (idx === 2) leftBorder = "border-l-4 border-l-[#F59E0B]";
                             } else {
-                                if (idx < 2) leftBorder = "border-l-4 border-l-[#10B981]"; // Top 2 of 3rd place
-                                else leftBorder = "border-l-4 border-l-[#EF4444]"; // Eliminated
+                                if (idx < 2) leftBorder = "border-l-4 border-l-[#10B981]";
+                                else leftBorder = "border-l-4 border-l-[#EF4444]";
                             }
 
                             return (
@@ -70,114 +69,78 @@ export default function StandingsView({ standingsData, bracketData }) {
         </div>
     );
 
+    const bracket = bracketData && bracketData.length > 0 ? processBracket(bracketData) : [];
+    const qfs = bracket.filter(m => m.id.startsWith('QF'));
+    const sfs = bracket.filter(m => m.id.startsWith('SF'));
+    const finalMatch = bracket.find(m => m.id.startsWith('F'));
+
     return (
         <div className="space-y-12">
             <div className="grid lg:grid-cols-2 gap-8">
                 {renderTable(standingsData.groups.A, "GROUP A", false, "bg-[#3B82F6]")}
                 {renderTable(standingsData.groups.B, "GROUP B", false, "bg-[#F59E0B]")}
                 {renderTable(standingsData.groups.C, "GROUP C", false, "bg-[#10B981]")}
-                {renderTable(standingsData.thirds, "BEST THIRD-PLACE", true, "bg-[#A855F7]")}
-            </div>
-
-            <div className="mt-16 border-t border-[#1E2738] pt-12">
-                <h2 className="text-2xl font-black flex items-center gap-3 mb-6 text-[#E2E8F0] tracking-tight">
-                    <ShieldCheck className="text-[#C084FC] w-7 h-7" /> QUALIFIED 8 (SEEDING)
-                </h2>
-                <div className="bg-[#131722] border border-[#2B2144] rounded-xl overflow-hidden shadow-[0_0_40px_rgba(168,85,247,0.05)]">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-[#1A1829] text-[#C084FC] text-xs uppercase font-bold border-b border-[#2B2144]">
-                                <tr>
-                                    <th className="px-6 py-4">Seed</th>
-                                    <th className="px-6 py-4">Player</th>
-                                    <th className="px-6 py-4 text-center">Path</th>
-                                    <th className="px-6 py-4 text-center">PTS</th>
-                                    <th className="px-6 py-4 text-center">GD</th>
-                                    <th className="px-6 py-4 text-center">GF</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#1E2738]">
-                                {standingsData.qualified.map((p, idx) => (
-                                    <tr key={p.id} className="hover:bg-[#1A2234] transition-colors">
-                                        <td className="px-6 py-4 font-black text-lg text-[#64748B]">#{idx + 1}</td>
-                                        <td className="px-6 py-4 font-bold text-base text-[#F8FAFC]">
-                                            <div className="flex items-center gap-3">
-                                                <PlayerAvatar name={p.name} className="w-7 h-7 text-[10px]" />
-                                                {p.name}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className={`text-[11px] font-bold px-3 py-1.5 rounded-md border ${p.seedType.includes('1') ? 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]' :
-                                                p.seedType.includes('2') ? 'bg-[#94A3B8]/10 text-[#CBD5E1] border-[#94A3B8]/20' :
-                                                    'bg-[#3B82F6]/10 text-[#60A5FA] border-[#3B82F6]/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
-                                                }`}>
-                                                {p.seedType}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center font-black text-[#E2E8F0] text-base">{p.pts}</td>
-                                        <td className="px-6 py-4 text-center font-mono font-medium text-[#94A3B8]">{p.gd > 0 ? `+${p.gd}` : p.gd}</td>
-                                        <td className="px-6 py-4 text-center font-mono font-medium text-[#94A3B8]">{p.gf}</td>
-                                    </tr>
-                                ))}
-                                {standingsData.qualified.length === 0 && (
-                                    <tr><td colSpan="6" className="text-center py-12 text-[#64748B] font-medium">No matches played yet. Waiting for group stage results.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
 
             {/* Knockout Bracket on Standings Page */}
-            {bracketData && bracketData.length > 0 && (
+            {bracket.length > 0 && (
                 <div className="mt-16 pt-12 border-t border-[#1E2738]">
                     <h2 className="text-2xl font-black flex items-center gap-3 mb-10 text-[#F8FAFC]">
                         <Trophy className="text-[#FBBF24] w-7 h-7" /> KNOCKOUT BRACKET
                     </h2>
-                    <div className="space-y-16">
-                        {/* Quarterfinals */}
-                        <div>
-                            <h3 className="text-sm font-black tracking-widest uppercase mb-6 text-[#C084FC] flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-[#C084FC] shadow-[0_0_8px_currentColor]"></span> Quarterfinals
-                            </h3>
-                            <div className="grid md:grid-cols-2 gap-6">
-                                {processBracket(bracketData).filter(m => m.id.startsWith('QF')).map((match, idx) => (
-                                    <BracketMatchBox key={match.id} match={match} title={`Quarterfinal ${idx + 1}`} isAdmin={false} />
-                                ))}
-                            </div>
+
+                    <div className="flex flex-col lg:flex-row justify-between items-center lg:items-center w-full min-w-max overflow-x-auto gap-12 py-16 pb-24 px-8 min-h-[700px] relative mt-12 bg-[#080b12] rounded-3xl border border-[#1E2738] shadow-2xl">
+                        {/* QF Left Column (QF-1, QF-2) */}
+                        <div className="flex flex-col justify-around w-full lg:w-80 shrink-0 space-y-24 z-10">
+                            {qfs.filter(m => m.id === 'QF-1' || m.id === 'QF-2').map((match, idx) => (
+                                <BracketMatchBox key={match.id} match={match} title={`Quarterfinal ${idx + 1}`} isAdmin={false} hideGames={true} />
+                            ))}
                         </div>
 
-                        {/* Semifinals */}
-                        {processBracket(bracketData).filter(m => m.id.startsWith('SF')).length > 0 && (
-                            <div>
-                                <h3 className="text-sm font-black tracking-widest uppercase mb-6 text-[#F97316] flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-[#F97316] shadow-[0_0_8px_currentColor]"></span> Semifinals
-                                </h3>
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    {processBracket(bracketData).filter(m => m.id.startsWith('SF')).map((match, idx) => (
-                                        <BracketMatchBox key={match.id} match={match} title={`Semifinal ${idx + 1}`} isAdmin={false} />
-                                    ))}
+                        {/* SF-1 */}
+                        {sfs.filter(m => m.id === 'SF-1').length > 0 && (
+                            <div className="flex flex-col justify-center w-full lg:w-80 shrink-0 z-10 relative px-4">
+                                {sfs.filter(m => m.id === 'SF-1').map(match => (
+                                    <BracketMatchBox key={match.id} match={match} title="Semifinal 1" isAdmin={false} hideGames={true} />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Championship + Grand Final (Center) */}
+                        {finalMatch && (
+                            <div className="flex flex-col justify-center w-full lg:w-96 shrink-0 z-20 px-4 md:scale-110 transition-transform duration-500 hover:scale-110">
+                                <div className="text-center mb-8 relative">
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#FBBF24] opacity-[0.05] blur-[80px] rounded-full pointer-events-none"></div>
+                                    <Trophy className="mx-auto text-[#FBBF24] w-16 h-16 mb-4 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]" />
+                                    <h3 className="font-black text-2xl text-white tracking-[0.2em] uppercase drop-shadow-md">Championship</h3>
+                                    <p className="text-xs text-[#FBBF24] font-bold tracking-widest mt-2 uppercase">Best of 3 Series</p>
+                                </div>
+                                <div className="shadow-[0_0_50px_rgba(251,191,36,0.15)] rounded-2xl">
+                                    <BracketMatchBox match={finalMatch} title="Grand Final" isAdmin={false} hideGames={true} />
                                 </div>
                             </div>
                         )}
 
-                        {/* Grand Final */}
-                        {processBracket(bracketData).find(m => m.id.startsWith('F')) && (
-                            <div>
-                                <h3 className="text-sm font-black tracking-widest uppercase mb-6 text-[#FBBF24] flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-[#FBBF24] shadow-[0_0_8px_currentColor]"></span> Grand Final
-                                </h3>
-                                <div className="flex justify-center">
-                                    <div className="w-full max-w-lg">
-                                        <BracketMatchBox
-                                            match={processBracket(bracketData).find(m => m.id.startsWith('F'))}
-                                            title="Grand Final"
-                                            isAdmin={false}
-                                        />
-                                    </div>
-                                </div>
+                        {/* SF-2 */}
+                        {sfs.filter(m => m.id === 'SF-2').length > 0 && (
+                            <div className="flex flex-col justify-center w-full lg:w-80 shrink-0 z-10 relative px-4">
+                                {sfs.filter(m => m.id === 'SF-2').map(match => (
+                                    <BracketMatchBox key={match.id} match={match} title="Semifinal 2" isAdmin={false} hideGames={true} />
+                                ))}
                             </div>
                         )}
+
+                        {/* QF Right Column (QF-3, QF-4) */}
+                        <div className="flex flex-col justify-around w-full lg:w-80 shrink-0 space-y-24 z-10">
+                            {qfs.filter(m => m.id === 'QF-3' || m.id === 'QF-4').map((match, idx) => (
+                                <BracketMatchBox key={match.id} match={match} title={`Quarterfinal ${idx + 3}`} isAdmin={false} hideGames={true} />
+                            ))}
+                        </div>
+
+                        {/* Background Effects */}
+                        <div className="absolute inset-0 z-0 bg-center bg-no-repeat bg-contain opacity-[0.02] pointer-events-none" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }}></div>
+                        <div className="absolute top-0 left-0 w-96 h-96 bg-[#C084FC] opacity-[0.05] rounded-full blur-[120px] pointer-events-none"></div>
+                        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#10B981] opacity-[0.05] rounded-full blur-[120px] pointer-events-none"></div>
                     </div>
                 </div>
             )}

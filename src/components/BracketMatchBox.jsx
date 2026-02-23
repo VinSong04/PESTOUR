@@ -4,15 +4,18 @@ import GameScoreRow from './GameScoreRow';
 import PlayerAvatar from './PlayerAvatar';
 import { getSeriesResult } from '../utils/logic';
 
-export default function BracketMatchBox({ match, title, isAdmin, togglePlayed, handleScoreChange }) {
+export default function BracketMatchBox({ match, title, isAdmin, togglePlayed, handleScoreChange, hideGames = false }) {
     const res = getSeriesResult(match);
-    const g1Played = match.g1.p1 !== null && match.g1.p2 !== null;
-    const g2Played = match.g2.p1 !== null && match.g2.p2 !== null;
+    const g1 = match.g1 || {};
+    const g2 = match.g2 || {};
+    const g3 = match.g3 || {};
+    const g1Played = g1.p1 !== undefined && g1.p1 !== null && g1.p2 !== undefined && g1.p2 !== null;
+    const g2Played = g2.p1 !== undefined && g2.p1 !== null && g2.p2 !== undefined && g2.p2 !== null;
     let needG3 = false;
 
     if (g1Played && g2Played) {
-        let tempP1W = (match.g1.p1 > match.g1.p2 ? 1 : 0) + (match.g2.p1 > match.g2.p2 ? 1 : 0);
-        let tempP2W = (match.g1.p2 > match.g1.p1 ? 1 : 0) + (match.g2.p2 > match.g2.p1 ? 1 : 0);
+        let tempP1W = (g1.p1 > g1.p2 ? 1 : 0) + (g2.p1 > g2.p2 ? 1 : 0);
+        let tempP2W = (g1.p2 > g1.p1 ? 1 : 0) + (g2.p2 > g2.p1 ? 1 : 0);
         if (tempP1W === 1 && tempP2W === 1) needG3 = true;
     }
 
@@ -69,12 +72,16 @@ export default function BracketMatchBox({ match, title, isAdmin, togglePlayed, h
                         </div>
                     </div>
 
-                    <GameScoreRow game="g1" label="G1" match={match} p1Name={""} p2Name={""} onChange={handleScoreChange} isAdmin={isAdmin && !isTbd} />
-                    <GameScoreRow game="g2" label="G2" match={match} p1Name={""} p2Name={""} onChange={handleScoreChange} isAdmin={isAdmin && !isTbd} />
-                    {(needG3 || match.g3.p1 !== null || (isAdmin && !isTbd)) && (
-                        <div className={`transition-all duration-500 overflow-hidden ${needG3 || match.g3.p1 !== null || (isAdmin && !isTbd) ? 'opacity-100 max-h-32 mt-3 pt-3 border-t border-dashed border-[#1E2738]' : 'opacity-0 max-h-0'}`}>
-                            <GameScoreRow game="g3" label="G3" match={match} p1Name={""} p2Name={""} onChange={handleScoreChange} isAdmin={isAdmin && !isTbd} />
-                        </div>
+                    {!hideGames && (
+                        <>
+                            <GameScoreRow game="g1" label="G1" match={match} p1Name={""} p2Name={""} onChange={handleScoreChange} isAdmin={isAdmin && !isTbd} />
+                            <GameScoreRow game="g2" label="G2" match={match} p1Name={""} p2Name={""} onChange={handleScoreChange} isAdmin={isAdmin && !isTbd} />
+                            {(needG3 || (g3.p1 !== undefined && g3.p1 !== null) || isAdmin) && (
+                                <div className={`transition-all duration-500 overflow-hidden ${needG3 || (g3.p1 !== undefined && g3.p1 !== null) || isAdmin ? 'opacity-100 max-h-32 mt-3 pt-3 border-t border-dashed border-[#1E2738]' : 'opacity-0 max-h-0'}`}>
+                                    <GameScoreRow game="g3" label="G3" match={match} p1Name={""} p2Name={""} onChange={handleScoreChange} isAdmin={isAdmin && !isTbd} />
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

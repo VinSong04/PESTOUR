@@ -6,7 +6,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin }) {
     const navItems = [
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'standings', icon: BarChart3, label: 'Standings' },
-        { id: 'matches', icon: Gamepad2, label: 'Matches' },
+        { id: 'matches', icon: Gamepad2, label: 'Schedule' },
         { id: 'rules', icon: BookOpen, label: 'Rules' },
     ];
 
@@ -20,8 +20,8 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin }) {
         <nav className="sticky top-0 z-50 bg-[#0a0b10]/95 backdrop-blur-md border-b border-slate-800">
             <div className="max-w-7xl mx-auto px-4 lg:px-6 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => setCurrentPage('home')}>
-                    <div className="w-10 h-10 rounded-full overflow-hidden shadow-[0_0_15px_rgba(71,112,255,0.4)] flex-shrink-0 border border-[#222B3D]">
-                        <img src={logo} alt="Pallet Logo" className="w-full h-full object-cover" />
+                    <div className="w-10 h-10 flex-shrink-0">
+                        <img src={logo} alt="Pallet Logo" className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(71,112,255,0.4)]" />
                     </div>
                     <span className="font-black text-2xl tracking-tighter text-[#A1B1DA] hidden sm:block font-sans" style={{ textShadow: "0 0 10px rgba(161,177,218,0.3)" }}>
                         PES TOUR

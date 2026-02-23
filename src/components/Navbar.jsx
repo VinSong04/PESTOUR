@@ -1,8 +1,8 @@
 import React from 'react';
-import { Home, BarChart3, Gamepad2, Trophy, Settings, BookOpen, ShieldCheck, Sun } from 'lucide-react';
+import { Home, BarChart3, Gamepad2, Trophy, Settings, BookOpen, ShieldCheck, Sun, Moon } from 'lucide-react';
 import logo from '../assets/pallet.jpg';
 
-export default function Navbar({ currentPage, setCurrentPage, isAdmin }) {
+export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode }) {
     const navItems = [
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'standings', icon: BarChart3, label: 'Standings' },
@@ -53,8 +53,11 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin }) {
                             <ShieldCheck className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Admin</span>
                         </span>
                     )}
-                    <button className="text-[#8B9BB4] hover:text-white transition-colors">
-                        <Sun className="w-5 h-5" />
+                    <button
+                        onClick={() => setIsLightMode(prev => !prev)}
+                        className={`transition-colors p-2 rounded-lg ${isLightMode ? 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20' : 'text-[#8B9BB4] hover:text-white hover:bg-[#1E2738]'}`}
+                    >
+                        {isLightMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                     </button>
                 </div>
             </div>

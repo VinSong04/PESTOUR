@@ -18,6 +18,19 @@ export default function App() {
     const [data, setData] = useState(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [isLightMode, setIsLightMode] = useState(() => {
+        return localStorage.getItem('theme') === 'light';
+    });
+
+    useEffect(() => {
+        if (isLightMode) {
+            document.documentElement.classList.add('light-theme');
+            localStorage.setItem('theme', 'light');
+        } else {
+            document.documentElement.classList.remove('light-theme');
+            localStorage.setItem('theme', 'dark');
+        }
+    }, [isLightMode]);
 
     // Initial Auth and Data Sync
     useEffect(() => {
@@ -72,6 +85,8 @@ export default function App() {
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
                 isAdmin={isAdmin}
+                isLightMode={isLightMode}
+                setIsLightMode={setIsLightMode}
             />
 
             <main className="max-w-6xl mx-auto p-4 md:p-6 pb-24">

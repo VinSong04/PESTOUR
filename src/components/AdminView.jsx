@@ -27,8 +27,13 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         }
     };
 
+    const [isSavedSettings, setIsSavedSettings] = useState(false);
+    const [isSavedPlayers, setIsSavedPlayers] = useState(false);
+
     const handleSaveSettings = () => {
         updateData({ ...data, settings });
+        setIsSavedSettings(true);
+        setTimeout(() => setIsSavedSettings(false), 2500);
     };
 
     const handlePlayerChange = (id, newName) => {
@@ -37,6 +42,8 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
 
     const handleSavePlayers = () => {
         updateData({ ...data, players });
+        setIsSavedPlayers(true);
+        setTimeout(() => setIsSavedPlayers(false), 2500);
     };
 
     const handleReset = () => {
@@ -127,8 +134,17 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                 className="w-full bg-[#0a0b10] border border-[#1E2738] text-[#E2E8F0] rounded-xl px-4 py-3 focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] outline-none shadow-inner transition-all font-medium"
                             />
                         </div>
-                        <button onClick={handleSaveSettings} className="w-full mt-4 py-3.5 bg-[#3B82F6]/10 hover:bg-[#3B82F6]/20 text-[#60A5FA] rounded-xl font-black tracking-widest uppercase border border-[#3B82F6]/30 transition-colors">
-                            Save Info Updates
+                        <label className="flex items-center gap-3 p-4 bg-[#0a0b10] border border-[#1E2738] rounded-xl cursor-pointer hover:border-[#3B82F6] transition-all">
+                            <input
+                                type="checkbox"
+                                checked={settings.registrationOpen ?? true}
+                                onChange={e => setSettings({ ...settings, registrationOpen: e.target.checked })}
+                                className="w-5 h-5 rounded border-[#1E2738] text-[#3B82F6] focus:ring-[#3B82F6] bg-[#131722]"
+                            />
+                            <span className="text-sm font-bold text-[#E2E8F0] tracking-wide">Registration Open</span>
+                        </label>
+                        <button onClick={handleSaveSettings} disabled={isSavedSettings} className={`w-full mt-4 py-3.5 rounded-xl font-black tracking-widest uppercase border transition-colors ${isSavedSettings ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 cursor-default' : 'bg-[#3B82F6]/10 hover:bg-[#3B82F6]/20 text-[#60A5FA] border-[#3B82F6]/30'}`}>
+                            {isSavedSettings ? '✓ Saved Successfully' : 'Save Info Updates'}
                         </button>
                     </div>
                 </div>
@@ -158,8 +174,8 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                         </div>
                         Player Roster
                     </h3>
-                    <button onClick={handleSavePlayers} className="px-6 py-3 bg-[#10B981] hover:bg-[#059669] text-white rounded-xl text-sm font-black tracking-widest uppercase shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" /> Save Roster Updates
+                    <button onClick={handleSavePlayers} disabled={isSavedPlayers} className={`px-6 py-3 rounded-xl text-sm font-black tracking-widest uppercase transition-all flex items-center gap-2 ${isSavedPlayers ? 'bg-emerald-600 text-white/90 shadow-none cursor-default' : 'bg-[#10B981] hover:bg-[#059669] text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]'}`}>
+                        <CheckCircle2 className="w-4 h-4" /> {isSavedPlayers ? 'Roster Saved!' : 'Save Roster Updates'}
                     </button>
                 </div>
 

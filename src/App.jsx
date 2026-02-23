@@ -12,6 +12,7 @@ import MatchesView from './components/MatchesView';
 import RulesView from './components/RulesView';
 import KnockoutView from './components/KnockoutView';
 import AdminView from './components/AdminView';
+import RegisterView from './components/RegisterView';
 
 export default function App() {
     const [currentPage, setCurrentPage] = useState('home');
@@ -91,6 +92,7 @@ export default function App() {
 
             <main className="max-w-6xl mx-auto p-4 md:p-6 pb-24">
                 {currentPage === 'home' && <HomeView data={data} setCurrentPage={setCurrentPage} />}
+                {currentPage === 'register' && <RegisterView isAdmin={isAdmin} isOpen={data.settings.registrationOpen} />}
                 {currentPage === 'standings' && <StandingsView standingsData={standingsData} bracketData={data.bracket} />}
                 {currentPage === 'matches' && <MatchesView data={data} updateData={updateData} isAdmin={isAdmin} />}
                 {currentPage === 'rules' && <RulesView />}

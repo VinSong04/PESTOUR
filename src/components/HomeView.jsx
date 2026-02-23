@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, Gamepad2, Trophy } from 'lucide-react';
+import { BarChart3, Gamepad2, Trophy, UserPlus } from 'lucide-react';
 import logo from '../assets/pallet.jpg';
 
 export default function HomeView({ data, setCurrentPage }) {
@@ -40,18 +40,24 @@ export default function HomeView({ data, setCurrentPage }) {
                     </p>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center max-w-[440px] mx-auto">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center max-w-[640px] mx-auto">
+                        <button
+                            onClick={() => setCurrentPage('register')}
+                            className="w-full sm:w-1/3 flex items-center justify-center gap-2 py-4 px-6 rounded-[20px] bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:from-[#FBBF24] hover:to-[#B45309] text-white font-black tracking-wide transition-all shadow-[0_0_20px_rgba(245,158,11,0.25)] border border-[#F59E0B]/30 text-sm"
+                        >
+                            <UserPlus className="w-4 h-4" /> Register
+                        </button>
                         <button
                             onClick={() => setCurrentPage('standings')}
-                            className="w-full sm:w-1/2 flex items-center justify-center gap-2 py-4 px-6 rounded-[20px] bg-gradient-to-r from-[#8B78FF] to-[#6384FF] hover:from-[#7863FF] hover:to-[#4A6BFF] text-white font-black tracking-wide transition-all shadow-[0_0_20px_rgba(99,132,255,0.25)] border border-[#8B78FF]/30 text-sm"
+                            className="w-full sm:w-1/3 flex items-center justify-center gap-2 py-4 px-6 rounded-[20px] bg-gradient-to-r from-[#8B78FF] to-[#6384FF] hover:from-[#7863FF] hover:to-[#4A6BFF] text-white font-black tracking-wide transition-all shadow-[0_0_20px_rgba(99,132,255,0.25)] border border-[#8B78FF]/30 text-sm"
                         >
-                            <BarChart3 className="w-4 h-4" /> View Standings
+                            <BarChart3 className="w-4 h-4" /> Standings
                         </button>
                         <button
                             onClick={() => setCurrentPage('matches')}
-                            className="w-full sm:w-1/2 flex items-center justify-center gap-2 py-4 px-6 rounded-[20px] bg-[#131A2B] hover:bg-[#1E2738] border border-[#222B3D] text-[#E2E8F0] font-black tracking-wide transition-all shadow-md text-sm"
+                            className="w-full sm:w-1/3 flex items-center justify-center gap-2 py-4 px-6 rounded-[20px] bg-[#131A2B] hover:bg-[#1E2738] border border-[#222B3D] text-[#E2E8F0] font-black tracking-wide transition-all shadow-md text-sm"
                         >
-                            <Gamepad2 className="w-4 h-4" /> Enter Scores
+                            <Gamepad2 className="w-4 h-4" /> Schedule
                         </button>
                     </div>
                 </div>

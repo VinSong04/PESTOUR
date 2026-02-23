@@ -1,10 +1,11 @@
 import React from 'react';
-import { Home, BarChart3, Gamepad2, Trophy, Settings, BookOpen, ShieldCheck, Sun, Moon } from 'lucide-react';
+import { Home, BarChart3, Gamepad2, Trophy, Settings, BookOpen, ShieldCheck, Sun, Moon, UserPlus } from 'lucide-react';
 import logo from '../assets/pallet.jpg';
 
 export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode }) {
     const navItems = [
         { id: 'home', icon: Home, label: 'Home' },
+        { id: 'register', icon: UserPlus, label: 'Register' },
         { id: 'standings', icon: BarChart3, label: 'Standings' },
         { id: 'matches', icon: Gamepad2, label: 'Schedule' },
         { id: 'rules', icon: BookOpen, label: 'Rules' },

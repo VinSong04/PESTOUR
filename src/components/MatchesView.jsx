@@ -61,6 +61,9 @@ export default function MatchesView({ data, updateData, isAdmin }) {
     const getPlayerName = (playerId) => {
         return data.players.find(p => p.id === playerId)?.name || playerId;
     };
+    const getPlayerLogo = (playerId) => {
+        return data.players.find(p => p.id === playerId)?.logo || '';
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -159,7 +162,7 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                 {/* Players Row */}
                                 <div className="flex justify-between items-center w-full">
                                     <div className="flex items-center gap-3 sm:gap-6 w-[40%] justify-start">
-                                        <PlayerAvatar name={p1Name} className="w-12 h-12 sm:w-20 sm:h-20 text-xs sm:text-lg shrink-0 drop-shadow-xl" />
+                                        <PlayerAvatar name={p1Name} logo={getPlayerLogo(match.p1Id)} className="w-12 h-12 sm:w-20 sm:h-20 text-xs sm:text-lg shrink-0 drop-shadow-xl" />
                                         <span className="font-black text-lg sm:text-3xl text-[#F8FAFC] truncate tracking-wide" title={p1Name}>{p1Name}</span>
                                     </div>
 
@@ -175,7 +178,7 @@ export default function MatchesView({ data, updateData, isAdmin }) {
 
                                     <div className="flex items-center justify-end gap-3 sm:gap-6 w-[40%]">
                                         <span className="font-black text-lg sm:text-3xl text-[#F8FAFC] truncate text-right tracking-wide" title={p2Name}>{p2Name}</span>
-                                        <PlayerAvatar name={p2Name} className="w-12 h-12 sm:w-20 sm:h-20 text-xs sm:text-lg shrink-0 drop-shadow-xl" />
+                                        <PlayerAvatar name={p2Name} logo={getPlayerLogo(match.p2Id)} className="w-12 h-12 sm:w-20 sm:h-20 text-xs sm:text-lg shrink-0 drop-shadow-xl" />
                                     </div>
                                 </div>
                             </div>

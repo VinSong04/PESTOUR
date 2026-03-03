@@ -62,13 +62,13 @@ export default function BracketMatchBox({ match, title, isAdmin, togglePlayed, h
                 <div className="space-y-3">
                     <div className="flex justify-between items-center px-1 mb-3">
                         <div className="flex items-center gap-2 w-2/5">
-                            <PlayerAvatar name={match.p1Name} className="w-7 h-7 text-[10px] rounded-md" />
+                            <PlayerAvatar name={match.p1Name} logo={match.p1Logo} className="w-7 h-7 text-[10px] rounded-md" />
                             <span className="font-bold text-sm text-[#E2E8F0] truncate" title={match.p1Name}>{match.p1Name || 'TBD'}</span>
                         </div>
                         <span className="text-[10px] font-black tracking-widest text-[#64748B] uppercase">VS</span>
                         <div className="flex items-center justify-end gap-2 w-2/5">
                             <span className="font-bold text-sm text-[#E2E8F0] truncate text-right" title={match.p2Name}>{match.p2Name || 'TBD'}</span>
-                            <PlayerAvatar name={match.p2Name} className="w-7 h-7 text-[10px] rounded-md" />
+                            <PlayerAvatar name={match.p2Name} logo={match.p2Logo} className="w-7 h-7 text-[10px] rounded-md" />
                         </div>
                     </div>
 

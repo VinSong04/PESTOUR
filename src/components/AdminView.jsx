@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy } from 'lucide-react';
+import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy, Trash2 } from 'lucide-react';
 import { INITIAL_DATA, INITIAL_MATCHES } from '../utils/initialData';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue, remove, update } from 'firebase/database';
+import PlayerAvatar from './PlayerAvatar';
 
 const TABS = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -19,7 +20,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     const [passError, setPassError] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
-    const [approvedPlayers, setApprovedPlayers] = useState([]);
+    const [registrations, setRegistrations] = useState([]);
     const [totalRegistrations, setTotalRegistrations] = useState(0);
 
     // Form states
@@ -37,16 +38,21 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         const unsub = onValue(regRef, (snap) => {
             const val = snap.val();
             if (val) {
-                const all = Object.values(val);
-                setTotalRegistrations(all.length);
-                setApprovedPlayers(all.filter(r => r.status === 'approved'));
+                const parsed = Object.keys(val).map(key => ({
+                    id: key,
+                    ...val[key]
+                })).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                setRegistrations(parsed);
+                setTotalRegistrations(parsed.length);
             } else {
+                setRegistrations([]);
                 setTotalRegistrations(0);
-                setApprovedPlayers([]);
             }
         });
         return () => unsub();
     }, []);
+
+    const approvedPlayers = registrations.filter(r => r.status === 'approved');
 
     const handleDrawGroups = () => {
         if (approvedPlayers.length < 12) {
@@ -61,7 +67,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         groups.forEach((g, gi) => {
             for (let i = 0; i < 4; i++) {
                 const player = shuffled[gi * 4 + i];
-                newPlayers.push({ group: g, id: `${g}${i + 1}`, name: player.name });
+                newPlayers.push({ group: g, id: `${g}${i + 1}`, name: player.name, logo: player.logo || '' });
             }
         });
         updateData({ ...data, players: newPlayers, matches: INITIAL_MATCHES, bracket: [] });
@@ -101,6 +107,10 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         setPlayers(players.map(p => p.id === id ? { ...p, name: newName } : p));
     };
 
+    const handleClearPlayer = (id) => {
+        setPlayers(players.map(p => p.id === id ? { ...p, name: '', logo: '' } : p));
+    };
+
     const handleSavePlayers = () => {
         updateData({ ...data, players });
         setIsSavedPlayers(true);
@@ -111,6 +121,15 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         if (window.prompt("Type 'RESET' to wipe active season.") === "RESET") {
             updateData({ ...INITIAL_DATA, history: data.history || {} });
         }
+    };
+
+    const handleDeleteReg = async (id) => {
+        if (!window.confirm("Remove this registration?")) return;
+        try { await remove(ref(db, `registrations/${id}`)); } catch (e) { console.error(e); }
+    };
+
+    const handleApproveReg = async (id) => {
+        try { await update(ref(db, `registrations/${id}`), { status: 'approved' }); } catch (e) { console.error(e); }
     };
 
     // ---------- LOGIN SCREEN ----------
@@ -159,25 +178,32 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-[#C084FC]/10 via-[#6384FF]/5 to-[#10B981]/10 p-6 rounded-2xl border border-[#C084FC]/20 shadow-[0_0_40px_rgba(192,132,252,0.08)] relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-64 h-64 bg-[#C084FC] opacity-[0.04] rounded-full blur-[60px] pointer-events-none"></div>
                 <div className="absolute bottom-0 right-0 w-48 h-48 bg-[#10B981] opacity-[0.03] rounded-full blur-[50px] pointer-events-none"></div>
-                <div className="relative z-10">
-                    <h2 className="text-3xl font-black flex items-center gap-3 text-[#E2E8F0] tracking-tight">
-                        <ShieldCheck className="text-[#C084FC] w-8 h-8" /> Admin Dashboard
-                    </h2>
-                    <div className="flex items-center gap-3 mt-2">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse shadow-[0_0_6px_#10B981]"></div>
-                            <span className="text-[10px] font-black text-[#10B981] tracking-widest uppercase">LIVE SYNC</span>
+
+                <div className="flex items-center gap-6 w-full sm:w-auto relative z-10">
+                    <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-[#0a0b10]/80 hover:bg-rose-950/40 border border-rose-500/20 hover:border-rose-500/50 text-rose-400 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-lg shrink-0">
+                        <LogOut className="w-3.5 h-3.5" /> Logout
+                    </button>
+
+                    <div className="relative">
+                        <h2 className="text-2xl font-black flex items-center gap-3 text-[#E2E8F0] tracking-tight">
+                            <ShieldCheck className="text-[#A5B4FC] w-7 h-7" /> Admin Dashboard
+                        </h2>
+                        <div className="flex items-center gap-3 mt-1 underline-offset-4 decoration-[#C084FC]/30 underline decoration-2">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse shadow-[0_0_6px_#10B981]"></div>
+                                <span className="text-[9px] font-black text-[#10B981] tracking-widest uppercase mt-0.5">LIVE SYNC</span>
+                            </div>
+                            <span className="text-[#475569]">•</span>
+                            <span className="text-[10px] font-bold text-[#8B9BB4] uppercase tracking-wider">{data.settings.season}</span>
                         </div>
-                        <span className="text-[#475569]">•</span>
-                        <span className="text-xs font-bold text-[#8B9BB4]">{data.settings.season}</span>
-                        <span className={`text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full border ${data.settings.tournamentStarted ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' : 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20'}`}>
-                            {data.settings.tournamentStarted ? 'LIVE' : 'PRE-SEASON'}
-                        </span>
                     </div>
                 </div>
-                <button onClick={handleLogout} className="flex items-center gap-2 px-5 py-2.5 bg-[#0a0b10]/60 hover:bg-[#1E2738] border border-[#C084FC]/20 hover:border-[#C084FC]/50 text-[#C084FC] rounded-xl text-sm font-black tracking-widest uppercase transition-all shadow-md relative z-10">
-                    <LogOut className="w-4 h-4" /> Lock
-                </button>
+
+                <div className="relative z-10">
+                    <span className={`text-[10px] font-black tracking-widest uppercase px-3 py-1.5 rounded-xl border ${data.settings.tournamentStarted ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                        {data.settings.tournamentStarted ? 'Tournament LIVE' : 'Pre-Season Mode'}
+                    </span>
+                </div>
             </div>
 
             {/* Tab Navigation */}
@@ -304,35 +330,87 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
 
             {/* ===== ROSTER TAB ===== */}
             {activeTab === 'roster' && (
-                <div className="bg-[#131722] border border-[#222B3D] rounded-2xl p-8 shadow-xl animate-in fade-in duration-300">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <div className="space-y-6 animate-in fade-in duration-300">
+                    {/* Management List */}
+                    <div className="bg-[#131722] border border-[#222B3D] rounded-2xl p-8 shadow-xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-black flex items-center gap-3 text-[#E2E8F0] uppercase tracking-wider">
+                                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                    <UserPlus className="w-5 h-5" />
+                                </div>
+                                Manage Registrations
+                                <span className="bg-[#131C32] border border-[#2D3A5D]/50 text-[#A5B4FC] text-[10px] py-1 px-2.5 rounded-full font-black">
+                                    {registrations.length}
+                                </span>
+                            </h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
+                            {registrations.length === 0 ? (
+                                <div className="lg:col-span-2 py-10 text-center border-2 border-dashed border-[#1E2738] rounded-xl text-[#475569] font-bold uppercase tracking-widest text-xs">
+                                    No registrations found
+                                </div>
+                            ) : (
+                                registrations.map(reg => (
+                                    <div key={reg.id} className="flex items-center justify-between p-4 rounded-xl bg-[#0a0b10] border border-[#1E2738] hover:border-[#334155] transition-all group">
+                                        <div className="flex items-center gap-4">
+                                            <PlayerAvatar name={reg.name} logo={reg.logo} className="w-10 h-10 text-xs" />
+                                            <div>
+                                                <p className="font-black text-[#F8FAFC] tracking-wide text-sm">{reg.name}</p>
+                                                <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">{reg.team}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {reg.status !== 'approved' ? (
+                                                <button onClick={() => handleApproveReg(reg.id)} className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white transition-all border border-emerald-500/20" title="Approve">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                </button>
+                                            ) : (
+                                                <span className="text-[9px] font-black text-emerald-400 px-2 py-1 bg-emerald-500/10 rounded border border-emerald-500/20 uppercase tracking-widest mr-1">Approved</span>
+                                            )}
+                                            <button onClick={() => handleDeleteReg(reg.id)} className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white transition-all border border-rose-500/20" title="Delete">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-[#131722] border border-[#222B3D] rounded-2xl p-8 shadow-xl">
                         <h3 className="text-xl font-black flex items-center gap-3 text-[#E2E8F0] uppercase tracking-wider">
                             <div className="p-2 rounded-xl bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20">
                                 <Users className="w-5 h-5" />
                             </div>
-                            Player Roster
+                            Tournament Roster
                         </h3>
                         <button onClick={handleSavePlayers} disabled={isSavedPlayers}
                             className={`px-6 py-3 rounded-xl text-sm font-black tracking-widest uppercase transition-all flex items-center gap-2 ${isSavedPlayers ? 'bg-emerald-600 text-white/90' : 'bg-[#10B981] hover:bg-[#059669] text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]'}`}>
                             <CheckCircle2 className="w-4 h-4" /> {isSavedPlayers ? 'Roster Saved!' : 'Save Roster'}
                         </button>
                     </div>
-                    <div className="grid md:grid-cols-3 gap-6">
-                        {['A', 'B', 'C'].map(grp => (
-                            <div key={grp} className="bg-[#0a0b10] p-5 rounded-2xl border border-[#1E2738] shadow-inner">
-                                <h4 className="font-black text-center text-[#64748B] mb-5 uppercase tracking-[0.2em]">Group {grp}</h4>
-                                <div className="space-y-3">
-                                    {players.filter(p => p.group === grp).map(p => (
-                                        <div key={p.id} className="flex items-center gap-3 bg-[#131722] p-2 rounded-lg border border-[#222B3D]">
-                                            <span className="text-[10px] font-black tracking-wider text-[#64748B] bg-[#1E2738] px-2 py-1 rounded w-8 text-center">{p.id}</span>
-                                            <input value={p.name} onChange={e => handlePlayerChange(p.id, e.target.value)}
-                                                className="flex-1 bg-transparent border-none text-[#E2E8F0] px-2 py-1 text-sm focus:outline-none font-bold placeholder-[#475569]"
-                                                placeholder={`Player ${p.id}`} />
-                                        </div>
-                                    ))}
+                    <div className="bg-[#131722] border border-[#222B3D] rounded-2xl p-8 shadow-xl mt-6">
+                        <div className="grid md:grid-cols-3 gap-6">
+                            {['A', 'B', 'C'].map(grp => (
+                                <div key={grp} className="bg-[#0a0b10] p-5 rounded-2xl border border-[#1E2738] shadow-inner">
+                                    <h4 className="font-black text-center text-[#64748B] mb-5 uppercase tracking-[0.2em]">Group {grp}</h4>
+                                    <div className="space-y-3">
+                                        {players.filter(p => p.group === grp).map(p => (
+                                            <div key={p.id} className="group flex items-center gap-3 bg-[#131722] p-2 rounded-lg border border-[#222B3D] hover:border-[#334155] transition-all">
+                                                <PlayerAvatar name={p.name} logo={p.logo} className="w-8 h-8 text-[10px]" />
+                                                <input value={p.name} onChange={e => handlePlayerChange(p.id, e.target.value)}
+                                                    className="flex-1 bg-transparent border-none text-[#E2E8F0] px-2 py-1 text-sm focus:outline-none font-bold placeholder-[#475569]"
+                                                    placeholder={`Player ${p.id}`} />
+                                                <button onClick={() => handleClearPlayer(p.id)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/10 text-rose-400 rounded transition-all" title="Clear Slot">
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}

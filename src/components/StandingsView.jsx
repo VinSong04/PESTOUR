@@ -41,7 +41,7 @@ export default function StandingsView({ standingsData, bracketData }) {
                                     <td className={`px-4 py-4 font-bold text-[#8B9BB4] text-center ${leftBorder}`}>{idx + 1}</td>
                                     <td className="px-4 py-4 min-w-[200px]">
                                         <div className="flex items-center gap-3">
-                                            <PlayerAvatar name={p.name} className="w-8 h-8 text-xs" />
+                                            <PlayerAvatar name={p.name} logo={p.logo} className="w-8 h-8 text-xs" />
                                             <div className="flex flex-col">
                                                 <span className="font-bold text-[#E2E8F0] text-[15px]">{p.name}</span>
                                                 {isBestThird && (

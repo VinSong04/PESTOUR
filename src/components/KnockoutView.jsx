@@ -70,8 +70,10 @@ function WheelModal({ qualifiedPlayers, onClose, onComplete }) {
                     id: `QF-${drawnMatches.length + 1}`,
                     p1Id: currentMatch.p1.id,
                     p1Name: currentMatch.p1.name,
+                    p1Logo: currentMatch.p1.logo || '',
                     p2Id: selectedPlayer.id,
                     p2Name: selectedPlayer.name,
+                    p2Logo: selectedPlayer.logo || '',
                     played: false,
                     g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null }
                 };

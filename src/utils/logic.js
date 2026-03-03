@@ -91,8 +91,8 @@ export const calculateStandings = (players, matches) => {
 export const getBracketMatchWinner = (match) => {
     if (!match || !match.played) return null;
     const res = getSeriesResult(match);
-    if (res.p1Wins > res.p2Wins) return { id: match.p1Id, name: match.p1Name };
-    if (res.p2Wins > res.p1Wins) return { id: match.p2Id, name: match.p2Name };
+    if (res.p1Wins > res.p2Wins) return { id: match.p1Id, name: match.p1Name, logo: match.p1Logo };
+    if (res.p2Wins > res.p1Wins) return { id: match.p2Id, name: match.p2Name, logo: match.p2Logo };
     return null;
 };
 
@@ -101,9 +101,9 @@ export const processBracket = (bracket) => {
 
     let fullBracket = [...bracket];
     if (fullBracket.length === 4) {
-        fullBracket.push({ id: 'SF-1', round: 'SF', p1Id: null, p1Name: 'TBD (QF1)', p2Id: null, p2Name: 'TBD (QF2)', played: false, g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null } });
-        fullBracket.push({ id: 'SF-2', round: 'SF', p1Id: null, p1Name: 'TBD (QF3)', p2Id: null, p2Name: 'TBD (QF4)', played: false, g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null } });
-        fullBracket.push({ id: 'F-1', round: 'F', p1Id: null, p1Name: 'TBD (SF1)', p2Id: null, p2Name: 'TBD (SF2)', played: false, g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null } });
+        fullBracket.push({ id: 'SF-1', round: 'SF', p1Id: null, p1Name: 'TBD (QF1)', p1Logo: '', p2Id: null, p2Name: 'TBD (QF2)', p2Logo: '', played: false, g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null } });
+        fullBracket.push({ id: 'SF-2', round: 'SF', p1Id: null, p1Name: 'TBD (QF3)', p1Logo: '', p2Id: null, p2Name: 'TBD (QF4)', p2Logo: '', played: false, g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null } });
+        fullBracket.push({ id: 'F-1', round: 'F', p1Id: null, p1Name: 'TBD (SF1)', p1Logo: '', p2Id: null, p2Name: 'TBD (SF2)', p2Logo: '', played: false, g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null } });
     }
 
     const getM = id => fullBracket.find(m => m.id === id);
@@ -118,20 +118,20 @@ export const processBracket = (bracket) => {
     const qf4W = getBracketMatchWinner(getM('QF-4'));
 
     updateM('SF-1', {
-        p1Id: qf1W ? qf1W.id : null, p1Name: qf1W ? qf1W.name : 'TBD (QF1)',
-        p2Id: qf2W ? qf2W.id : null, p2Name: qf2W ? qf2W.name : 'TBD (QF2)'
+        p1Id: qf1W ? qf1W.id : null, p1Name: qf1W ? qf1W.name : 'TBD (QF1)', p1Logo: qf1W ? qf1W.logo : '',
+        p2Id: qf2W ? qf2W.id : null, p2Name: qf2W ? qf2W.name : 'TBD (QF2)', p2Logo: qf2W ? qf2W.logo : ''
     });
     updateM('SF-2', {
-        p1Id: qf3W ? qf3W.id : null, p1Name: qf3W ? qf3W.name : 'TBD (QF3)',
-        p2Id: qf4W ? qf4W.id : null, p2Name: qf4W ? qf4W.name : 'TBD (QF4)'
+        p1Id: qf3W ? qf3W.id : null, p1Name: qf3W ? qf3W.name : 'TBD (QF3)', p1Logo: qf3W ? qf3W.logo : '',
+        p2Id: qf4W ? qf4W.id : null, p2Name: qf4W ? qf4W.name : 'TBD (QF4)', p2Logo: qf4W ? qf4W.logo : ''
     });
 
     const sf1W = getBracketMatchWinner(getM('SF-1'));
     const sf2W = getBracketMatchWinner(getM('SF-2'));
 
     updateM('F-1', {
-        p1Id: sf1W ? sf1W.id : null, p1Name: sf1W ? sf1W.name : 'TBD (SF1)',
-        p2Id: sf2W ? sf2W.id : null, p2Name: sf2W ? sf2W.name : 'TBD (SF2)'
+        p1Id: sf1W ? sf1W.id : null, p1Name: sf1W ? sf1W.name : 'TBD (SF1)', p1Logo: sf1W ? sf1W.logo : '',
+        p2Id: sf2W ? sf2W.id : null, p2Name: sf2W ? sf2W.name : 'TBD (SF2)', p2Logo: sf2W ? sf2W.logo : ''
     });
 
     return fullBracket;

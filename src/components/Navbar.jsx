@@ -35,9 +35,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
 
     navItems.push({ id: 'rules', icon: BookOpen, label: 'Rules' });
 
-    if (isAdmin) {
-        navItems.push({ id: 'knockout', icon: Trophy, label: 'Knockout' });
-    }
+
 
     // Admin is accessed via URL hash (#admin) — no nav button needed
 
@@ -73,11 +71,6 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {isAdmin && (
-                        <span className="flex items-center gap-1 text-[#C084FC] bg-[#C084FC]/10 px-2.5 py-1 rounded-md border border-[#C084FC]/20 text-xs font-bold">
-                            <ShieldCheck className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Admin</span>
-                        </span>
-                    )}
                     {seasons && seasons.length > 1 && (
                         <select
                             value={selectedSeason}

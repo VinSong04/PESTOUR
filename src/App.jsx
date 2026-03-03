@@ -146,8 +146,8 @@ export default function App() {
             <main className="max-w-6xl mx-auto p-4 md:p-6 pb-24">
                 {currentPage === 'home' && <HomeView data={activeData} setCurrentPage={setCurrentPage} isAdmin={effectiveIsAdmin} />}
                 {currentPage === 'register' && <RegisterView isAdmin={effectiveIsAdmin} isOpen={activeData.settings.registrationOpen} />}
-                {currentPage === 'standings' && <StandingsView standingsData={standingsData} bracketData={activeData.bracket} />}
-                {currentPage === 'matches' && <MatchesView data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />}
+                {currentPage === 'standings' && (activeData.settings.tournamentStarted || isAdmin) && <StandingsView standingsData={standingsData} bracketData={activeData.bracket} />}
+                {currentPage === 'matches' && (activeData.settings.tournamentStarted || isAdmin) && <MatchesView data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />}
                 {currentPage === 'rules' && <RulesView />}
                 {currentPage === 'knockout' && isAdmin && (
                     <KnockoutView

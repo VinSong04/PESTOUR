@@ -42,7 +42,17 @@ const getAvatarColor = (name) => {
     return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 };
 
-export default function PlayerAvatar({ name, className = "w-8 h-8 text-xs" }) {
+export default function PlayerAvatar({ name, logo, className = "w-8 h-8 text-xs" }) {
+    // Priority 1: Use uploaded logo from registration
+    if (logo) {
+        return (
+            <div className={`flex-shrink-0 flex items-center justify-center ${className.replace(/rounded-\w+/, '').replace(/shadow-\w+/, '').replace(/border\b/, '')}`}>
+                <img src={logo} alt={name || 'Player avatar'} className="w-full h-full object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" />
+            </div>
+        );
+    }
+
+    // Priority 2: Match static asset file
     const url = getAvatarUrl(name);
 
     if (url) {

@@ -2,70 +2,23 @@ export const INITIAL_SETTINGS = {
     name: "PALLET EFOOTBALL",
     season: "Summer 2026",
     tagline: "Legends Start Here",
-    registrationOpen: true
+    registrationOpen: true,
+    tournamentStarted: false
 };
 
 export const INITIAL_PLAYERS = [
-    {
-        "group": "A",
-        "id": "A1",
-        "name": "Dra-Gon"
-    },
-    {
-        "group": "A",
-        "id": "A2",
-        "name": "Jak-Kroval"
-    },
-    {
-        "group": "A",
-        "id": "A3",
-        "name": "Max-88"
-    },
-    {
-        "group": "A",
-        "id": "A4",
-        "name": "Petter-027"
-    },
-    {
-        "group": "B",
-        "id": "B1",
-        "name": "MengZzz"
-    },
-    {
-        "group": "B",
-        "id": "B2",
-        "name": "Reach OMG"
-    },
-    {
-        "group": "B",
-        "id": "B3",
-        "name": "Si Dav"
-    },
-    {
-        "group": "B",
-        "id": "B4",
-        "name": "SO-R3spec1"
-    },
-    {
-        "group": "C",
-        "id": "C1",
-        "name": "1AUTO1"
-    },
-    {
-        "group": "C",
-        "id": "C2",
-        "name": "Glanelalala"
-    },
-    {
-        "group": "C",
-        "id": "C3",
-        "name": "Win Me Lbey"
-    },
-    {
-        "group": "C",
-        "id": "C4",
-        "name": "K-Vinn"
-    }
+    { group: 'A', id: 'A1', name: '' },
+    { group: 'A', id: 'A2', name: '' },
+    { group: 'A', id: 'A3', name: '' },
+    { group: 'A', id: 'A4', name: '' },
+    { group: 'B', id: 'B1', name: '' },
+    { group: 'B', id: 'B2', name: '' },
+    { group: 'B', id: 'B3', name: '' },
+    { group: 'B', id: 'B4', name: '' },
+    { group: 'C', id: 'C1', name: '' },
+    { group: 'C', id: 'C2', name: '' },
+    { group: 'C', id: 'C3', name: '' },
+    { group: 'C', id: 'C4', name: '' }
 ];
 
 export const INITIAL_MATCHES = [

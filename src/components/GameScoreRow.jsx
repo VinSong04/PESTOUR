@@ -1,9 +1,11 @@
 import React from 'react';
 
 export default function GameScoreRow({ game, label, match, p1Name, p2Name, onChange, isAdmin }) {
-    const p1Score = match[game].p1;
-    const p2Score = match[game].p2;
-    const isComplete = p1Score !== null && p2Score !== null;
+    if (!match) return null;
+    const gameData = match[game] || { p1: null, p2: null };
+    const p1Score = gameData.p1;
+    const p2Score = gameData.p2;
+    const isComplete = p1Score !== null && p1Score !== undefined && p2Score !== null && p2Score !== undefined;
     const p1Wins = isComplete && p1Score > p2Score;
     const p2Wins = isComplete && p2Score > p1Score;
 
@@ -29,8 +31,8 @@ export default function GameScoreRow({ game, label, match, p1Name, p2Name, onCha
 function ScoreInput({ val, onChange, disabled }) {
     if (disabled) {
         return (
-            <div className={`w-9 h-9 flex items-center justify-center rounded-lg font-black text-lg ${val !== null ? 'bg-[#1E2738] text-white border border-[#334155] shadow-md' : 'bg-transparent text-[#475569] border border-dashed border-[#334155]'}`}>
-                {val !== null ? val : '-'}
+            <div className={`w-9 h-9 flex items-center justify-center rounded-lg font-black text-lg ${(val !== null && val !== undefined) ? 'bg-[#1E2738] text-white border border-[#334155] shadow-md' : 'bg-transparent text-[#475569] border border-dashed border-[#334155]'}`}>
+                {(val !== null && val !== undefined) ? val : '-'}
             </div>
         );
     }
@@ -38,7 +40,7 @@ function ScoreInput({ val, onChange, disabled }) {
         <input
             type="number"
             min="0"
-            value={val === null ? '' : val}
+            value={(val === null || val === undefined) ? '' : val}
             onChange={(e) => onChange(e.target.value)}
             className="w-10 h-10 text-center bg-[#131722] border border-[#334155] text-white font-black text-lg focus:border-[#4770FF] focus:ring-2 focus:ring-[#4770FF]/50 outline-none hide-arrows transition-all rounded-lg shadow-inner"
         />

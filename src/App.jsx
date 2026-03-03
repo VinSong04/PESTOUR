@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { db, initAuth } from './firebase';
+import { db, auth } from './firebase';
 import { ref, onValue, set } from 'firebase/database';
 import { INITIAL_DATA } from './utils/initialData';
 import { calculateStandings } from './utils/logic';
@@ -15,10 +15,35 @@ import AdminView from './components/AdminView';
 import RegisterView from './components/RegisterView';
 
 export default function App() {
-    const [currentPage, setCurrentPage] = useState('home');
+    const getInitialPage = () => {
+        const hash = window.location.hash.replace('#', '');
+        return hash || 'home';
+    };
+
+    const [currentPage, setCurrentPage] = useState(getInitialPage);
+
+    // Sync URL hash with page state
+    useEffect(() => {
+        const handleHash = () => {
+            const hash = window.location.hash.replace('#', '');
+            if (hash) setCurrentPage(hash);
+        };
+        window.addEventListener('hashchange', handleHash);
+        return () => window.removeEventListener('hashchange', handleHash);
+    }, []);
+
+    // Update hash when page changes (clear hash for non-admin pages)
+    useEffect(() => {
+        if (currentPage === 'admin') {
+            window.location.hash = 'admin';
+        } else {
+            if (window.location.hash) window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, [currentPage]);
     const [data, setData] = useState(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [selectedSeason, setSelectedSeason] = useState('CURRENT');
     const [isLightMode, setIsLightMode] = useState(() => {
         return localStorage.getItem('theme') === 'light';
     });
@@ -35,27 +60,43 @@ export default function App() {
 
     // Initial Auth and Data Sync
     useEffect(() => {
-        const setup = async () => {
-            await initAuth();
-            const dbRef = ref(db, 'tournament');
+        let unsubscribeDb;
+        let unsubscribeAuth;
 
-            // Listen for real-time updates
-            const unsubscribe = onValue(dbRef, (snapshot) => {
-                const val = snapshot.val();
-                if (val) {
-                    setData(val);
+        import('firebase/auth').then(({ onAuthStateChanged, signInAnonymously }) => {
+            unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    setIsAdmin(!user.isAnonymous);
                 } else {
-                    // Initialize if empty
-                    set(dbRef, INITIAL_DATA);
-                    setData(INITIAL_DATA);
+                    setIsAdmin(false);
+                    signInAnonymously(auth).catch(console.error);
                 }
-                setLoading(false);
             });
+        });
 
-            return () => unsubscribe();
+        const dbRef = ref(db, 'tournament');
+
+        // Listen for real-time updates
+        unsubscribeDb = onValue(dbRef, (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+                // Firebase natively drops empty arrays so we must ensure they are restored
+                val.players = val.players || [];
+                val.matches = val.matches || [];
+                val.bracket = val.bracket || [];
+                setData(val);
+            } else {
+                // Initialize if empty
+                set(dbRef, INITIAL_DATA);
+                setData(INITIAL_DATA);
+            }
+            setLoading(false);
+        });
+
+        return () => {
+            if (unsubscribeDb) unsubscribeDb();
+            if (unsubscribeAuth) unsubscribeAuth();
         };
-
-        setup();
     }, []);
 
     const updateData = async (newData) => {
@@ -78,7 +119,15 @@ export default function App() {
         );
     }
 
-    const standingsData = calculateStandings(data.players, data.matches);
+    const history = data.history || {};
+    const seasons = ['CURRENT', ...Object.keys(history).sort().reverse()];
+
+    const displayData = selectedSeason === 'CURRENT' ? data : history[selectedSeason];
+    const activeData = displayData || data; // fallback 
+    const isCurrentSeason = selectedSeason === 'CURRENT';
+    const effectiveIsAdmin = isAdmin && isCurrentSeason;
+
+    const standingsData = calculateStandings(activeData.players, activeData.matches);
 
     return (
         <div className="min-h-screen font-sans selection:bg-blue-500/30">
@@ -88,23 +137,27 @@ export default function App() {
                 isAdmin={isAdmin}
                 isLightMode={isLightMode}
                 setIsLightMode={setIsLightMode}
+                selectedSeason={selectedSeason}
+                setSelectedSeason={setSelectedSeason}
+                seasons={seasons}
+                tournamentStarted={activeData.settings.tournamentStarted}
             />
 
             <main className="max-w-6xl mx-auto p-4 md:p-6 pb-24">
-                {currentPage === 'home' && <HomeView data={data} setCurrentPage={setCurrentPage} />}
-                {currentPage === 'register' && <RegisterView isAdmin={isAdmin} isOpen={data.settings.registrationOpen} />}
-                {currentPage === 'standings' && <StandingsView standingsData={standingsData} bracketData={data.bracket} />}
-                {currentPage === 'matches' && <MatchesView data={data} updateData={updateData} isAdmin={isAdmin} />}
+                {currentPage === 'home' && <HomeView data={activeData} setCurrentPage={setCurrentPage} isAdmin={effectiveIsAdmin} />}
+                {currentPage === 'register' && <RegisterView isAdmin={effectiveIsAdmin} isOpen={activeData.settings.registrationOpen} />}
+                {currentPage === 'standings' && <StandingsView standingsData={standingsData} bracketData={activeData.bracket} />}
+                {currentPage === 'matches' && <MatchesView data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />}
                 {currentPage === 'rules' && <RulesView />}
                 {currentPage === 'knockout' && isAdmin && (
                     <KnockoutView
-                        data={data}
+                        data={activeData}
                         updateData={updateData}
                         standingsData={standingsData}
-                        isAdmin={isAdmin}
+                        isAdmin={effectiveIsAdmin}
                     />
                 )}
-                {currentPage === 'admin' && (
+                {currentPage === 'admin' && isCurrentSeason && (
                     <AdminView
                         data={data}
                         updateData={updateData}

@@ -1,24 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, BarChart3, Gamepad2, Trophy, Settings, BookOpen, ShieldCheck, Sun, Moon, UserPlus } from 'lucide-react';
 import logo from '../assets/pallet.jpg';
 
-export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode }) {
+export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted }) {
+    const [showNavbar, setShowNavbar] = useState(true);
+
+    useEffect(() => {
+        let lastScrollY = window.scrollY;
+
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+
+            if (currentScrollY > lastScrollY && currentScrollY > 60) {
+                setShowNavbar(false);
+            } else {
+                setShowNavbar(true);
+            }
+            lastScrollY = currentScrollY;
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     const navItems = [
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'register', icon: UserPlus, label: 'Register' },
-        { id: 'standings', icon: BarChart3, label: 'Standings' },
-        { id: 'matches', icon: Gamepad2, label: 'Schedule' },
-        { id: 'rules', icon: BookOpen, label: 'Rules' },
     ];
+
+    if (tournamentStarted || isAdmin) {
+        navItems.push({ id: 'standings', icon: BarChart3, label: 'Standings' });
+        navItems.push({ id: 'matches', icon: Gamepad2, label: 'Schedule' });
+    }
+
+    navItems.push({ id: 'rules', icon: BookOpen, label: 'Rules' });
 
     if (isAdmin) {
         navItems.push({ id: 'knockout', icon: Trophy, label: 'Knockout' });
     }
 
-    navItems.push({ id: 'admin', icon: Settings, label: 'Admin' });
+    // Admin is accessed via URL hash (#admin) — no nav button needed
 
     return (
-        <nav className="sticky top-0 z-50 bg-[#0a0b10]/95 backdrop-blur-md border-b border-slate-800">
+        <nav className={`sticky top-0 z-50 bg-[#0a0b10]/95 backdrop-blur-md border-b border-slate-800 transition-transform duration-300 ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}>
             <div className="max-w-7xl mx-auto px-4 lg:px-6 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => setCurrentPage('home')}>
                     <div className="w-10 h-10 flex-shrink-0">
@@ -53,6 +77,17 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                         <span className="flex items-center gap-1 text-[#C084FC] bg-[#C084FC]/10 px-2.5 py-1 rounded-md border border-[#C084FC]/20 text-xs font-bold">
                             <ShieldCheck className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Admin</span>
                         </span>
+                    )}
+                    {seasons && seasons.length > 1 && (
+                        <select
+                            value={selectedSeason}
+                            onChange={(e) => setSelectedSeason(e.target.value)}
+                            className="bg-[#18233C] text-[#C5D3EB] text-xs font-bold px-3 py-1.5 rounded-lg border border-[#222B3D] hover:border-[#6384FF]/50 focus:border-[#6384FF] outline-none transition-colors shadow-inner"
+                        >
+                            {seasons.map(s => (
+                                <option key={s} value={s}>{s === 'CURRENT' ? 'Active Season' : s}</option>
+                            ))}
+                        </select>
                     )}
                     <button
                         onClick={() => setIsLightMode(prev => !prev)}

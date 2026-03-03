@@ -6,11 +6,12 @@ export const getSeriesResult = (match) => {
 
     const games = ['g1', 'g2', 'g3'];
     games.forEach(g => {
-        if (match[g] && match[g].p1 !== null && match[g].p2 !== null) {
-            p1Goals += Number(match[g].p1);
-            p2Goals += Number(match[g].p2);
-            if (Number(match[g].p1) > Number(match[g].p2)) p1Wins++;
-            if (Number(match[g].p2) > Number(match[g].p1)) p2Wins++;
+        const gameData = match[g] || {};
+        if (gameData.p1 !== null && gameData.p1 !== undefined && gameData.p2 !== null && gameData.p2 !== undefined) {
+            p1Goals += Number(gameData.p1);
+            p2Goals += Number(gameData.p2);
+            if (Number(gameData.p1) > Number(gameData.p2)) p1Wins++;
+            if (Number(gameData.p2) > Number(gameData.p1)) p2Wins++;
         }
     });
 

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 
 // Your web app's Firebase configuration
@@ -18,12 +18,3 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getDatabase(app);
 
-export const initAuth = async () => {
-    try {
-        await signInAnonymously(auth);
-        return true;
-    } catch (e) {
-        console.error("Firebase Auth Error: Please enable Anonymous Sign-in in Firebase Console!", e);
-        return false;
-    }
-};

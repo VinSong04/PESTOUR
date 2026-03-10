@@ -16,7 +16,6 @@ const TABS = [
 ];
 
 export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [passError, setPassError] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +79,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         setIsLoading(true);
         setPassError(false);
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            await signInWithEmailAndPassword(auth, "admin@pestour.com", password);
             setIsAdmin(true);
             setPassword('');
         } catch (error) {
@@ -173,8 +172,6 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                 <p className="text-slate-400 text-center text-sm mb-10 font-bold tracking-wide relative z-10">Authentication required to manage.</p>
                 <form onSubmit={handleLogin} className="space-y-6 relative z-10">
                     <div className="space-y-4">
-                        <input type="email" placeholder="Admin Email" value={email} onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-slate-950/50 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:border-purple-500/50 focus:bg-slate-900/80 text-center text-lg text-white font-bold placeholder:text-slate-600 shadow-inner transition-colors" required />
                         <input type="password" placeholder="Admin Password" value={password} onChange={(e) => setPassword(e.target.value)}
                             className="w-full bg-slate-950/50 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:border-purple-500/50 focus:bg-slate-900/80 text-center text-lg text-white font-bold placeholder:text-slate-600 shadow-inner transition-colors" required />
                         {passError && <p className="text-rose-400 text-xs mt-3 text-center font-black tracking-widest uppercase animate-pulse drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]">Invalid credentials</p>}

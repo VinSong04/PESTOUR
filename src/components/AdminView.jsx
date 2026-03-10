@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { ref, onValue, remove, update } from 'firebase/database';
 import PlayerAvatar from './PlayerAvatar';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const TABS = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -132,30 +133,63 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         try { await update(ref(db, `registrations/${id}`), { status: 'approved' }); } catch (e) { console.error(e); }
     };
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.1 }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: "spring", stiffness: 100, damping: 15 }
+        }
+    };
+
     // ---------- LOGIN SCREEN ----------
     if (!isAdmin) {
         return (
-            <div className="max-w-md mx-auto mt-20 p-8 bg-[#131722] border border-[#222B3D] rounded-2xl shadow-[0_0_50px_rgba(20,30,50,0.5)] animate-in zoom-in-95 duration-500">
-                <div className="flex justify-center mb-6">
-                    <div className="w-20 h-20 bg-[#C084FC]/10 rounded-full flex items-center justify-center border border-[#C084FC]/20 shadow-[0_0_30px_rgba(192,132,252,0.15)]">
-                        <Lock className="w-10 h-10 text-[#C084FC]" />
-                    </div>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                className="max-w-md mx-auto mt-20 p-10 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-[40px] shadow-2xl relative overflow-hidden group"
+            >
+                <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none group-hover:bg-purple-500/20 transition-all duration-700 mix-blend-screen"></div>
+
+                <div className="flex justify-center mb-8 relative z-10">
+                    <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="w-24 h-24 bg-purple-500/10 rounded-3xl flex items-center justify-center border border-purple-500/20 shadow-[0_0_40px_rgba(168,85,247,0.2)] backdrop-blur-md"
+                    >
+                        <Lock className="w-12 h-12 text-purple-400 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]" />
+                    </motion.div>
                 </div>
-                <h2 className="text-3xl font-black text-center mb-2 text-[#E2E8F0] tracking-tight">Admin Portal</h2>
-                <p className="text-[#8B9BB4] text-center text-sm mb-8 font-medium">Authentication required to manage tournament.</p>
-                <form onSubmit={handleLogin} className="space-y-6">
+                <h2 className="text-4xl font-outfit font-black text-center mb-3 text-white tracking-tighter uppercase drop-shadow-md relative z-10">Admin Portal</h2>
+                <p className="text-slate-400 text-center text-sm mb-10 font-bold tracking-wide relative z-10">Authentication required to manage.</p>
+                <form onSubmit={handleLogin} className="space-y-6 relative z-10">
                     <div className="space-y-4">
                         <input type="email" placeholder="Admin Email" value={email} onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-[#0a0b10] border border-[#1E2738] rounded-xl px-5 py-4 focus:outline-none focus:border-[#C084FC] focus:ring-1 focus:ring-[#C084FC] text-center text-lg text-white placeholder-[#475569] shadow-inner transition-colors font-mono" required />
+                            className="w-full bg-slate-950/50 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:border-purple-500/50 focus:bg-slate-900/80 text-center text-lg text-white font-bold placeholder:text-slate-600 shadow-inner transition-colors" required />
                         <input type="password" placeholder="Admin Password" value={password} onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-[#0a0b10] border border-[#1E2738] rounded-xl px-5 py-4 focus:outline-none focus:border-[#C084FC] focus:ring-1 focus:ring-[#C084FC] text-center text-lg text-white placeholder-[#475569] shadow-inner transition-colors font-mono" required />
-                        {passError && <p className="text-[#EF4444] text-xs mt-3 text-center font-bold tracking-widest uppercase animate-pulse">Invalid credentials</p>}
+                            className="w-full bg-slate-950/50 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:border-purple-500/50 focus:bg-slate-900/80 text-center text-lg text-white font-bold placeholder:text-slate-600 shadow-inner transition-colors" required />
+                        {passError && <p className="text-rose-400 text-xs mt-3 text-center font-black tracking-widest uppercase animate-pulse drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]">Invalid credentials</p>}
                     </div>
-                    <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-[#C084FC] to-[#9333EA] hover:from-[#A855F7] hover:to-[#7E22CE] text-white font-black tracking-widest uppercase py-4 rounded-xl shadow-[0_0_20px_rgba(192,132,252,0.3)] transition-all disabled:opacity-50">
-                        {isLoading ? 'Authenticating...' : 'Unlock Dashboard'}
-                    </button>
+                    <motion.button
+                        whileHover={!isLoading ? { scale: 1.02 } : {}}
+                        whileTap={!isLoading ? { scale: 0.98 } : {}}
+                        type="submit" disabled={isLoading}
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-outfit font-black tracking-[0.2em] uppercase py-5 rounded-3xl shadow-[0_0_30px_rgba(168,85,247,0.4)] transition-all disabled:opacity-50 disabled:shadow-none text-lg relative overflow-hidden group/btn"
+                    >
+                        <span className="relative z-10">{isLoading ? 'Authenticating...' : 'Unlock Dashboard'}</span>
+                        {!isLoading && <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] animate-shimmer"></div>}
+                    </motion.button>
                 </form>
-            </div>
+            </motion.div>
         );
     }
 
@@ -165,49 +199,55 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     const filledPlayers = data.players.filter(p => p.name && p.name.trim()).length;
 
     const statCards = [
-        { label: 'Registrations', value: totalRegistrations, icon: UserPlus, color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
-        { label: 'Approved', value: approvedPlayers.length, icon: CheckCircle2, color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
-        { label: 'Roster Filled', value: `${filledPlayers}/12`, icon: Users, color: '#6384FF', bg: 'rgba(99,132,255,0.08)' },
-        { label: 'Matches Played', value: `${playedMatches}/${totalMatches}`, icon: Zap, color: '#C084FC', bg: 'rgba(192,132,252,0.08)' },
+        { label: 'Registrations', value: totalRegistrations, icon: UserPlus, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', shadow: 'shadow-[0_0_30px_rgba(251,191,36,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]' },
+        { label: 'Approved', value: approvedPlayers.length, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', shadow: 'shadow-[0_0_30px_rgba(16,185,129,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]' },
+        { label: 'Roster Filled', value: `${filledPlayers}/12`, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', shadow: 'shadow-[0_0_30px_rgba(96,165,250,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]' },
+        { label: 'Matches Played', value: `${playedMatches}/${totalMatches}`, icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', shadow: 'shadow-[0_0_30px_rgba(168,85,247,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]' },
     ];
 
     // ---------- DASHBOARD ----------
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <motion.div
+            className="space-y-8"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+        >
             {/* Header Bar */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-[#C084FC]/10 via-[#6384FF]/5 to-[#10B981]/10 p-6 rounded-2xl border border-[#C084FC]/20 shadow-[0_0_40px_rgba(192,132,252,0.08)] relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-64 h-64 bg-[#C084FC] opacity-[0.04] rounded-full blur-[60px] pointer-events-none"></div>
-                <div className="absolute bottom-0 right-0 w-48 h-48 bg-[#10B981] opacity-[0.03] rounded-full blur-[50px] pointer-events-none"></div>
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-slate-900/80 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[80px] pointer-events-none mix-blend-screen group-hover:bg-blue-500/20 transition-all duration-700"></div>
+                <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-600/10 rounded-full blur-[80px] pointer-events-none mix-blend-screen group-hover:bg-purple-500/20 transition-all duration-700"></div>
 
-                <div className="flex items-center gap-6 w-full sm:w-auto relative z-10">
-                    <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-[#0a0b10]/80 hover:bg-rose-950/40 border border-rose-500/20 hover:border-rose-500/50 text-rose-400 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-lg shrink-0">
-                        <LogOut className="w-3.5 h-3.5" /> Logout
+                <div className="flex items-center gap-6 w-full sm:w-auto relative z-10 flex-wrap sm:flex-nowrap">
+                    <button onClick={handleLogout} className="flex items-center gap-2 px-5 py-2.5 bg-slate-950/50 hover:bg-rose-500/10 border border-white/5 hover:border-rose-500/30 text-rose-400 rounded-xl text-[10px] font-outfit font-black tracking-widest uppercase transition-all shadow-sm shrink-0 backdrop-blur-md">
+                        <LogOut className="w-4 h-4" /> Logout
                     </button>
 
                     <div className="relative">
-                        <h2 className="text-2xl font-black flex items-center gap-3 text-[#E2E8F0] tracking-tight">
-                            <ShieldCheck className="text-[#A5B4FC] w-7 h-7" /> Admin Dashboard
+                        <h2 className="text-3xl font-outfit font-black flex items-center gap-3 text-white tracking-widest uppercase drop-shadow-md">
+                            <ShieldCheck className="text-blue-400 w-8 h-8 drop-shadow-[0_0_15px_rgba(96,165,250,0.5)]" />
+                            Dashboard
                         </h2>
-                        <div className="flex items-center gap-3 mt-1 underline-offset-4 decoration-[#C084FC]/30 underline decoration-2">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse shadow-[0_0_6px_#10B981]"></div>
-                                <span className="text-[9px] font-black text-[#10B981] tracking-widest uppercase mt-0.5">LIVE SYNC</span>
+                        <div className="flex items-center gap-3 mt-2 underline-offset-4 decoration-blue-500/30 underline decoration-2">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_#34d399]"></div>
+                                <span className="text-[10px] font-outfit font-black text-emerald-400 tracking-[0.2em] uppercase mt-0.5">LIVE SYNC</span>
                             </div>
-                            <span className="text-[#475569]">•</span>
-                            <span className="text-[10px] font-bold text-[#8B9BB4] uppercase tracking-wider">{data.settings.season}</span>
+                            <span className="text-slate-600">•</span>
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{data.settings.season}</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="relative z-10">
-                    <span className={`text-[10px] font-black tracking-widest uppercase px-3 py-1.5 rounded-xl border ${data.settings.tournamentStarted ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                <div className="relative z-10 w-full sm:w-auto flex justify-start sm:justify-end mt-4 sm:mt-0">
+                    <span className={`text-xs font-outfit font-black tracking-[0.2em] uppercase px-5 py-2.5 rounded-xl border backdrop-blur-md flex items-center gap-2 ${data.settings.tournamentStarted ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.15)]'}`}>
                         {data.settings.tournamentStarted ? 'Tournament LIVE' : 'Pre-Season Mode'}
                     </span>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Tab Navigation */}
-            <div className="flex gap-1 bg-[#0a0b10] p-1.5 rounded-2xl border border-[#1E2738] overflow-x-auto no-scrollbar">
+            <motion.div variants={itemVariants} className="flex gap-2 bg-slate-900/50 p-2 rounded-[24px] border border-white/5 overflow-x-auto no-scrollbar backdrop-blur-xl">
                 {TABS.map(tab => {
                     const isActive = activeTab === tab.id;
                     const TabIcon = tab.icon;
@@ -215,255 +255,325 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-5 py-3 rounded-xl transition-all text-sm font-bold tracking-wide whitespace-nowrap ${isActive
-                                ? 'bg-[#18233C] text-[#A5B4FC] shadow-[inset_0_1px_rgba(165,180,252,0.15)] border border-[#2D3A5D]/50'
-                                : 'text-[#64748B] hover:text-[#94A3B8] hover:bg-[#131722] border border-transparent'
+                            className={`flex items-center gap-3 px-6 py-3.5 rounded-[18px] transition-all text-sm font-outfit font-bold tracking-wider whitespace-nowrap relative overflow-hidden group ${isActive
+                                ? 'bg-white/10 text-white shadow-inner border border-white/5'
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
                                 }`}
                         >
-                            <TabIcon className="w-4 h-4" />
-                            {tab.label}
-                            {tab.id === 'danger' && <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] ml-1"></span>}
+                            <TabIcon className={`w-5 h-5 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]' : ''}`} />
+                            <span className="relative z-10">{tab.label}</span>
+                            {tab.id === 'danger' && <span className="w-2 h-2 rounded-full bg-rose-500 ml-2 shadow-[0_0_10px_rgba(244,63,94,0.6)]"></span>}
+                            {isActive && <motion.div layoutId="activeTabAdmin" className="absolute inset-0 bg-blue-500/10 mix-blend-screen" border-white border-2></motion.div>}
                         </button>
                     );
                 })}
-            </div>
+            </motion.div>
 
             {/* ===== OVERVIEW TAB ===== */}
-            {activeTab === 'overview' && (
-                <div className="space-y-6 animate-in fade-in duration-300">
-                    {/* Stat Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {statCards.map(card => (
-                            <div key={card.label} className="bg-[#131722] border border-[#222B3D] rounded-2xl p-5 relative overflow-hidden group hover:border-[#334155] transition-all">
-                                <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-[40px] pointer-events-none opacity-30" style={{ background: card.color }}></div>
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 border" style={{ background: card.bg, borderColor: card.color + '30' }}>
-                                    <card.icon className="w-5 h-5" style={{ color: card.color }} />
-                                </div>
-                                <p className="text-2xl font-black text-[#F8FAFC] tracking-tight">{card.value}</p>
-                                <p className="text-xs font-bold text-[#64748B] uppercase tracking-widest mt-1">{card.label}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="bg-[#131722] border border-[#222B3D] rounded-2xl p-6">
-                        <h3 className="text-sm font-black text-[#64748B] uppercase tracking-widest mb-4">Quick Actions</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <button onClick={() => setActiveTab('settings')} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#0a0b10] border border-[#1E2738] hover:border-[#3B82F6]/50 hover:bg-[#131A2B] transition-all group">
-                                <Settings className="w-5 h-5 text-[#3B82F6] group-hover:scale-110 transition-transform" />
-                                <span className="text-xs font-bold text-[#8B9BB4]">Edit Settings</span>
-                            </button>
-                            <button onClick={() => setActiveTab('roster')} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#0a0b10] border border-[#1E2738] hover:border-[#10B981]/50 hover:bg-[#131A2B] transition-all group">
-                                <Users className="w-5 h-5 text-[#10B981] group-hover:scale-110 transition-transform" />
-                                <span className="text-xs font-bold text-[#8B9BB4]">Edit Roster</span>
-                            </button>
-                            <button onClick={() => setActiveTab('season')} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#0a0b10] border border-[#1E2738] hover:border-[#F59E0B]/50 hover:bg-[#131A2B] transition-all group">
-                                <Shuffle className="w-5 h-5 text-[#F59E0B] group-hover:scale-110 transition-transform" />
-                                <span className="text-xs font-bold text-[#8B9BB4]">Draw Groups</span>
-                            </button>
-                            <button onClick={() => setActiveTab('danger')} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#0a0b10] border border-[#1E2738] hover:border-[#EF4444]/50 hover:bg-[#131A2B] transition-all group">
-                                <Flame className="w-5 h-5 text-[#EF4444] group-hover:scale-110 transition-transform" />
-                                <span className="text-xs font-bold text-[#8B9BB4]">Reset</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ===== SETTINGS TAB ===== */}
-            {activeTab === 'settings' && (
-                <div className="bg-[#131722] border border-[#222B3D] rounded-2xl p-8 shadow-xl animate-in fade-in duration-300">
-                    <h3 className="text-xl font-black mb-8 flex items-center gap-3 text-[#E2E8F0] uppercase tracking-wider">
-                        <div className="p-2 rounded-xl bg-[#3B82F6]/10 text-[#60A5FA] border border-[#3B82F6]/20">
-                            <Settings className="w-5 h-5" />
-                        </div>
-                        Tournament Settings
-                    </h3>
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-5">
-                            <div>
-                                <label className="block text-xs text-[#64748B] font-black mb-2 uppercase tracking-widest">Tournament Name</label>
-                                <input value={settings.name} onChange={e => setSettings({ ...settings, name: e.target.value })}
-                                    className="w-full bg-[#0a0b10] border border-[#1E2738] text-[#E2E8F0] rounded-xl px-4 py-3 focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] outline-none shadow-inner transition-all font-medium" />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-[#64748B] font-black mb-2 uppercase tracking-widest">Season</label>
-                                <input value={settings.season} onChange={e => setSettings({ ...settings, season: e.target.value })}
-                                    className="w-full bg-[#0a0b10] border border-[#1E2738] text-[#E2E8F0] rounded-xl px-4 py-3 focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] outline-none shadow-inner transition-all font-medium" />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-[#64748B] font-black mb-2 uppercase tracking-widest">Tagline</label>
-                                <input value={settings.tagline} onChange={e => setSettings({ ...settings, tagline: e.target.value })}
-                                    className="w-full bg-[#0a0b10] border border-[#1E2738] text-[#E2E8F0] rounded-xl px-4 py-3 focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] outline-none shadow-inner transition-all font-medium" />
-                            </div>
-                        </div>
-                        <div className="space-y-5">
-                            <h4 className="text-xs text-[#64748B] font-black uppercase tracking-widest">Status Controls</h4>
-                            <label className="flex items-center justify-between p-5 bg-[#0a0b10] border border-[#1E2738] rounded-xl cursor-pointer hover:border-[#3B82F6]/50 transition-all">
-                                <div>
-                                    <span className="text-sm font-bold text-[#E2E8F0] block">Registration Open</span>
-                                    <span className="text-xs text-[#64748B]">Allow new players to sign up</span>
-                                </div>
-                                <div className={`w-12 h-7 rounded-full p-1 transition-colors cursor-pointer ${settings.registrationOpen ? 'bg-[#3B82F6]' : 'bg-[#1E2738]'}`}
-                                    onClick={() => setSettings({ ...settings, registrationOpen: !settings.registrationOpen })}>
-                                    <div className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform ${settings.registrationOpen ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                                </div>
-                            </label>
-                            <label className="flex items-center justify-between p-5 bg-[#0a0b10] border border-[#1E2738] rounded-xl cursor-pointer hover:border-[#10B981]/50 transition-all">
-                                <div>
-                                    <span className="text-sm font-bold text-[#E2E8F0] block">Tournament LIVE</span>
-                                    <span className="text-xs text-[#64748B]">Show standings & schedule to everyone</span>
-                                </div>
-                                <div className={`w-12 h-7 rounded-full p-1 transition-colors cursor-pointer ${settings.tournamentStarted ? 'bg-[#10B981]' : 'bg-[#1E2738]'}`}
-                                    onClick={() => setSettings({ ...settings, tournamentStarted: !settings.tournamentStarted })}>
-                                    <div className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform ${settings.tournamentStarted ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                    <button onClick={handleSaveSettings} disabled={isSavedSettings}
-                        className={`w-full mt-8 py-4 rounded-xl font-black tracking-widest uppercase border transition-all text-lg ${isSavedSettings ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-[#3B82F6]/10 hover:bg-[#3B82F6]/20 text-[#60A5FA] border-[#3B82F6]/30 hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]'}`}>
-                        {isSavedSettings ? '✓ Settings Saved!' : 'Save Settings'}
-                    </button>
-                </div>
-            )}
-
-            {/* ===== ROSTER TAB ===== */}
-            {activeTab === 'roster' && (
-                <div className="space-y-6 animate-in fade-in duration-300">
-                    {/* Management List */}
-                    <div className="bg-[#131722] border border-[#222B3D] rounded-2xl p-8 shadow-xl">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-black flex items-center gap-3 text-[#E2E8F0] uppercase tracking-wider">
-                                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                                    <UserPlus className="w-5 h-5" />
-                                </div>
-                                Manage Registrations
-                                <span className="bg-[#131C32] border border-[#2D3A5D]/50 text-[#A5B4FC] text-[10px] py-1 px-2.5 rounded-full font-black">
-                                    {registrations.length}
-                                </span>
-                            </h3>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
-                            {registrations.length === 0 ? (
-                                <div className="lg:col-span-2 py-10 text-center border-2 border-dashed border-[#1E2738] rounded-xl text-[#475569] font-bold uppercase tracking-widest text-xs">
-                                    No registrations found
-                                </div>
-                            ) : (
-                                registrations.map(reg => (
-                                    <div key={reg.id} className="flex items-center justify-between p-4 rounded-xl bg-[#0a0b10] border border-[#1E2738] hover:border-[#334155] transition-all group">
-                                        <div className="flex items-center gap-4">
-                                            <PlayerAvatar name={reg.name} logo={reg.logo} className="w-10 h-10 text-xs" />
-                                            <div>
-                                                <p className="font-black text-[#F8FAFC] tracking-wide text-sm">{reg.name}</p>
-                                                <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">{reg.team}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {reg.status !== 'approved' ? (
-                                                <button onClick={() => handleApproveReg(reg.id)} className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white transition-all border border-emerald-500/20" title="Approve">
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                </button>
-                                            ) : (
-                                                <span className="text-[9px] font-black text-emerald-400 px-2 py-1 bg-emerald-500/10 rounded border border-emerald-500/20 uppercase tracking-widest mr-1">Approved</span>
-                                            )}
-                                            <button onClick={() => handleDeleteReg(reg.id)} className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white transition-all border border-rose-500/20" title="Delete">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
+            <AnimatePresence mode="wait">
+                {activeTab === 'overview' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                        className="space-y-8"
+                    >
+                        {/* Stat Cards */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            {statCards.map((card, idx) => (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
+                                    key={card.label}
+                                    className={`bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-[28px] p-6 sm:p-8 relative overflow-hidden group hover:border-white/10 transition-all ${card.shadow}`}
+                                >
+                                    <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-[60px] pointer-events-none ${card.bg} group-hover:scale-110 transition-transform duration-500 mix-blend-screen`}></div>
+                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border ${card.bg} ${card.border} shadow-inner`}>
+                                        <card.icon className={`w-7 h-7 ${card.color} ${card.drop}`} />
                                     </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="bg-[#131722] border border-[#222B3D] rounded-2xl p-8 shadow-xl">
-                        <h3 className="text-xl font-black flex items-center gap-3 text-[#E2E8F0] uppercase tracking-wider">
-                            <div className="p-2 rounded-xl bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20">
-                                <Users className="w-5 h-5" />
-                            </div>
-                            Tournament Roster
-                        </h3>
-                        <button onClick={handleSavePlayers} disabled={isSavedPlayers}
-                            className={`px-6 py-3 rounded-xl text-sm font-black tracking-widest uppercase transition-all flex items-center gap-2 ${isSavedPlayers ? 'bg-emerald-600 text-white/90' : 'bg-[#10B981] hover:bg-[#059669] text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]'}`}>
-                            <CheckCircle2 className="w-4 h-4" /> {isSavedPlayers ? 'Roster Saved!' : 'Save Roster'}
-                        </button>
-                    </div>
-                    <div className="bg-[#131722] border border-[#222B3D] rounded-2xl p-8 shadow-xl mt-6">
-                        <div className="grid md:grid-cols-3 gap-6">
-                            {['A', 'B', 'C'].map(grp => (
-                                <div key={grp} className="bg-[#0a0b10] p-5 rounded-2xl border border-[#1E2738] shadow-inner">
-                                    <h4 className="font-black text-center text-[#64748B] mb-5 uppercase tracking-[0.2em]">Group {grp}</h4>
-                                    <div className="space-y-3">
-                                        {players.filter(p => p.group === grp).map(p => (
-                                            <div key={p.id} className="group flex items-center gap-3 bg-[#131722] p-2 rounded-lg border border-[#222B3D] hover:border-[#334155] transition-all">
-                                                <PlayerAvatar name={p.name} logo={p.logo} className="w-8 h-8 text-[10px]" />
-                                                <input value={p.name} onChange={e => handlePlayerChange(p.id, e.target.value)}
-                                                    className="flex-1 bg-transparent border-none text-[#E2E8F0] px-2 py-1 text-sm focus:outline-none font-bold placeholder-[#475569]"
-                                                    placeholder={`Player ${p.id}`} />
-                                                <button onClick={() => handleClearPlayer(p.id)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/10 text-rose-400 rounded transition-all" title="Clear Slot">
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                    <p className="text-3xl sm:text-4xl font-outfit font-black text-white tracking-widest mb-1">{card.value}</p>
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">{card.label}</p>
+                                </motion.div>
                             ))}
                         </div>
-                    </div>
-                </div>
-            )}
 
-            {/* ===== SEASON TOOLS TAB ===== */}
-            {activeTab === 'season' && (
-                <div className="space-y-6 animate-in fade-in duration-300">
-                    {/* Group Draw */}
-                    <div className="bg-[#131722] border border-[#10B981]/20 rounded-2xl p-8 shadow-[0_0_30px_rgba(16,185,129,0.05)] relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-[#10B981] opacity-[0.03] rounded-full blur-[50px] pointer-events-none"></div>
-                        <h3 className="text-xl font-black mb-4 flex items-center gap-3 text-[#10B981] uppercase tracking-wider relative z-10">
-                            <div className="p-2 rounded-xl bg-[#10B981]/10 border border-[#10B981]/20">
-                                <Shuffle className="w-5 h-5" />
+                        {/* Quick Actions */}
+                        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-[32px] p-8 sm:p-10 shadow-2xl">
+                            <h3 className="text-sm font-outfit font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+                                <Zap className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" /> Quick Actions
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <button onClick={() => setActiveTab('settings')} className="flex flex-col items-center justify-center gap-4 p-6 rounded-2xl bg-slate-950/50 border border-white/5 hover:border-blue-500/30 hover:bg-slate-900/80 transition-all group shadow-inner">
+                                    <Settings className="w-8 h-8 text-blue-400 group-hover:scale-110 group-hover:rotate-45 transition-all drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]" />
+                                    <span className="text-xs font-outfit font-black tracking-widest text-slate-300 uppercase">Settings</span>
+                                </button>
+                                <button onClick={() => setActiveTab('roster')} className="flex flex-col items-center justify-center gap-4 p-6 rounded-2xl bg-slate-950/50 border border-white/5 hover:border-emerald-500/30 hover:bg-slate-900/80 transition-all group shadow-inner">
+                                    <Users className="w-8 h-8 text-emerald-400 group-hover:scale-110 transition-transform drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                                    <span className="text-xs font-outfit font-black tracking-widest text-slate-300 uppercase">Roster</span>
+                                </button>
+                                <button onClick={() => setActiveTab('season')} className="flex flex-col items-center justify-center gap-4 p-6 rounded-2xl bg-slate-950/50 border border-white/5 hover:border-amber-500/30 hover:bg-slate-900/80 transition-all group shadow-inner">
+                                    <Shuffle className="w-8 h-8 text-amber-400 group-hover:scale-110 group-hover:-rotate-12 transition-transform drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
+                                    <span className="text-xs font-outfit font-black tracking-widest text-slate-300 uppercase">Draw</span>
+                                </button>
+                                <button onClick={() => setActiveTab('danger')} className="flex flex-col items-center justify-center gap-4 p-6 rounded-2xl bg-slate-950/50 border border-white/5 hover:border-rose-500/30 hover:bg-slate-900/80 transition-all group shadow-inner">
+                                    <Flame className="w-8 h-8 text-rose-400 group-hover:scale-110 transition-transform drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
+                                    <span className="text-xs font-outfit font-black tracking-widest text-slate-300 uppercase">Reset</span>
+                                </button>
                             </div>
-                            Group Draw
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* ===== SETTINGS TAB ===== */}
+                {activeTab === 'settings' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                        className="bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden group"
+                    >
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px] pointer-events-none mix-blend-screen group-hover:bg-blue-600/10 transition-all duration-700"></div>
+
+                        <h3 className="text-3xl font-outfit font-black mb-10 flex items-center gap-4 text-white uppercase tracking-widest drop-shadow-md relative z-10">
+                            <div className="p-4 rounded-3xl bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-inner">
+                                <Settings className="w-8 h-8 drop-shadow-[0_0_15px_rgba(96,165,250,0.5)]" />
+                            </div>
+                            Tournament Settings
                         </h3>
-                        <p className="text-[#94A3B8] font-medium leading-relaxed mb-4 relative z-10">
-                            Randomly assign <strong className="text-white">12 approved</strong> registrations into Groups A, B, C. This also resets all match scores.
-                        </p>
-                        <div className="flex items-center gap-3 mb-6 relative z-10">
-                            <div className={`px-3 py-1.5 rounded-full text-xs font-black tracking-widest uppercase ${approvedPlayers.length >= 12 ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20' : 'bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20'}`}>
-                                {approvedPlayers.length} / 12 Approved
+                        <div className="grid md:grid-cols-2 gap-10 relative z-10">
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-[11px] text-slate-400 font-outfit font-black mb-3 uppercase tracking-[0.2em] ml-2">Tournament Name</label>
+                                    <input value={settings.name} onChange={e => setSettings({ ...settings, name: e.target.value })}
+                                        className="w-full bg-slate-950/50 backdrop-blur-md border border-white/10 text-white rounded-2xl px-6 py-4 focus:border-blue-500/50 focus:bg-slate-900/80 outline-none shadow-inner transition-all font-bold text-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] text-slate-400 font-outfit font-black mb-3 uppercase tracking-[0.2em] ml-2">Season</label>
+                                    <input value={settings.season} onChange={e => setSettings({ ...settings, season: e.target.value })}
+                                        className="w-full bg-slate-950/50 backdrop-blur-md border border-white/10 text-white rounded-2xl px-6 py-4 focus:border-blue-500/50 focus:bg-slate-900/80 outline-none shadow-inner transition-all font-bold text-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] text-slate-400 font-outfit font-black mb-3 uppercase tracking-[0.2em] ml-2">Tagline</label>
+                                    <input value={settings.tagline} onChange={e => setSettings({ ...settings, tagline: e.target.value })}
+                                        className="w-full bg-slate-950/50 backdrop-blur-md border border-white/10 text-white rounded-2xl px-6 py-4 focus:border-blue-500/50 focus:bg-slate-900/80 outline-none shadow-inner transition-all font-bold text-lg" />
+                                </div>
+                            </div>
+                            <div className="space-y-6">
+                                <h4 className="text-[11px] text-slate-400 font-outfit font-black uppercase tracking-[0.2em] mb-3 ml-2">Status Controls</h4>
+                                <label className="flex items-center justify-between p-6 bg-slate-950/50 backdrop-blur-md border border-white/10 rounded-3xl cursor-pointer hover:border-blue-500/50 hover:bg-slate-900/80 transition-all shadow-inner group/toggle">
+                                    <div>
+                                        <span className="text-lg font-outfit font-black text-white block tracking-widest uppercase">Registration Open</span>
+                                        <span className="text-xs font-bold text-slate-500">Allow new players to sign up</span>
+                                    </div>
+                                    <div className={`w-14 h-8 rounded-full p-1 transition-colors cursor-pointer flex-shrink-0 shadow-inner ${settings.registrationOpen ? 'bg-blue-500' : 'bg-slate-800 border border-white/10'}`}
+                                        onClick={() => setSettings({ ...settings, registrationOpen: !settings.registrationOpen })}>
+                                        <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform ${settings.registrationOpen ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                    </div>
+                                </label>
+                                <label className="flex items-center justify-between p-6 bg-slate-950/50 backdrop-blur-md border border-white/10 rounded-3xl cursor-pointer hover:border-emerald-500/50 hover:bg-slate-900/80 transition-all shadow-inner group/toggle">
+                                    <div>
+                                        <span className="text-lg font-outfit font-black text-white block tracking-widest uppercase">Tournament LIVE</span>
+                                        <span className="text-xs font-bold text-slate-500">Show standings & schedule publicly</span>
+                                    </div>
+                                    <div className={`w-14 h-8 rounded-full p-1 transition-colors cursor-pointer flex-shrink-0 shadow-inner ${settings.tournamentStarted ? 'bg-emerald-500' : 'bg-slate-800 border border-white/10'}`}
+                                        onClick={() => setSettings({ ...settings, tournamentStarted: !settings.tournamentStarted })}>
+                                        <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform ${settings.tournamentStarted ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                    </div>
+                                </label>
                             </div>
                         </div>
-                        <button onClick={handleDrawGroups} disabled={approvedPlayers.length < 12}
-                            className={`w-full py-4 rounded-xl font-black uppercase tracking-widest border transition-all flex items-center justify-center gap-3 relative z-10 ${approvedPlayers.length >= 12 ? 'bg-[#10B981]/10 hover:bg-[#10B981] text-[#10B981] hover:text-white border-[#10B981]/30 hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]' : 'bg-[#1E2738] text-[#475569] border-[#222B3D] cursor-not-allowed'}`}>
-                            <Shuffle className="w-5 h-5" /> Draw Groups Randomly
-                        </button>
-                    </div>
-                </div>
-            )}
+                        <motion.button
+                            whileHover={!isSavedSettings ? { scale: 1.02 } : {}}
+                            whileTap={!isSavedSettings ? { scale: 0.98 } : {}}
+                            onClick={handleSaveSettings} disabled={isSavedSettings}
+                            className={`w-full mt-10 py-5 rounded-3xl font-outfit font-black tracking-[0.2em] uppercase transition-all text-lg shadow-lg relative overflow-hidden group/btn ${isSavedSettings ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-[0_0_40px_rgba(79,70,229,0.5)]'}`}>
+                            <span className="relative z-10 flex items-center justify-center gap-3">
+                                {isSavedSettings ? <><CheckCircle2 className="w-6 h-6" /> Settings Saved!</> : 'Save Settings'}
+                            </span>
+                            {!isSavedSettings && <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] animate-shimmer"></div>}
+                        </motion.button>
+                    </motion.div>
+                )}
 
-            {/* ===== DANGER TAB ===== */}
-            {activeTab === 'danger' && (
-                <div className="bg-[#131722] border border-[#EF4444]/20 rounded-2xl p-8 shadow-[0_0_30px_rgba(239,68,68,0.05)] relative overflow-hidden animate-in fade-in duration-300">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#EF4444] opacity-[0.03] rounded-full blur-[60px] pointer-events-none"></div>
-                    <h3 className="text-2xl font-black mb-6 flex items-center gap-3 text-[#EF4444] uppercase tracking-wider relative z-10">
-                        <div className="p-2 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/20">
-                            <Flame className="w-6 h-6" />
+                {/* ===== ROSTER TAB ===== */}
+                {activeTab === 'roster' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                        className="space-y-8"
+                    >
+                        {/* Management List */}
+                        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/5 rounded-full blur-[100px] pointer-events-none mix-blend-screen"></div>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10 relative z-10">
+                                <h3 className="text-2xl sm:text-3xl font-outfit font-black flex items-center gap-4 text-white uppercase tracking-widest drop-shadow-md">
+                                    <div className="p-4 rounded-3xl bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-inner">
+                                        <UserPlus className="w-7 h-7 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]" />
+                                    </div>
+                                    Registrations
+                                    <span className="bg-slate-950/50 border border-white/10 text-purple-400 text-lg py-1.5 px-3.5 rounded-2xl font-black shadow-inner ml-2">
+                                        {registrations.length}
+                                    </span>
+                                </h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-h-[500px] overflow-y-auto pr-4 no-scrollbar relative z-10 p-1">
+                                {registrations.length === 0 ? (
+                                    <div className="lg:col-span-2 py-16 text-center border-2 border-dashed border-white/5 rounded-3xl text-slate-500 font-outfit font-black uppercase tracking-widest text-sm bg-slate-950/30 backdrop-blur-sm">
+                                        <UserPlus className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                        No registrations found
+                                    </div>
+                                ) : (
+                                    registrations.map(reg => (
+                                        <div key={reg.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-3xl bg-slate-950/50 border border-white/5 hover:border-purple-500/30 transition-all group shadow-sm gap-4">
+                                            <div className="flex items-center gap-5">
+                                                <div className="p-1.5 rounded-2xl bg-slate-900 border border-white/5 shadow-inner shrink-0">
+                                                    <PlayerAvatar name={reg.name} logo={reg.logo} className="w-12 h-12 text-sm" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-outfit font-black text-white tracking-widest text-lg">{reg.name}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{reg.team}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-end gap-3 shrink-0">
+                                                {reg.status !== 'approved' ? (
+                                                    <button onClick={() => handleApproveReg(reg.id)} className="p-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-all border border-emerald-500/20 shadow-sm" title="Approve">
+                                                        <CheckCircle2 className="w-5 h-5 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-[10px] font-outfit font-black text-emerald-400 px-3 py-1.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20 uppercase tracking-[0.2em] shadow-sm">Approved</span>
+                                                )}
+                                                <button onClick={() => handleDeleteReg(reg.id)} className="p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-all border border-rose-500/20 shadow-sm" title="Delete">
+                                                    <Trash2 className="w-5 h-5 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
-                        Danger Zone
-                    </h3>
-                    <div className="bg-[#EF4444]/5 border border-[#EF4444]/10 rounded-xl p-6 mb-8 relative z-10">
-                        <p className="text-[#94A3B8] font-medium leading-relaxed">
-                            Resetting the tournament will <strong className="text-[#EF4444]">permanently wipe</strong> the active season&apos;s scores, matches, bracket, and roster.
-                            Archived seasons in history are kept safe. <strong className="text-white">This cannot be undone.</strong>
-                        </p>
-                    </div>
-                    <button onClick={handleReset} className="w-full py-4 bg-[#EF4444]/10 hover:bg-[#EF4444] text-[#EF4444] hover:text-white rounded-xl font-black uppercase tracking-widest border border-[#EF4444]/30 transition-all flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(239,68,68,0.1)] hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] relative z-10 text-lg">
-                        <RefreshCw className="w-5 h-5" /> Factory Reset Season
-                    </button>
-                </div>
-            )}
-        </div>
+
+                        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-600/5 rounded-full blur-[100px] pointer-events-none mix-blend-screen"></div>
+
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10 relative z-10">
+                                <h3 className="text-2xl sm:text-3xl font-outfit font-black flex items-center gap-4 text-white uppercase tracking-widest drop-shadow-md">
+                                    <div className="p-4 rounded-3xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-inner">
+                                        <Users className="w-7 h-7 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+                                    </div>
+                                    Tournament Roster
+                                </h3>
+                                <motion.button
+                                    whileHover={!isSavedPlayers ? { scale: 1.02 } : {}}
+                                    whileTap={!isSavedPlayers ? { scale: 0.98 } : {}}
+                                    onClick={handleSavePlayers} disabled={isSavedPlayers}
+                                    className={`px-8 py-4 rounded-2xl text-sm font-outfit font-black tracking-[0.2em] uppercase transition-all flex items-center gap-3 shadow-lg w-full sm:w-auto justify-center ${isSavedPlayers ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]'}`}>
+                                    <CheckCircle2 className="w-5 h-5" /> {isSavedPlayers ? 'Saved!' : 'Save Roster'}
+                                </motion.button>
+                            </div>
+
+                            <div className="grid md:grid-cols-3 gap-8 relative z-10">
+                                {['A', 'B', 'C'].map((grp, idx) => {
+                                    const groupColors = [
+                                        'from-blue-500/10 to-transparent border-blue-500/20 text-blue-400',
+                                        'from-purple-500/10 to-transparent border-purple-500/20 text-purple-400',
+                                        'from-amber-500/10 to-transparent border-amber-500/20 text-amber-400'
+                                    ];
+                                    const colorCls = groupColors[idx];
+
+                                    return (
+                                        <div key={grp} className="bg-slate-950/60 p-6 rounded-[32px] border border-white/5 shadow-inner">
+                                            <div className={`bg-gradient-to-b ${colorCls} p-4 rounded-2xl mb-6 text-center border shadow-[inset_0_1px_rgba(255,255,255,0.1)]`}>
+                                                <h4 className="font-outfit font-black text-2xl uppercase tracking-[0.3em]">Group {grp}</h4>
+                                            </div>
+                                            <div className="space-y-4">
+                                                {players.filter(p => p.group === grp).map((p, pIdx) => (
+                                                    <div key={p.id} className="group flex items-center gap-4 bg-slate-900/50 p-2.5 rounded-2xl border border-white/5 hover:border-white/20 transition-all shadow-sm relative overflow-hidden">
+                                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/5 group-hover:bg-white/20 transition-colors"></div>
+                                                        <div className="font-outfit font-black text-[10px] text-slate-600 tracking-widest w-4 text-center">{pIdx + 1}</div>
+                                                        <PlayerAvatar name={p.name} logo={p.logo} className="w-10 h-10 text-[10px] rounded-xl" />
+                                                        <input value={p.name} onChange={e => handlePlayerChange(p.id, e.target.value)}
+                                                            className="flex-1 bg-transparent border-none text-white px-2 py-2 text-base focus:outline-none font-outfit font-bold placeholder:text-slate-600 tracking-wide"
+                                                            placeholder={`Player ${p.id}`} />
+                                                        <button onClick={() => handleClearPlayer(p.id)} className="opacity-0 group-hover:opacity-100 p-2 hover:bg-rose-500/10 text-rose-400 rounded-xl transition-all mr-1" title="Clear Slot">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* ===== SEASON TOOLS TAB ===== */}
+                {activeTab === 'season' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                        className="space-y-6"
+                    >
+                        {/* Group Draw */}
+                        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen group-hover:bg-emerald-500/20 transition-all duration-700"></div>
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] pointer-events-none"></div>
+
+                            <h3 className="text-3xl font-outfit font-black mb-6 flex items-center gap-4 text-white uppercase tracking-widest relative z-10 drop-shadow-md">
+                                <div className="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 shadow-inner">
+                                    <Shuffle className="w-8 h-8 text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+                                </div>
+                                Group Draw
+                            </h3>
+                            <p className="text-slate-400 font-medium text-lg max-w-2xl leading-relaxed mb-8 relative z-10">
+                                Randomly assign <strong className="text-emerald-400">12 approved</strong> registrations into Groups A, B, C. <br />
+                                <span className="text-rose-400/80 text-sm">Note: This also resets all match scores.</span>
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row items-center gap-6 relative z-10 bg-slate-950/50 p-6 rounded-3xl border border-white/5 shadow-inner">
+                                <div className={`flex items-center justify-center gap-3 px-6 py-4 rounded-2xl text-lg font-outfit font-black tracking-widest uppercase shadow-sm ${approvedPlayers.length >= 12 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                                    <Users className="w-6 h-6" /> {approvedPlayers.length} / 12 Approved
+                                </div>
+                                <motion.button
+                                    whileHover={approvedPlayers.length >= 12 ? { scale: 1.02 } : {}}
+                                    whileTap={approvedPlayers.length >= 12 ? { scale: 0.98 } : {}}
+                                    onClick={handleDrawGroups} disabled={approvedPlayers.length < 12}
+                                    className={`flex-1 w-full py-5 rounded-2xl font-outfit font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 text-lg shadow-lg ${approvedPlayers.length >= 12 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-[0_0_40px_rgba(16,185,129,0.4)]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>
+                                    <Shuffle className="w-6 h-6" /> Randomize Groups
+                                </motion.button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* ===== DANGER TAB ===== */}
+                {activeTab === 'danger' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                        className="bg-slate-900/80 backdrop-blur-xl border border-rose-500/30 rounded-[40px] p-8 sm:p-12 shadow-[0_0_50px_rgba(244,63,94,0.1)] relative overflow-hidden group"
+                    >
+                        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-rose-600/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen group-hover:bg-rose-600/20 transition-all duration-700"></div>
+
+                        <h3 className="text-3xl font-outfit font-black mb-8 flex items-center gap-4 text-rose-400 uppercase tracking-widest relative z-10 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]">
+                            <div className="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/20 shadow-inner">
+                                <Flame className="w-8 h-8 animate-pulse" />
+                            </div>
+                            Danger Zone
+                        </h3>
+
+                        <div className="bg-rose-500/5 backdrop-blur-md border border-rose-500/20 rounded-3xl p-8 mb-10 relative z-10 shadow-inner">
+                            <p className="text-rose-200/80 font-medium text-lg leading-relaxed">
+                                Resetting the tournament will <strong className="text-rose-400 font-black">permanently wipe</strong> the active season&apos;s scores, matches, bracket, and roster.
+                                Archived seasons in history are kept safe. <br /><br /><strong className="text-rose-300 font-bold tracking-widest uppercase text-sm border-b border-rose-500/30 pb-1">This action cannot be undone.</strong>
+                            </p>
+                        </div>
+
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={handleReset}
+                            className="w-full py-6 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white rounded-3xl font-outfit font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 shadow-[0_0_30px_rgba(244,63,94,0.3)] hover:shadow-[0_0_50px_rgba(244,63,94,0.5)] relative z-10 text-xl border border-rose-400/30"
+                        >
+                            <RefreshCw className="w-6 h-6" /> Factory Reset Season
+                        </motion.button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 }

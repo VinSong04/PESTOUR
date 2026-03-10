@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { ref, onValue, push, serverTimestamp } from 'firebase/database';
 import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Users, Zap, Star, DollarSign, Upload, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function RegisterView({ isAdmin, isOpen = true }) {
     const [registrations, setRegistrations] = useState([]);
@@ -88,186 +89,204 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
         }
     };
 
-
-
     const approvedCount = registrations.filter(r => r.status === 'approved').length;
     const slotsLeft = Math.max(0, 12 - approvedCount);
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.1 }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: "spring", stiffness: 100, damping: 15 }
+        }
+    };
+
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 w-full max-w-5xl mx-auto flex flex-col justify-center mt-2 pb-12">
+        <motion.div
+            className="space-y-8 w-full max-w-5xl mx-auto flex flex-col justify-center mt-2 pb-12"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+        >
 
             {/* ===== HERO BANNER ===== */}
-            <div className="relative overflow-hidden rounded-[32px] bg-[#0A0D14] border border-[#1E2738]/60 shadow-[0_0_60px_rgba(0,0,0,0.5)]">
+            <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[40px] bg-[#0A0D14]/80 backdrop-blur-xl border border-white/5 shadow-2xl group">
                 {/* Animated background effects */}
-                <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute top-[-50%] left-[-20%] w-[600px] h-[600px] bg-[#6384FF] opacity-[0.04] blur-[150px] rounded-full animate-pulse"></div>
-                    <div className="absolute bottom-[-40%] right-[-10%] w-[500px] h-[500px] bg-[#C084FC] opacity-[0.04] blur-[120px] rounded-full"></div>
-                    <div className="absolute top-[20%] right-[30%] w-[300px] h-[300px] bg-[#F59E0B] opacity-[0.02] blur-[100px] rounded-full"></div>
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-[-50%] left-[-20%] w-[600px] h-[600px] bg-blue-600/10 blur-[120px] rounded-full animate-pulse group-hover:bg-blue-500/20 transition-all duration-700 mix-blend-screen"></div>
+                    <div className="absolute bottom-[-40%] right-[-10%] w-[500px] h-[500px] bg-purple-600/10 blur-[100px] rounded-full group-hover:bg-purple-500/20 transition-all duration-700 mix-blend-screen"></div>
                     {/* Grid pattern overlay */}
-                    <div className="absolute inset-0 opacity-[0.03]" style={{
-                        backgroundImage: 'linear-gradient(rgba(99,132,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(99,132,255,0.3) 1px, transparent 1px)',
-                        backgroundSize: '40px 40px'
-                    }}></div>
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
                 </div>
 
-                <div className="relative z-10 py-16 px-8 sm:px-16 text-center flex flex-col items-center">
+                <div className="relative z-10 py-20 px-8 sm:px-16 text-center flex flex-col items-center">
                     {/* Badge */}
-                    <div className="mb-8 px-5 py-2 rounded-full bg-gradient-to-r from-[#131C32] to-[#1a2340] border border-[#2D3A5D]/60 flex items-center gap-2.5 shadow-[0_0_20px_rgba(99,132,255,0.08)]">
-                        <div className="w-2 h-2 rounded-full bg-[#F59E0B] shadow-[0_0_10px_#F59E0B] animate-pulse"></div>
-                        <span className="text-[11px] font-black tracking-[0.2em] uppercase text-[#F59E0B]">Registration Open</span>
-                    </div>
+                    <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        className="mb-8 px-6 py-2.5 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center gap-3 shadow-[0_0_30px_rgba(245,158,11,0.15)] backdrop-blur-md"
+                    >
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_12px_#FBBF24] animate-pulse"></div>
+                        <span className="text-[11px] font-outfit font-black tracking-[0.25em] uppercase text-amber-400">Registration Open</span>
+                    </motion.div>
 
                     {/* Icon */}
-                    <div className="mb-8 relative">
-                        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-[#6384FF]/20 to-[#C084FC]/20 border border-[#6384FF]/20 flex items-center justify-center shadow-[0_0_40px_rgba(99,132,255,0.15)]">
-                            <UserPlus className="w-12 h-12 text-[#A5B4FC] drop-shadow-[0_0_20px_rgba(165,180,252,0.5)]" />
+                    <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="mb-8 relative"
+                    >
+                        <div className="w-28 h-28 rounded-[32px] bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center shadow-[0_0_50px_rgba(96,165,250,0.2)] backdrop-blur-md">
+                            <UserPlus className="w-14 h-14 text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]" />
                         </div>
-                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#F59E0B] rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.5)]">
-                            <Star className="w-4 h-4 text-white" />
+                        <div className="absolute -top-3 -right-3 w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.6)] border-2 border-[#0A0D14]">
+                            <Star className="w-5 h-5 text-white" />
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* Title */}
-                    <h1 className="text-4xl sm:text-6xl font-black tracking-tighter mb-4 uppercase">
-                        <span className="bg-gradient-to-r from-[#A5B4FC] via-[#C084FC] to-[#F0ABFC] bg-clip-text text-transparent drop-shadow-md">
-                            Join The Battle
-                        </span>
+                    <h1 className="text-4xl sm:text-6xl font-outfit font-black tracking-tighter mb-4 uppercase drop-shadow-lg text-white">
+                        Join The Battle
                     </h1>
-                    <p className="text-[#8B9BB4] text-lg sm:text-xl font-medium mb-10 tracking-wide max-w-lg">
+                    <p className="text-slate-400 text-lg sm:text-2xl font-medium mb-12 tracking-wide max-w-2xl">
                         Secure your spot in the ultimate eFootball showdown. Register now and claim your place.
                     </p>
 
                     {/* Stats Row - Admin Only */}
                     {isAdmin && (
-                        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
-                            <div className="flex items-center gap-2.5 px-5 py-3 bg-[#131A2B]/80 backdrop-blur-sm border border-[#222B3D] rounded-2xl">
-                                <div className="w-9 h-9 rounded-xl bg-[#F59E0B]/10 flex items-center justify-center border border-[#F59E0B]/20">
-                                    <Users className="w-4 h-4 text-[#F59E0B]" />
+                        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-4">
+                            <div className="flex items-center gap-4 px-6 py-4 bg-[#0A0D14]/50 backdrop-blur-xl border border-white/5 rounded-3xl shadow-lg hover:bg-[#0A0D14]/80 transition-colors">
+                                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                                    <Users className="w-6 h-6 text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
                                 </div>
                                 <div className="text-left">
-                                    <p className="text-xl font-black text-[#F8FAFC] leading-none">{registrations.length}</p>
-                                    <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Registered</p>
+                                    <p className="text-2xl font-outfit font-black text-white leading-none">{registrations.length}</p>
+                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Registered</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2.5 px-5 py-3 bg-[#131A2B]/80 backdrop-blur-sm border border-[#222B3D] rounded-2xl">
-                                <div className="w-9 h-9 rounded-xl bg-[#10B981]/10 flex items-center justify-center border border-[#10B981]/20">
-                                    <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+                            <div className="flex items-center gap-4 px-6 py-4 bg-[#0A0D14]/50 backdrop-blur-xl border border-white/5 rounded-3xl shadow-lg hover:bg-[#0A0D14]/80 transition-colors">
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                                    <CheckCircle2 className="w-6 h-6 text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                                 </div>
                                 <div className="text-left">
-                                    <p className="text-xl font-black text-[#F8FAFC] leading-none">{approvedCount}</p>
-                                    <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Approved</p>
+                                    <p className="text-2xl font-outfit font-black text-white leading-none">{approvedCount}</p>
+                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Approved</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2.5 px-5 py-3 bg-[#131A2B]/80 backdrop-blur-sm border border-[#222B3D] rounded-2xl">
-                                <div className="w-9 h-9 rounded-xl bg-[#EF4444]/10 flex items-center justify-center border border-[#EF4444]/20">
-                                    <Zap className="w-4 h-4 text-[#EF4444]" />
+                            <div className="flex items-center gap-4 px-6 py-4 bg-[#0A0D14]/50 backdrop-blur-xl border border-white/5 rounded-3xl shadow-lg hover:bg-[#0A0D14]/80 transition-colors">
+                                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
+                                    <Zap className="w-6 h-6 text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
                                 </div>
                                 <div className="text-left">
-                                    <p className="text-xl font-black text-[#F8FAFC] leading-none">{slotsLeft}</p>
-                                    <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Slots Left</p>
+                                    <p className="text-2xl font-outfit font-black text-white leading-none">{slotsLeft}</p>
+                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Slots Left</p>
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
-            </div>
+            </motion.div>
 
             {/* ===== MAIN CONTENT ===== */}
-            <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-2' : ''} gap-8`}>
+            <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-2' : ''} gap-8 relative z-10`}>
 
                 {/* ===== REGISTRATION FORM ===== */}
-                <div className="bg-[#0A0D14] rounded-[28px] border border-[#1E2738]/60 shadow-[0_0_40px_rgba(0,0,0,0.3)] relative overflow-hidden">
+                <motion.div variants={itemVariants} className="bg-[#0A0D14]/80 backdrop-blur-xl rounded-[40px] border border-white/5 shadow-2xl relative overflow-hidden group">
                     {/* Glow accents */}
-                    <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#6384FF]/40 to-transparent"></div>
-                    <div className="absolute top-1/2 left-[-100px] w-64 h-64 bg-[#C084FC] opacity-[0.02] blur-[80px] pointer-events-none rounded-full"></div>
+                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent"></div>
+                    <div className="absolute top-1/2 left-[-100px] w-96 h-96 bg-purple-500/5 blur-[100px] pointer-events-none rounded-full group-hover:bg-purple-500/10 transition-colors duration-700 mix-blend-screen"></div>
 
-                    <div className="p-8 sm:p-10">
+                    <div className="p-8 sm:p-12">
                         {/* Form Header */}
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#C084FC]/20 to-[#6384FF]/20 border border-[#C084FC]/20 flex items-center justify-center shadow-inner">
-                                <Sparkles className="w-6 h-6 text-[#C084FC]" />
+                        <div className="flex items-center gap-5 mb-10">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center shadow-inner">
+                                <Sparkles className="w-7 h-7 text-purple-400 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-black text-[#E2E8F0] tracking-tight">Enter the Arena</h2>
-                                <p className="text-xs font-bold text-[#64748B] tracking-wide">Fill in your details to register</p>
+                                <h2 className="text-3xl font-outfit font-black text-white tracking-tight">Enter the Arena</h2>
+                                <p className="text-sm font-bold text-slate-400 tracking-wide mt-1">Fill in your details to register</p>
                             </div>
                         </div>
 
                         {successMessage && (
-                            <div className="mb-6 p-5 rounded-2xl bg-emerald-500/8 border border-emerald-500/20 flex items-center gap-3 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent"></div>
-                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0 relative z-10">
-                                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-4 relative overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.15)]">
+                                <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0 relative z-10">
+                                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
                                 </div>
-                                <p className="text-sm font-bold text-emerald-400 relative z-10">{successMessage}</p>
-                            </div>
+                                <p className="text-base font-bold text-emerald-400 relative z-10">{successMessage}</p>
+                            </motion.div>
                         )}
 
                         {errorMessage && (
-                            <div className="mb-6 p-5 rounded-2xl bg-rose-500/8 border border-rose-500/20 flex items-center gap-3 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-r from-rose-500/5 to-transparent"></div>
-                                <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center flex-shrink-0 relative z-10">
-                                    <ShieldAlert className="w-5 h-5 text-rose-400" />
+                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 p-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-4 relative overflow-hidden shadow-[0_0_30px_rgba(244,63,94,0.15)]">
+                                <div className="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center flex-shrink-0 relative z-10">
+                                    <ShieldAlert className="w-6 h-6 text-rose-400" />
                                 </div>
-                                <p className="text-sm font-bold text-rose-400 relative z-10">{errorMessage}</p>
-                            </div>
+                                <p className="text-base font-bold text-rose-400 relative z-10">{errorMessage}</p>
+                            </motion.div>
                         )}
 
                         {isOpen ? (
-                            <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+                            <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
                                 {/* Player Name */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-[#8B9BB4] uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
+                                <div className="space-y-3">
+                                    <label className="text-xs font-outfit font-black text-slate-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
                                         Player Name <span className="text-rose-400">*</span>
                                     </label>
                                     <div className="relative group">
                                         <input type="text" value={name} onChange={(e) => setName(e.target.value)}
                                             placeholder="e.g. K-Vinn"
-                                            className="w-full bg-[#131A2B] border-2 border-[#222B3D] text-[#E2E8F0] px-5 py-4 rounded-2xl outline-none focus:border-[#6384FF]/60 focus:ring-2 focus:ring-[#6384FF]/20 transition-all font-bold placeholder:text-[#334155] text-lg" />
+                                            className="w-full bg-[#131A2B]/50 backdrop-blur-md border border-white/10 text-white px-6 py-5 rounded-2xl outline-none focus:border-blue-500/50 focus:bg-[#131A2B]/80 transition-all font-bold placeholder:text-[#334155] text-lg shadow-inner" />
                                     </div>
                                 </div>
 
                                 {/* Team / Clan */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-[#8B9BB4] uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
+                                <div className="space-y-3">
+                                    <label className="text-xs font-outfit font-black text-slate-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
                                         Team / Clan <span className="text-rose-400">*</span>
                                     </label>
                                     <div className="relative group">
                                         <input type="text" value={team} onChange={(e) => setTeam(e.target.value)}
                                             placeholder="e.g. Team Liquid"
-                                            className="w-full bg-[#131A2B] border-2 border-[#222B3D] text-[#E2E8F0] px-5 py-4 rounded-2xl outline-none focus:border-[#6384FF]/60 focus:ring-2 focus:ring-[#6384FF]/20 transition-all font-bold placeholder:text-[#334155] text-lg" />
+                                            className="w-full bg-[#131A2B]/50 backdrop-blur-md border border-white/10 text-white px-6 py-5 rounded-2xl outline-none focus:border-blue-500/50 focus:bg-[#131A2B]/80 transition-all font-bold placeholder:text-[#334155] text-lg shadow-inner" />
                                     </div>
                                 </div>
 
                                 {/* Base Team Logo Upload */}
-                                <div className="space-y-3">
-                                    <label className="text-xs font-black text-[#8B9BB4] uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
-                                        <Upload className="w-3.5 h-3.5" /> Base Team Logo <span className="text-rose-400">*</span>
+                                <div className="space-y-4">
+                                    <label className="text-xs font-outfit font-black text-slate-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
+                                        <Upload className="w-4 h-4" /> Base Team Logo <span className="text-rose-400">*</span>
                                     </label>
-                                    <p className="text-[10px] text-[#475569] font-bold ml-1 -mt-1">PNG or JPG, transparent background recommended</p>
+                                    <p className="text-[11px] text-slate-500 font-bold ml-2 -mt-2">PNG or JPG, transparent background recommended</p>
 
                                     {logoPreview ? (
-                                        <div className="flex items-center gap-4 p-4 bg-[#131A2B] border-2 border-[#6384FF]/30 rounded-2xl">
-                                            <div className="w-16 h-16 rounded-xl bg-[#0A0D14] border border-[#222B3D] flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner">
-                                                <img src={logoPreview} alt="Logo" className="w-14 h-14 object-contain" />
+                                        <div className="flex items-center gap-5 p-5 bg-[#131A2B]/50 border border-blue-500/30 rounded-2xl backdrop-blur-md">
+                                            <div className="w-20 h-20 rounded-2xl bg-[#0A0D14] border border-white/5 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner p-2">
+                                                <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
                                             </div>
                                             <div className="flex-1">
-                                                <p className="text-sm font-bold text-[#A5B4FC]">Logo uploaded</p>
-                                                <p className="text-[10px] text-[#64748B] font-bold">Click below to change</p>
+                                                <p className="text-base font-bold text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]">Logo uploaded successfully</p>
+                                                <p className="text-xs text-slate-500 font-bold mt-1">Click the X to remove</p>
                                             </div>
                                             <button type="button" onClick={() => { setLogoPreview(null); setLogoBase64(''); }}
-                                                className="w-8 h-8 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 flex items-center justify-center text-rose-400 transition-all">
-                                                <X className="w-4 h-4" />
+                                                className="w-10 h-10 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 shadow-sm flex items-center justify-center text-rose-400 hover:text-rose-300 transition-all">
+                                                <X className="w-5 h-5" />
                                             </button>
                                         </div>
                                     ) : (
-                                        <label className="flex flex-col items-center justify-center gap-3 p-8 bg-[#131A2B] border-2 border-dashed border-[#222B3D] hover:border-[#6384FF]/40 rounded-2xl cursor-pointer transition-all group">
-                                            <div className="w-14 h-14 rounded-2xl bg-[#6384FF]/10 flex items-center justify-center border border-[#6384FF]/20 group-hover:scale-110 transition-transform">
-                                                <Upload className="w-6 h-6 text-[#6384FF]" />
+                                        <label className="flex flex-col items-center justify-center gap-4 p-10 bg-[#131A2B]/30 border-2 border-dashed border-white/10 hover:border-blue-500/40 hover:bg-blue-500/5 rounded-3xl cursor-pointer transition-all group backdrop-blur-md">
+                                            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform shadow-inner">
+                                                <Upload className="w-7 h-7 text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]" />
                                             </div>
                                             <div className="text-center">
-                                                <p className="text-sm font-bold text-[#8B9BB4] group-hover:text-[#A5B4FC] transition-colors">Click to upload logo</p>
-                                                <p className="text-[10px] text-[#475569] font-bold mt-0.5">.PNG or .JPG • Max 2MB</p>
+                                                <p className="text-base font-bold text-slate-400 group-hover:text-blue-300 transition-colors">Click to browse or drag and drop</p>
+                                                <p className="text-xs text-slate-500 font-bold mt-2 uppercase tracking-wide">.PNG or .JPG • Max 2MB</p>
                                             </div>
                                             <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
                                                 onChange={(e) => {
@@ -301,55 +320,59 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                 </div>
 
                                 {/* Registration Fee */}
-                                <div className="bg-[#131A2B] border-2 border-[#F59E0B]/20 rounded-2xl p-5 space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-11 h-11 rounded-xl bg-[#F59E0B]/10 flex items-center justify-center border border-[#F59E0B]/20 flex-shrink-0">
-                                            <DollarSign className="w-5 h-5 text-[#F59E0B]" />
+                                <div className="bg-amber-500/5 border border-amber-500/20 rounded-3xl p-6 sm:p-8 space-y-6 shadow-inner backdrop-blur-md relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-[50px] mix-blend-screen pointer-events-none"></div>
+                                    <div className="flex items-center gap-4 relative z-10">
+                                        <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center border border-amber-500/30 flex-shrink-0 shadow-sm">
+                                            <DollarSign className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-black text-[#E2E8F0]">Registration Fee: <span className="text-[#F59E0B]">$2.00</span></p>
-                                            <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Pay to admin before submitting</p>
+                                            <p className="text-base font-outfit font-black text-white">Registration Fee: <span className="text-amber-400 ml-1 text-xl drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]">$2.00</span></p>
+                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Pay to admin before submitting</p>
                                         </div>
                                     </div>
-                                    <label className="flex items-center gap-3 cursor-pointer group">
-                                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all flex-shrink-0 ${paidConfirm ? 'bg-[#F59E0B] border-[#F59E0B]' : 'border-[#334155] group-hover:border-[#F59E0B]/50'
+                                    <label className="flex items-center gap-4 cursor-pointer group relative z-10 bg-[#0A0D14]/40 p-4 rounded-2xl border border-white/5 hover:bg-[#0A0D14]/60 transition-colors">
+                                        <div className={`w-7 h-7 rounded-xl border flex items-center justify-center transition-all flex-shrink-0 ${paidConfirm ? 'bg-amber-500 border-amber-500 text-[#0A0D14] shadow-[0_0_15px_rgba(251,191,36,0.6)]' : 'border-white/20 group-hover:border-amber-500/50'
                                             }`} onClick={() => setPaidConfirm(!paidConfirm)}>
-                                            {paidConfirm && <CheckCircle2 className="w-4 h-4 text-[#0A0D14]" />}
+                                            {paidConfirm && <CheckCircle2 className="w-5 h-5" />}
                                         </div>
-                                        <span className="text-xs font-bold text-[#8B9BB4]" onClick={() => setPaidConfirm(!paidConfirm)}>I confirm that I have paid the <strong className="text-[#F59E0B]">$2</strong> registration fee</span>
+                                        <span className="text-sm font-bold text-slate-300" onClick={() => setPaidConfirm(!paidConfirm)}>I confirm that I have paid the <strong className="text-amber-400">$2</strong> registration fee</span>
                                     </label>
                                 </div>
 
-                                <button type="submit" disabled={isSubmitting}
-                                    className={`w-full py-5 px-6 rounded-2xl font-black tracking-widest uppercase transition-all text-lg relative overflow-hidden group ${isSubmitting
-                                        ? 'bg-[#1E2738] text-[#475569] cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-[#8B78FF] via-[#6384FF] to-[#38BDF8] hover:from-[#7863FF] hover:via-[#4A6BFF] hover:to-[#0EA5E9] text-white border border-[#8B78FF]/30 shadow-[0_0_30px_rgba(99,132,255,0.25)] hover:shadow-[0_0_50px_rgba(99,132,255,0.4)]'
+                                <motion.button
+                                    whileHover={!isSubmitting ? { scale: 1.02 } : {}}
+                                    whileTap={!isSubmitting ? { scale: 0.98 } : {}}
+                                    type="submit" disabled={isSubmitting}
+                                    className={`w-full py-6 px-8 rounded-3xl font-outfit font-black tracking-[0.2em] uppercase transition-all text-lg relative overflow-hidden group ${isSubmitting
+                                        ? 'bg-[#131A2B] text-slate-500 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-[0_0_40px_rgba(79,70,229,0.4)] hover:shadow-[0_0_60px_rgba(79,70,229,0.6)]'
                                         }`}>
                                     <span className="relative z-10 flex items-center justify-center gap-3">
-                                        <UserPlus className="w-5 h-5" />
-                                        {isSubmitting ? 'Submitting...' : 'Register Now — $2'}
+                                        <UserPlus className="w-6 h-6" />
+                                        {isSubmitting ? 'Submitting...' : 'Register Now'}
                                     </span>
-                                    {!isSubmitting && <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>}
-                                </button>
+                                    {!isSubmitting && <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] animate-shimmer"></div>}
+                                </motion.button>
 
-                                <p className="text-center text-[10px] font-bold text-[#475569] tracking-wider uppercase mt-4">
-                                    <Trophy className="w-3 h-3 inline mr-1 -mt-0.5" />
+                                <p className="text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase mt-6 flex items-center justify-center gap-2">
+                                    <Trophy className="w-4 h-4 text-amber-500/50" />
                                     Your registration will be reviewed by an admin
                                 </p>
                             </form>
                         ) : (
-                            <div className="flex flex-col items-center justify-center p-10 border-2 border-dashed border-[#1E2738]/50 rounded-2xl bg-[#0a0b10]/50 relative z-10 text-center">
-                                <div className="w-20 h-20 rounded-full bg-rose-500/10 flex items-center justify-center mb-5 border border-rose-500/20 shadow-[0_0_30px_rgba(239,68,68,0.1)]">
-                                    <ShieldAlert className="w-10 h-10 text-rose-400" />
+                            <div className="flex flex-col items-center justify-center p-12 border border-white/5 rounded-3xl bg-[#0A0D14]/50 backdrop-blur-xl relative z-10 text-center shadow-inner">
+                                <div className="w-24 h-24 rounded-[32px] bg-rose-500/10 flex items-center justify-center mb-6 border border-rose-500/20 shadow-[0_0_40px_rgba(244,63,94,0.15)]">
+                                    <ShieldAlert className="w-12 h-12 text-rose-400 drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
                                 </div>
-                                <h3 className="text-[#E2E8F0] font-black text-2xl mb-3 tracking-tight">Registration Closed</h3>
-                                <p className="text-[#8B9BB4] font-medium text-sm max-w-sm">We are not accepting new players at this time. Check back later for the next season!</p>
+                                <h3 className="text-white font-outfit font-black text-3xl mb-4 tracking-tight">Registration Closed</h3>
+                                <p className="text-slate-400 font-medium text-base max-w-sm">We are not accepting new players at this time. Check back later for the next season!</p>
                             </div>
                         )}
                     </div>
-                </div>
+                </motion.div>
 
             </div>
-        </div>
+        </motion.div>
     );
 }

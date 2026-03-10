@@ -143,7 +143,7 @@ export default function App() {
                 tournamentStarted={activeData.settings.tournamentStarted}
             />
 
-            <main className="max-w-6xl mx-auto p-4 md:p-6 pb-24">
+            <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 pt-28 md:pt-32">
                 {currentPage === 'home' && <HomeView data={activeData} setCurrentPage={setCurrentPage} isAdmin={effectiveIsAdmin} />}
                 {currentPage === 'register' && <RegisterView isAdmin={effectiveIsAdmin} isOpen={activeData.settings.registrationOpen} />}
                 {currentPage === 'standings' && (activeData.settings.tournamentStarted || isAdmin) && <StandingsView standingsData={standingsData} bracketData={activeData.bracket} />}

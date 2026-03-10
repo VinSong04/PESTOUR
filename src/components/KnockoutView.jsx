@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Trophy, XCircle, CircleDashed, Info, Lock, Flame } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trophy, XCircle, CircleDashed, Info, Lock } from 'lucide-react';
 import BracketMatchBox from './BracketMatchBox';
 import { processBracket } from '../utils/logic';
 
@@ -360,7 +360,7 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
                     <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-2xl text-slate-500">
                         <Trophy className="w-12 h-12 mb-3 opacity-20" />
                         <p className="font-bold">No draw generated yet.</p>
-                        {isAdmin && <p className="text-sm mt-1">Click "Spin Draw" to generate matchups.</p>}
+                        {isAdmin && <p className="text-sm mt-1">Click &quot;Spin Draw&quot; to generate matchups.</p>}
                     </div>
                 )
             )}

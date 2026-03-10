@@ -1,4 +1,3 @@
-import React from 'react';
 import { BookOpen, Gamepad2, BarChart3, ShieldCheck } from 'lucide-react';
 
 export default function RulesView() {
@@ -33,7 +32,7 @@ export default function RulesView() {
                         <ul className="space-y-3">
                             <li className="flex gap-3">
                                 <span className="text-[#10B981] font-bold mt-0.5">•</span>
-                                <span>Each "game" is a full eFootball match.</span>
+                                <span>Each &quot;game&quot; is a full eFootball match.</span>
                             </li>
                             <li className="flex gap-3">
                                 <span className="text-[#10B981] font-bold mt-0.5">•</span>

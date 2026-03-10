@@ -1,5 +1,3 @@
-import React from 'react';
-
 // Eager load all player images from the assets folder using Vite
 const avatarModules = import.meta.glob('../assets/*.{png,jpg,jpeg,webp}', { eager: true });
 

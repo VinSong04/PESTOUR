@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function GameScoreRow({ game, label, match, p1Name, p2Name, onChange, isAdmin }) {
     if (!match) return null;

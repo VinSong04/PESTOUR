@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { db, auth } from './firebase';
 import { ref, onValue, set } from 'firebase/database';
 import { INITIAL_DATA } from './utils/initialData';

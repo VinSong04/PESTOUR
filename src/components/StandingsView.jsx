@@ -1,5 +1,4 @@
-import React from 'react';
-import { BarChart3, ShieldCheck, Trophy, Flame } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import BracketMatchBox from './BracketMatchBox';
 import PlayerAvatar from './PlayerAvatar';
 import { processBracket } from '../utils/logic';

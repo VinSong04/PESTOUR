@@ -1,4 +1,3 @@
-import React from 'react';
 import { BarChart3, Gamepad2, Trophy, UserPlus } from 'lucide-react';
 import logo from '../assets/pallet.jpg';
 

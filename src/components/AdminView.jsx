@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy, Trash2 } from 'lucide-react';
 import { INITIAL_DATA, INITIAL_MATCHES } from '../utils/initialData';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
@@ -455,7 +455,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                     </h3>
                     <div className="bg-[#EF4444]/5 border border-[#EF4444]/10 rounded-xl p-6 mb-8 relative z-10">
                         <p className="text-[#94A3B8] font-medium leading-relaxed">
-                            Resetting the tournament will <strong className="text-[#EF4444]">permanently wipe</strong> the active season's scores, matches, bracket, and roster.
+                            Resetting the tournament will <strong className="text-[#EF4444]">permanently wipe</strong> the active season&apos;s scores, matches, bracket, and roster.
                             Archived seasons in history are kept safe. <strong className="text-white">This cannot be undone.</strong>
                         </p>
                     </div>

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Home, BarChart3, Gamepad2, Trophy, Settings, BookOpen, ShieldCheck, Sun, Moon, UserPlus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Home, BarChart3, Gamepad2, BookOpen, Sun, Moon, UserPlus } from 'lucide-react';
 import logo from '../assets/pallet.jpg';
 
 export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted }) {
@@ -11,7 +11,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
 
-            if (currentScrollY > lastScrollY && currentScrollY > 60) {
+            if (currentScrollY > lastScrollY && currentScrollY > 60 && !isAdmin) {
                 setShowNavbar(false);
             } else {
                 setShowNavbar(true);
@@ -21,7 +21,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
 
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    }, [isAdmin]);
 
     const navItems = [
         { id: 'home', icon: Home, label: 'Home' },

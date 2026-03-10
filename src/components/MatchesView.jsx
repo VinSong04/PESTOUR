@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Gamepad2, CheckCircle2, CircleDashed, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import GameScoreRow from './GameScoreRow';
 import PlayerAvatar from './PlayerAvatar';

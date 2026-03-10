@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { ref, onValue, push, serverTimestamp, remove, update } from 'firebase/database';
-import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trash2, CheckCircle, Trophy, Users, Zap, Star, DollarSign, Upload, X } from 'lucide-react';
-import PlayerAvatar from './PlayerAvatar';
+import { ref, onValue, push, serverTimestamp } from 'firebase/database';
+import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Users, Zap, Star, DollarSign, Upload, X } from 'lucide-react';
 
 export default function RegisterView({ isAdmin, isOpen = true }) {
     const [registrations, setRegistrations] = useState([]);
@@ -89,14 +88,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Remove this player?")) return;
-        try { await remove(ref(db, `registrations/${id}`)); } catch (e) { console.error(e); }
-    };
 
-    const handleApprove = async (id) => {
-        try { await update(ref(db, `registrations/${id}`), { status: 'approved' }); } catch (e) { console.error(e); }
-    };
 
     const approvedCount = registrations.filter(r => r.status === 'approved').length;
     const slotsLeft = Math.max(0, 12 - approvedCount);

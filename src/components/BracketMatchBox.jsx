@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckCircle2, CircleDashed } from 'lucide-react';
 import GameScoreRow from './GameScoreRow';
 import PlayerAvatar from './PlayerAvatar';

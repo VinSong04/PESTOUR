@@ -102,7 +102,11 @@ export default function App() {
     const updateData = async (newData) => {
         const dbRef = ref(db, 'tournament');
         try {
-            await set(dbRef, newData);
+            const dataToSave = {
+                ...newData,
+                lastUpdated: new Date().toISOString()
+            };
+            await set(dbRef, dataToSave);
         } catch (error) {
             console.error("Error updating document: ", error);
         }
@@ -141,6 +145,7 @@ export default function App() {
                 setSelectedSeason={setSelectedSeason}
                 seasons={seasons}
                 tournamentStarted={activeData.settings.tournamentStarted}
+                lastUpdated={activeData.lastUpdated}
             />
 
             <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 pt-28 md:pt-32">

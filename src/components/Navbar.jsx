@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Home, BarChart3, Gamepad2, BookOpen, Sun, Moon, UserPlus, Lock } from 'lucide-react';
+import { Home, BarChart3, Gamepad2, BookOpen, Sun, Moon, UserPlus, Lock, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../assets/pallet.jpg';
 export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted, lastUpdated }) {
@@ -42,6 +42,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
     if (tournamentStarted || isAdmin) {
         navItems.push({ id: 'standings', icon: BarChart3, label: 'Standings' });
         navItems.push({ id: 'matches', icon: Gamepad2, label: 'Schedule' });
+        navItems.push({ id: 'knockout', icon: Trophy, label: 'Bracket' });
     }
 
     navItems.push({ id: 'rules', icon: BookOpen, label: 'Rules' });

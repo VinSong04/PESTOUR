@@ -292,9 +292,15 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
                         <div className="p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20 shadow-inner">
                             <Trophy className="text-amber-400 w-8 h-8 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
                         </div>
-                        Knockout Draw <span className="text-amber-500/50 text-xl ml-2 tracking-widest">(Admin)</span>
+                        {isAdmin ? (
+                            <>
+                                Knockout Draw <span className="text-amber-500/50 text-xl ml-2 tracking-widest">(Admin)</span>
+                            </>
+                        ) : 'Knockout Bracket'}
                     </h2>
-                    <p className="text-sm font-medium text-slate-400 mt-3 ml-1">Manage and draw the knockout bracket here.</p>
+                    <p className="text-sm font-medium text-slate-400 mt-3 ml-1">
+                        {isAdmin ? 'Manage and draw the knockout bracket here.' : 'View the tournament\'s final knockout stage.'}
+                    </p>
                 </div>
 
                 {isAdmin ? (

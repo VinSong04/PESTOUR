@@ -174,7 +174,7 @@ export default function App() {
                     {currentPage === 'standings' && (activeData.settings.tournamentStarted || isAdmin) && <StandingsView standingsData={standingsData} bracketData={activeData.bracket} />}
                     {currentPage === 'matches' && (activeData.settings.tournamentStarted || isAdmin) && <MatchesView data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />}
                     {currentPage === 'rules' && <RulesView />}
-                    {currentPage === 'knockout' && isAdmin && (
+                    {currentPage === 'knockout' && (activeData.settings.tournamentStarted || isAdmin) && (
                         <KnockoutView
                             data={activeData}
                             updateData={updateData}

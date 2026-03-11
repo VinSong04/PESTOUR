@@ -80,7 +80,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                         </motion.div>
 
                         {/* Navigation Links */}
-                        <div className="flex space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar ml-auto mr-4 sm:mr-8 relative z-10 items-center h-full">
+                        <div className="flex flex-1 justify-center gap-1 overflow-x-auto no-scrollbar mx-2 lg:mx-8 relative z-10 items-center h-full">
                             {navItems.map(item => {
                                 const isActive = currentPage === item.id;
                                 return (
@@ -89,7 +89,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                                         whileHover={{ y: -2 }}
                                         whileTap={{ y: 0 }}
                                         onClick={() => setCurrentPage(item.id)}
-                                        className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all text-sm font-bold tracking-wide overflow-hidden ${isActive
+                                        className={`relative flex items-center gap-1.5 px-2.5 py-2 md:px-3 md:py-2.5 rounded-xl transition-all text-xs sm:text-sm font-bold tracking-wide overflow-hidden whitespace-nowrap flex-shrink-0 ${isActive
                                             ? 'text-white'
                                             : 'text-slate-400 hover:text-white'
                                             }`}
@@ -102,14 +102,14 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                                             />
                                         )}
                                         <item.icon className={`w-4 h-4 relative z-10 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]' : ''}`} />
-                                        <span className="hidden md:inline relative z-10">{item.label}</span>
+                                        <span className="hidden lg:inline relative z-10">{item.label}</span>
                                     </motion.button>
                                 )
                             })}
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-4 relative z-10">
+                        <div className="flex items-center justify-end gap-2 lg:gap-3 relative z-10 shrink-0">
                             {seasons && seasons.length > 1 && (
                                 <select
                                     value={selectedSeason}

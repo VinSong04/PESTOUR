@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy, Trash2 } from 'lucide-react';
+import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy, Trash2, Sparkles, Image as ImageIcon, Copy, ExternalLink } from 'lucide-react';
 import { INITIAL_DATA, INITIAL_MATCHES } from '../utils/initialData';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, db } from '../firebase';
@@ -12,6 +12,7 @@ const TABS = [
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'roster', label: 'Roster', icon: Users },
     { id: 'season', label: 'Season', icon: Trophy },
+    { id: 'studio', label: 'AI Studio', icon: Sparkles },
     { id: 'danger', label: 'Danger', icon: Flame },
 ];
 
@@ -159,6 +160,98 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
 
     const handleApproveReg = async (id) => {
         try { await update(ref(db, `registrations/${id}`), { status: 'approved' }); } catch (e) { console.error(e); }
+    };
+
+    const [generatedPrompt, setGeneratedPrompt] = useState('');
+    const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const generateAiPrompt = (type) => {
+        let promptText = "Create an epic, professional sports tournament poster. Style: Sharp geometric shapes like parallelograms and angled banners, split layout. Color scheme: bold reds, maroons, and white. Clean, modern typography. High-quality action photography of soccer players in the background. Inspired by professional Asian football league graphics (like Cambodian Premier League).\n\nDetails to include:\n";
+
+        if (type === 'schedule') {
+            const upNext = data.matches.filter(m => !m.played).slice(0, 5);
+            const matchLines = upNext.map(m => {
+                const p1 = data.players.find(p => p.id === m.p1Id)?.name || m.p1Id;
+                const p2 = data.players.find(p => p.id === m.p2Id)?.name || m.p2Id;
+                return `${p1} VS ${p2} at 18:00`;
+            }).join('\n');
+            promptText += `Title: "MATCH SCHEDULE" or "FIXTURE LIVE" at the top in elegant formatting.\nList the following matchups inside sharp, angled horizontal banners:\n${matchLines}`;
+        } else if (type === 'results') {
+            const recent = data.matches.filter(m => m.played).slice(-5);
+            const matchLines = recent.map(m => {
+                const p1 = data.players.find(p => p.id === m.p1Id)?.name || m.p1Id;
+                const p2 = data.players.find(p => p.id === m.p2Id)?.name || m.p2Id;
+                let s1 = 0, s2 = 0;
+                [m.g1, m.g2, m.g3].forEach(g => {
+                    if (g.p1 > g.p2) s1++; if (g.p2 > g.p1) s2++;
+                });
+                return `${p1} [${s1} - ${s2}] ${p2}`;
+            }).join('\n');
+            promptText += `Title: "MATCH RESULTS" or "SUMMARY" at the top.\nList the following final scores centered between the team names inside sharp horizontal boxes:\n${matchLines}`;
+        } else if (type === 'standings') {
+            promptText += `Title: "LEADERBOARD" or "TOP 6". Show a clean, well-organized ranking table inside a sleek graphical panel with red and white accents.`;
+        }
+
+        setGeneratedPrompt(promptText);
+        setGeneratedImageUrl(null);
+        setIsGenerating(false);
+    };
+
+    const handleGenerateImage = async () => {
+        if (!generatedPrompt) return;
+
+        setIsGenerating(true);
+        setGeneratedImageUrl(null);
+
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+
+        if (apiKey) {
+            // Try Gemini Imagen first
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        instances: [{ prompt: generatedPrompt }],
+                        parameters: { sampleCount: 1, aspectRatio: "3:4" }
+                    })
+                });
+
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData?.error?.message || "Gemini API error");
+                }
+
+                const result = await res.json();
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    setGeneratedImageUrl(`data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`);
+                    setIsGenerating(false);
+                    return;
+                } else {
+                    throw new Error("No image data returned from Gemini.");
+                }
+            } catch (error) {
+                console.warn("Gemini Imagen failed, falling back to Pollinations:", error.message);
+            }
+        }
+
+        // Fallback to Pollinations AI (free, no key needed)
+        try {
+            const promptEncoded = encodeURIComponent(generatedPrompt);
+            const imageUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=1080&height=1440&nologo=true`;
+            setGeneratedImageUrl(imageUrl);
+        } catch (error) {
+            console.error(error);
+            alert("Image Generation Error: " + error.message);
+            setIsGenerating(false);
+        }
+    };
+
+    const copyPrompt = () => {
+        if (!generatedPrompt) return;
+        navigator.clipboard.writeText(generatedPrompt);
+        alert('Prompt copied to clipboard! You can now paste this into Gemini AI if you prefer manual generation.');
     };
 
     const containerVariants = {
@@ -599,6 +692,134 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                         >
                             <RefreshCw className="w-6 h-6" /> Factory Reset Season
                         </motion.button>
+                    </motion.div>
+                )}
+
+                {/* ===== AI STUDIO TAB ===== */}
+                {activeTab === 'studio' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                        className="bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden group"
+                    >
+                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen group-hover:bg-amber-500/20 transition-all duration-700"></div>
+
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10 relative z-10">
+                            <h3 className="text-3xl font-outfit font-black flex items-center gap-4 text-white uppercase tracking-widest drop-shadow-md">
+                                <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-inner">
+                                    <Sparkles className="w-8 h-8 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
+                                </div>
+                                Gemini AI Studio
+                            </h3>
+                            <a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-2xl font-bold transition-all backdrop-blur-md shadow-sm">
+                                <ExternalLink className="w-4 h-4" /> Open Gemini
+                            </a>
+                        </div>
+
+                        <p className="text-slate-400 mb-8 font-medium text-lg relative z-10">
+                            Generate context-aware prompts designed for <strong className="text-amber-400">Gemini AI</strong> to create epic tournament posters, result announcements, and schedule graphics.
+                        </p>
+
+                        <div className="grid md:grid-cols-3 gap-4 mb-8 relative z-10">
+                            <button onClick={() => generateAiPrompt('schedule')} className={`p-6 rounded-2xl border transition-all text-left group shadow-inner ${generatedPrompt.includes('Upcoming Schedule') ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-950/50 border-white/5 hover:border-white/20'}`}>
+                                <ImageIcon className={`w-6 h-6 mb-3 ${generatedPrompt.includes('Upcoming Schedule') ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'text-slate-500'}`} />
+                                <span className={`text-lg font-outfit font-black uppercase tracking-widest block mb-1 ${generatedPrompt.includes('Upcoming Schedule') ? 'text-blue-400' : 'text-slate-300'}`}>Schedule Poster</span>
+                                <span className="text-xs font-bold text-slate-500">Upcoming unplayed matches</span>
+                            </button>
+                            <button onClick={() => generateAiPrompt('results')} className={`p-6 rounded-2xl border transition-all text-left group shadow-inner ${generatedPrompt.includes('Latest Results') ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-950/50 border-white/5 hover:border-white/20'}`}>
+                                <Trophy className={`w-6 h-6 mb-3 ${generatedPrompt.includes('Latest Results') ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-slate-500'}`} />
+                                <span className={`text-lg font-outfit font-black uppercase tracking-widest block mb-1 ${generatedPrompt.includes('Latest Results') ? 'text-emerald-400' : 'text-slate-300'}`}>Results Poster</span>
+                                <span className="text-xs font-bold text-slate-500">Recent completed matches</span>
+                            </button>
+                            <button onClick={() => generateAiPrompt('standings')} className={`p-6 rounded-2xl border transition-all text-left group shadow-inner ${generatedPrompt.includes('Tournament Update') ? 'bg-purple-500/10 border-purple-500/30' : 'bg-slate-950/50 border-white/5 hover:border-white/20'}`}>
+                                <BarChart3 className={`w-6 h-6 mb-3 ${generatedPrompt.includes('Tournament Update') ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'text-slate-500'}`} />
+                                <span className={`text-lg font-outfit font-black uppercase tracking-widest block mb-1 ${generatedPrompt.includes('Tournament Update') ? 'text-purple-400' : 'text-slate-300'}`}>Update Poster</span>
+                                <span className="text-xs font-bold text-slate-500">General tournament status</span>
+                            </button>
+                        </div>
+
+                        {generatedPrompt && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="relative z-10 space-y-4">
+                                <div className="space-y-4">
+                                    <label className="text-sm font-outfit font-black text-slate-400 uppercase tracking-[0.2em] ml-2 block">Generated Prompt</label>
+                                    <div className="relative group">
+                                        <textarea 
+                                            readOnly 
+                                            value={generatedPrompt} 
+                                            className="w-full h-48 bg-[#0A0D14] border border-amber-500/20 rounded-2xl p-6 pb-20 text-white font-medium text-sm outline-none resize-none shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)] leading-relaxed"
+                                        />
+                                        <div className="absolute bottom-4 right-4 flex flex-wrap gap-3 pointer-events-none">
+                                            <button 
+                                                onClick={copyPrompt}
+                                                className="pointer-events-auto p-3 sm:px-5 bg-[#131A2B] hover:bg-[#1e293b] text-slate-300 rounded-xl border border-white/10 shadow-lg transition-all flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest"
+                                            >
+                                                <Copy className="w-4 h-4" /> <span className="hidden sm:inline">Copy Prompt</span>
+                                            </button>
+                                            <button 
+                                                onClick={handleGenerateImage}
+                                                disabled={isGenerating}
+                                                className="pointer-events-auto p-3 sm:px-6 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl border border-amber-400/50 shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed group/gen"
+                                            >
+                                                <ImageIcon className={`w-4 h-4 ${isGenerating ? 'animate-bounce' : 'group-hover/gen:rotate-12 transition-transform'}`} /> 
+                                                <span className="hidden sm:inline">{isGenerating ? 'Rendering Magic...' : 'Generate Art (Free)'}</span>
+                                                <span className="sm:hidden">{isGenerating ? '...' : 'Generate'}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                            </motion.div>
+                        )}
+
+                        {/* Generated Image Preview */}
+                        <AnimatePresence>
+                            {(isGenerating || generatedImageUrl) && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, height: 0 }}
+                                    animate={{ opacity: 1, scale: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, scale: 0.95, height: 0 }}
+                                    className="relative z-10 mt-10 origin-top"
+                                >
+                                    <h4 className="text-sm font-outfit font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
+                                        <Sparkles className="w-4 h-4 text-amber-400" /> AI Output
+                                    </h4>
+                                    
+                                    <div className="w-full max-w-lg mx-auto relative rounded-[32px] overflow-hidden bg-[#0A0D14] border border-white/10 aspect-[3/4] flex items-center justify-center shadow-2xl group/img">
+                                        {/* Background effect */}
+                                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-purple-500/5 pointer-events-none"></div>
+                                        
+                                        {isGenerating ? (
+                                            <div className="flex flex-col items-center gap-6 relative z-10">
+                                                <div className="relative w-20 h-20">
+                                                    <div className="absolute inset-0 border-4 border-amber-500/20 rounded-full"></div>
+                                                    <div className="absolute inset-0 border-4 border-amber-500 rounded-full animate-spin border-t-transparent"></div>
+                                                    <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-amber-400 animate-pulse" />
+                                                </div>
+                                                <div className="text-amber-400 font-outfit font-black tracking-widest uppercase animate-pulse text-sm">Rendering via Pollinations AI...</div>
+                                            </div>
+                                        ) : generatedImageUrl ? (
+                                            <>
+                                                <img 
+                                                    src={generatedImageUrl} 
+                                                    alt="AI Generated Tournament Poster" 
+                                                    className="w-full h-full object-cover relative z-10"
+                                                    onLoad={() => setIsGenerating(false)}
+                                                />
+                                                <div className="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-[#0A0D14] via-[#0A0D14]/60 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end justify-center pb-8 z-20">
+                                                    <a 
+                                                        href={generatedImageUrl} 
+                                                        download="pestour-ai-poster.jpg"
+                                                        className="px-6 py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-outfit font-black uppercase tracking-widest flex items-center gap-3 shadow-[0_0_30px_rgba(245,158,11,0.6)] transition-all transform hover:scale-105"
+                                                    >
+                                                        <ExternalLink className="w-5 h-5" /> Save Image
+                                                    </a>
+                                                </div>
+                                            </>
+                                        ) : null}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </motion.div>
                 )}
             </AnimatePresence>

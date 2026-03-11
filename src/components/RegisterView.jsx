@@ -1,19 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { ref, onValue, push, serverTimestamp } from 'firebase/database';
-import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Users, Zap, Star, DollarSign, Upload, X } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Users, Zap, Star, DollarSign, Upload, X, Search, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Swal from 'sweetalert2';
 
 export default function RegisterView({ isAdmin, isOpen = true }) {
     const [registrations, setRegistrations] = useState([]);
+    const BASE_TEAMS = [
+        'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Argentina', 'Armenia', 'Australia', 'Austria',
+        'Azerbaijan', 'Bahrain', 'Bangladesh', 'Belarus', 'Belgium', 'Bhutan', 'Bolivia',
+        'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'British Virgin Islands', 'Brunei Darussalam',
+        'Bulgaria', 'Burkina Faso', 'Cambodia', 'Cameroon', 'Canada', 'Cape Verde', 'Cayman Islands',
+        'Chad', 'Chile', 'China PR', 'Colombia', 'Comoros', 'Congo DR', 'Costa Rica', 'Cote d\'Ivoire',
+        'Croatia', 'Cyprus', 'Czech Republic', 'Denmark', 'Dominican Republic', 'Ecuador', 'Egypt',
+        'El Salvador', 'England', 'Equatorial Guinea', 'Estonia', 'Eswatini', 'Faroe Islands',
+        'Finland', 'France', 'Georgia', 'Germany', 'Ghana', 'Gibraltar', 'Greece', 'Guam', 'Guinea',
+        'Guyana', 'Honduras', 'Hong Kong (China)', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran',
+        'Iraq', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Korea Republic',
+        'Kosovo', 'Kuwait', 'Kyrgyz Republic', 'Laos', 'Latvia', 'Lebanon', 'Libya', 'Liechtenstein',
+        'Lithuania', 'Luxembourg', 'Macau', 'Madagascar', 'Malaysia', 'Maldives', 'Mali', 'Malta',
+        'Mauritius', 'Mexico', 'Moldova', 'Mongolia', 'Montenegro', 'Morocco', 'Myanmar', 'Nepal',
+        'Netherlands', 'New Zealand', 'Nigeria', 'North Macedonia', 'Northern Ireland', 'Norway',
+        'Oman', 'Pakistan', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland',
+        'Portugal', 'Puerto Rico', 'Qatar', 'Republic of Ireland', 'Romania', 'Russia', 'San Marino',
+        'Saudi Arabia', 'Scotland', 'Senegal', 'Serbia', 'Seychelles', 'Slovakia', 'Slovenia',
+        'Somalia', 'South Africa', 'South Sudan', 'Spain', 'Sri Lanka', 'Sweden', 'Switzerland',
+        'Syria', 'Tajikistan', 'Tanzania', 'Thailand', 'Trinidad and Tobago', 'Tunisia', 'Turkey',
+        'Turks and Caicos Islands', 'UAE', 'USA', 'US Virgin Islands', 'Ukraine', 'Uruguay',
+        'Uzbekistan', 'Venezuela', 'Vietnam', 'Wales', 'Zambia', 'Zimbabwe'
+    ].sort();
+
     const [name, setName] = useState('');
-    const [team, setTeam] = useState('');
-    const [logoPreview, setLogoPreview] = useState(null);
-    const [logoBase64, setLogoBase64] = useState('');
+    const [baseTeam, setBaseTeam] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const dropdownRef = useRef(null);
     const [paidConfirm, setPaidConfirm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
-    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
         const registrationsRef = ref(db, 'registrations');
@@ -32,34 +56,63 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
         return () => unsubscribe();
     }, []);
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setErrorMessage('');
-        setSuccessMessage('');
+
+        const swalConfig = {
+            background: '#131A2B',
+            color: '#fff',
+            backdrop: `rgba(10, 13, 20, 0.85)`,
+            timer: 3500,
+            timerProgressBar: true,
+            showConfirmButton: true,
+            customClass: {
+                popup: 'border border-white/10 rounded-[32px] shadow-2xl',
+                confirmButton: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-outfit font-black uppercase tracking-widest rounded-2xl px-10 py-4 transition-all outline-none focus:ring-4 focus:ring-blue-500/50',
+                title: 'font-outfit font-black text-3xl tracking-wide',
+                htmlContainer: 'font-medium text-slate-300 text-lg'
+            },
+            buttonsStyling: false
+        };
 
         if (!name.trim()) {
-            setErrorMessage('In-Game Name is required.');
+            Swal.fire({ ...swalConfig, title: 'Notice', text: 'In-Game Name is required.', icon: 'info' });
             return;
         }
-        if (!team.trim()) {
-            setErrorMessage('Team / Clan name is required.');
-            return;
-        }
-        if (!logoBase64) {
-            setErrorMessage('Please upload your Base Team logo.');
+        if (!baseTeam.trim()) {
+            Swal.fire({ ...swalConfig, title: 'Notice', text: 'Base Team (Country) is required.', icon: 'info' });
             return;
         }
         if (!paidConfirm) {
-            setErrorMessage('Please confirm you have paid the $2 registration fee.');
+            Swal.fire({ ...swalConfig, title: 'Payment Required', text: 'Please confirm you have paid the registration fee before submitting.', icon: 'info' });
             return;
         }
 
-        const exists = registrations.some(
+        const nameExists = registrations.some(
             reg => reg.name.toLowerCase() === name.trim().toLowerCase()
         );
 
-        if (exists) {
-            setErrorMessage('This name is already registered!');
+        if (nameExists) {
+            Swal.fire({ ...swalConfig, title: 'Name Taken!', text: 'This player name is already registered by someone else!', icon: 'warning' });
+            return;
+        }
+
+        const teamExists = registrations.some(
+            reg => reg.baseTeam === baseTeam
+        );
+
+        if (teamExists) {
+            Swal.fire({ ...swalConfig, title: 'Country Taken!', text: `${baseTeam} has already been claimed by another player! Please choose a different country.`, icon: 'warning' });
             return;
         }
 
@@ -68,22 +121,23 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
             const registrationsRef = ref(db, 'registrations');
             await push(registrationsRef, {
                 name: name.trim(),
-                team: team.trim(),
-                logo: logoBase64,
+                baseTeam: baseTeam.trim(),
                 timestamp: serverTimestamp(),
                 status: 'pending'
             });
 
-            setSuccessMessage('Registration successful! Awaiting admin approval.');
+            Swal.fire({
+                ...swalConfig,
+                title: 'Registration Sent!',
+                text: 'Your registration was successful. Please await admin approval.',
+                icon: 'success'
+            });
             setName('');
-            setTeam('');
-            setLogoPreview(null);
-            setLogoBase64('');
+            setBaseTeam('');
             setPaidConfirm(false);
-            setTimeout(() => setSuccessMessage(''), 5000);
         } catch (error) {
             console.error("Registration error:", error);
-            setErrorMessage('Registration failed. Please try again.');
+            Swal.fire({ ...swalConfig, title: 'Error', text: 'Registration failed. Please try again.', icon: 'error' });
         } finally {
             setIsSubmitting(false);
         }
@@ -214,24 +268,6 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                             </div>
                         </div>
 
-                        {successMessage && (
-                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-4 relative overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.15)]">
-                                <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0 relative z-10">
-                                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                                </div>
-                                <p className="text-base font-bold text-emerald-400 relative z-10">{successMessage}</p>
-                            </motion.div>
-                        )}
-
-                        {errorMessage && (
-                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 p-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-4 relative overflow-hidden shadow-[0_0_30px_rgba(244,63,94,0.15)]">
-                                <div className="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center flex-shrink-0 relative z-10">
-                                    <ShieldAlert className="w-6 h-6 text-rose-400" />
-                                </div>
-                                <p className="text-base font-bold text-rose-400 relative z-10">{errorMessage}</p>
-                            </motion.div>
-                        )}
-
                         {isOpen ? (
                             <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
                                 {/* Player Name */}
@@ -246,77 +282,70 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                     </div>
                                 </div>
 
-                                {/* Team / Clan */}
-                                <div className="space-y-3">
+                                {/* Base Team */}
+                                <div className="space-y-3" ref={dropdownRef}>
                                     <label className="text-xs font-outfit font-black text-slate-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
-                                        Team / Clan <span className="text-rose-400">*</span>
+                                        Base Team (Country) <span className="text-rose-400">*</span>
                                     </label>
                                     <div className="relative group">
-                                        <input type="text" value={team} onChange={(e) => setTeam(e.target.value)}
-                                            placeholder="e.g. Team Liquid"
-                                            className="w-full bg-[#131A2B]/50 backdrop-blur-md border border-white/10 text-white px-6 py-5 rounded-2xl outline-none focus:border-blue-500/50 focus:bg-[#131A2B]/80 transition-all font-bold placeholder:text-[#334155] text-lg shadow-inner" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                            className={`w-full bg-[#131A2B]/50 backdrop-blur-md border ${isDropdownOpen ? 'border-blue-500/50 bg-[#131A2B]/80' : 'border-white/10'} text-white px-6 py-5 rounded-2xl flex items-center justify-between transition-all font-bold text-lg shadow-inner cursor-pointer text-left`}
+                                        >
+                                            <span className={baseTeam ? 'text-white' : 'text-[#334155]'}>
+                                                {baseTeam || 'Select a Country'}
+                                            </span>
+                                            <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {/* Dropdown Menu */}
+                                        <AnimatePresence>
+                                            {isDropdownOpen && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="absolute z-50 w-full mt-2 bg-[#0A0D14]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                                                >
+                                                    <div className="p-3 border-b border-white/10 relative">
+                                                        <Search className="w-5 h-5 text-slate-400 absolute left-6 top-1/2 -translate-y-1/2" />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Search country..."
+                                                            value={searchQuery}
+                                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                                            className="w-full bg-[#131A2B] text-white pl-10 pr-4 py-3 rounded-xl outline-none border border-transparent focus:border-blue-500/30 transition-all text-sm font-bold placeholder:text-slate-500"
+                                                            autoFocus
+                                                        />
+                                                    </div>
+                                                    <div className="max-h-60 overflow-y-auto no-scrollbar py-2">
+                                                        {BASE_TEAMS.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
+                                                            BASE_TEAMS.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())).map(country => (
+                                                                <button
+                                                                    key={country}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setBaseTeam(country);
+                                                                        setIsDropdownOpen(false);
+                                                                        setSearchQuery('');
+                                                                    }}
+                                                                    className={`w-full text-left px-5 py-3 hover:bg-blue-500/10 transition-colors font-bold ${baseTeam === country ? 'text-blue-400 bg-blue-500/5' : 'text-slate-300'}`}
+                                                                >
+                                                                    {country}
+                                                                </button>
+                                                            ))
+                                                        ) : (
+                                                            <div className="px-5 py-6 text-center text-slate-500 font-bold text-sm">
+                                                                No countries found
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
-                                </div>
-
-                                {/* Base Team Logo Upload */}
-                                <div className="space-y-4">
-                                    <label className="text-xs font-outfit font-black text-slate-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
-                                        <Upload className="w-4 h-4" /> Base Team Logo <span className="text-rose-400">*</span>
-                                    </label>
-                                    <p className="text-[11px] text-slate-500 font-bold ml-2 -mt-2">PNG or JPG, transparent background recommended</p>
-
-                                    {logoPreview ? (
-                                        <div className="flex items-center gap-5 p-5 bg-[#131A2B]/50 border border-blue-500/30 rounded-2xl backdrop-blur-md">
-                                            <div className="w-20 h-20 rounded-2xl bg-[#0A0D14] border border-white/5 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner p-2">
-                                                <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-base font-bold text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]">Logo uploaded successfully</p>
-                                                <p className="text-xs text-slate-500 font-bold mt-1">Click the X to remove</p>
-                                            </div>
-                                            <button type="button" onClick={() => { setLogoPreview(null); setLogoBase64(''); }}
-                                                className="w-10 h-10 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 shadow-sm flex items-center justify-center text-rose-400 hover:text-rose-300 transition-all">
-                                                <X className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <label className="flex flex-col items-center justify-center gap-4 p-10 bg-[#131A2B]/30 border-2 border-dashed border-white/10 hover:border-blue-500/40 hover:bg-blue-500/5 rounded-3xl cursor-pointer transition-all group backdrop-blur-md">
-                                            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:scale-110 transition-transform shadow-inner">
-                                                <Upload className="w-7 h-7 text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]" />
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-base font-bold text-slate-400 group-hover:text-blue-300 transition-colors">Click to browse or drag and drop</p>
-                                                <p className="text-xs text-slate-500 font-bold mt-2 uppercase tracking-wide">.PNG or .JPG • Max 2MB</p>
-                                            </div>
-                                            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
-                                                onChange={(e) => {
-                                                    const file = e.target.files[0];
-                                                    if (!file) return;
-                                                    if (file.size > 2 * 1024 * 1024) {
-                                                        setErrorMessage('Logo must be under 2MB');
-                                                        return;
-                                                    }
-                                                    const reader = new FileReader();
-                                                    reader.onload = (ev) => {
-                                                        const img = new window.Image();
-                                                        img.onload = () => {
-                                                            const canvas = document.createElement('canvas');
-                                                            canvas.width = 128;
-                                                            canvas.height = 128;
-                                                            const ctx = canvas.getContext('2d');
-                                                            ctx.drawImage(img, 0, 0, 128, 128);
-                                                            const resized = canvas.toDataURL('image/png', 0.8);
-                                                            setLogoPreview(resized);
-                                                            setLogoBase64(resized);
-                                                        };
-                                                        img.src = ev.target.result;
-                                                    };
-                                                    reader.readAsDataURL(file);
-                                                    e.target.value = '';
-                                                }}
-                                            />
-                                        </label>
-                                    )}
                                 </div>
 
                                 {/* Registration Fee */}

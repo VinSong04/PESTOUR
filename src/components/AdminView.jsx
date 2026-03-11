@@ -610,7 +610,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             animate="visible"
         >
             {/* Header Bar */}
-            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-slate-900/80 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden group">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 24 }} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-slate-900/80 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[80px] pointer-events-none mix-blend-screen group-hover:bg-blue-500/20 transition-all duration-700"></div>
                 <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-600/10 rounded-full blur-[80px] pointer-events-none mix-blend-screen group-hover:bg-purple-500/20 transition-all duration-700"></div>
 
@@ -643,7 +643,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             </motion.div>
 
             {/* Tab Navigation */}
-            <motion.div variants={itemVariants} className="flex gap-2 bg-slate-900/50 p-2 rounded-[24px] border border-white/5 overflow-x-auto no-scrollbar backdrop-blur-xl">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.1 }} className="flex gap-2 bg-slate-900/50 p-2 rounded-[24px] border border-white/5 overflow-x-auto no-scrollbar backdrop-blur-xl">
                 {TABS.map(tab => {
                     const isActive = activeTab === tab.id;
                     const TabIcon = tab.icon;
@@ -659,7 +659,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                             <TabIcon className={`w-5 h-5 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]' : ''}`} />
                             <span className="relative z-10">{tab.label}</span>
                             {tab.id === 'danger' && <span className="w-2 h-2 rounded-full bg-rose-500 ml-2 shadow-[0_0_10px_rgba(244,63,94,0.6)]"></span>}
-                            {isActive && <motion.div layoutId="activeTabAdmin" className="absolute inset-0 bg-blue-500/10 mix-blend-screen" border-white border-2></motion.div>}
+                            {isActive && <motion.div layoutId="activeTabAdmin" className="absolute inset-0 bg-blue-500/10 mix-blend-screen border-2 border-white/10 rounded-[18px]"></motion.div>}
                         </button>
                     );
                 })}

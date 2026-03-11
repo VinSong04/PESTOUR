@@ -55,23 +55,47 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     const approvedPlayers = registrations.filter(r => r.status === 'approved');
 
     const handleDrawGroups = () => {
-        if (approvedPlayers.length < 12) {
-            alert(`Need 12 approved players. Currently: ${approvedPlayers.length}`);
+        if (approvedPlayers.length < 2) {
+            alert(`Need at least 2 approved players. Currently: ${approvedPlayers.length}`);
             return;
         }
-        if (!window.confirm('Randomly assign 12 players into Groups A, B, C and reset matches?')) return;
+        if (!window.confirm(`Randomly assign ${approvedPlayers.length} players into dynamic groups and reset matches?`)) return;
 
         const shuffled = [...approvedPlayers].sort(() => Math.random() - 0.5);
-        const groups = ['A', 'B', 'C'];
+
+        // Dynamic group assignment. Target groups of ~4 players.
+        let numGroups = Math.max(1, Math.ceil(approvedPlayers.length / 4));
+        const groups = Array.from({ length: numGroups }, (_, i) => String.fromCharCode(65 + i));
+
         const newPlayers = [];
-        groups.forEach((g, gi) => {
-            for (let i = 0; i < 4; i++) {
-                const player = shuffled[gi * 4 + i];
-                newPlayers.push({ group: g, id: `${g}${i + 1}`, name: player.name, logo: player.baseTeam || player.logo || '' });
+        shuffled.forEach((player, i) => {
+            const g = groups[i % numGroups];
+            const pCount = newPlayers.filter(p => p.group === g).length + 1;
+            newPlayers.push({ group: g, id: `${g}${pCount}`, name: player.name, logo: player.baseTeam || player.logo || '' });
+        });
+
+        // Dynamic match generation (round-robin per group)
+        const newMatches = [];
+        groups.forEach(g => {
+            const grpPlayers = newPlayers.filter(p => p.group === g);
+            for (let i = 0; i < grpPlayers.length; i++) {
+                for (let j = i + 1; j < grpPlayers.length; j++) {
+                    newMatches.push({
+                        id: `M-${g}${i + 1}-${j + 1}`,
+                        groupId: g,
+                        p1Id: grpPlayers[i].id,
+                        p2Id: grpPlayers[j].id,
+                        played: false,
+                        g1: { p1: null, p2: null },
+                        g2: { p1: null, p2: null },
+                        g3: { p1: null, p2: null }
+                    });
+                }
             }
         });
-        updateData({ ...data, players: newPlayers, matches: INITIAL_MATCHES, bracket: [] });
-        alert('Groups drawn successfully!');
+
+        updateData({ ...data, players: newPlayers, matches: newMatches, bracket: [] });
+        alert('Groups and matches drawn successfully!');
     };
 
     const handleLogin = async (e) => {
@@ -202,8 +226,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
 
     const statCards = [
         { label: 'Registrations', value: totalRegistrations, icon: UserPlus, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', shadow: 'shadow-[0_0_30px_rgba(251,191,36,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]' },
-        { label: 'Approved', value: approvedPlayers.length, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', shadow: 'shadow-[0_0_30px_rgba(16,185,129,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]' },
-        { label: 'Roster Filled', value: `${filledPlayers}/12`, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', shadow: 'shadow-[0_0_30px_rgba(96,165,250,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]' },
+        { label: 'Roster Approved', value: approvedPlayers.length, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', shadow: 'shadow-[0_0_30px_rgba(96,165,250,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]' },
         { label: 'Matches Played', value: `${playedMatches}/${totalMatches}`, icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', shadow: 'shadow-[0_0_30px_rgba(168,85,247,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]' },
     ];
 
@@ -469,13 +492,16 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                             </div>
 
                             <div className="grid md:grid-cols-3 gap-8 relative z-10">
-                                {['A', 'B', 'C'].map((grp, idx) => {
+                                {[...new Set(players.map(p => p.group))].sort().map((grp, idx) => {
                                     const groupColors = [
                                         'from-blue-500/10 to-transparent border-blue-500/20 text-blue-400',
                                         'from-purple-500/10 to-transparent border-purple-500/20 text-purple-400',
-                                        'from-amber-500/10 to-transparent border-amber-500/20 text-amber-400'
+                                        'from-amber-500/10 to-transparent border-amber-500/20 text-amber-400',
+                                        'from-emerald-500/10 to-transparent border-emerald-500/20 text-emerald-400',
+                                        'from-rose-500/10 to-transparent border-rose-500/20 text-rose-400',
+                                        'from-cyan-500/10 to-transparent border-cyan-500/20 text-cyan-400'
                                     ];
-                                    const colorCls = groupColors[idx];
+                                    const colorCls = groupColors[idx % groupColors.length];
 
                                     return (
                                         <div key={grp} className="bg-slate-950/60 p-6 rounded-[32px] border border-white/5 shadow-inner">
@@ -518,25 +544,25 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
 
                             <h3 className="text-3xl font-outfit font-black mb-6 flex items-center gap-4 text-white uppercase tracking-widest relative z-10 drop-shadow-md">
                                 <div className="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 shadow-inner">
-                                    <Shuffle className="w-8 h-8 text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+                                    <Users className="w-8 h-8 text-emerald-400 group-hover:scale-110 transition-transform drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                                 </div>
-                                Group Draw
+                                <span>{approvedPlayers.length} Approved</span>
                             </h3>
-                            <p className="text-slate-400 font-medium text-lg max-w-2xl leading-relaxed mb-8 relative z-10">
-                                Randomly assign <strong className="text-emerald-400">12 approved</strong> registrations into Groups A, B, C. <br />
-                                <span className="text-rose-400/80 text-sm">Note: This also resets all match scores.</span>
+                            <p className="text-slate-400 mt-3 font-medium text-lg max-w-sm">
+                                Randomly assign <strong className="text-emerald-400">all currently approved</strong> registrations into dynamic groups. <br />
+                                <span className="text-sm font-bold text-amber-500/80 uppercase tracking-widest block mt-2">Warning: Resets match history</span>
                             </p>
 
-                            <div className="flex flex-col sm:flex-row items-center gap-6 relative z-10 bg-slate-950/50 p-6 rounded-3xl border border-white/5 shadow-inner">
-                                <div className={`flex items-center justify-center gap-3 px-6 py-4 rounded-2xl text-lg font-outfit font-black tracking-widest uppercase shadow-sm ${approvedPlayers.length >= 12 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
-                                    <Users className="w-6 h-6" /> {approvedPlayers.length} / 12 Approved
+                            <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto relative z-10">
+                                <div className={`flex items-center justify-center gap-3 px-6 py-4 rounded-2xl text-lg font-outfit font-black tracking-widest uppercase shadow-sm ${approvedPlayers.length >= 2 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                                    <Users className="w-6 h-6" /> {approvedPlayers.length} Approved
                                 </div>
                                 <motion.button
-                                    whileHover={approvedPlayers.length >= 12 ? { scale: 1.02 } : {}}
-                                    whileTap={approvedPlayers.length >= 12 ? { scale: 0.98 } : {}}
-                                    onClick={handleDrawGroups} disabled={approvedPlayers.length < 12}
-                                    className={`flex-1 w-full py-5 rounded-2xl font-outfit font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 text-lg shadow-lg ${approvedPlayers.length >= 12 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-[0_0_40px_rgba(16,185,129,0.4)]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>
-                                    <Shuffle className="w-6 h-6" /> Randomize Groups
+                                    whileHover={approvedPlayers.length >= 2 ? { scale: 1.02 } : {}}
+                                    whileTap={approvedPlayers.length >= 2 ? { scale: 0.98 } : {}}
+                                    onClick={handleDrawGroups} disabled={approvedPlayers.length < 2}
+                                    className={`flex-1 w-full py-5 rounded-2xl font-outfit font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 text-lg shadow-lg ${approvedPlayers.length >= 2 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-[0_0_40px_rgba(16,185,129,0.4)]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>
+                                    <Shuffle className="w-6 h-6" /> Auto Draw Groups
                                 </motion.button>
                             </div>
                         </div>

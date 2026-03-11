@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db, auth } from './firebase';
+import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { ref, onValue, set } from 'firebase/database';
 import { INITIAL_DATA } from './utils/initialData';
 import { calculateStandings } from './utils/logic';
@@ -63,15 +64,13 @@ export default function App() {
         let unsubscribeDb;
         let unsubscribeAuth;
 
-        import('firebase/auth').then(({ onAuthStateChanged, signInAnonymously }) => {
-            unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    setIsAdmin(!user.isAnonymous);
-                } else {
-                    setIsAdmin(false);
-                    signInAnonymously(auth).catch(console.error);
-                }
-            });
+        unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setIsAdmin(!user.isAnonymous);
+            } else {
+                setIsAdmin(false);
+                signInAnonymously(auth).catch(console.error);
+            }
         });
 
         const dbRef = ref(db, 'tournament');
@@ -86,10 +85,17 @@ export default function App() {
                 val.bracket = val.bracket || [];
                 setData(val);
             } else {
-                // Initialize if empty
-                set(dbRef, INITIAL_DATA);
+                // Initialize if empty. We wrap in try-catch in case write permissions are disabled for guests.
+                try {
+                    set(dbRef, INITIAL_DATA);
+                } catch (e) { console.error("Could not write initial data", e); }
                 setData(INITIAL_DATA);
             }
+            setLoading(false);
+        }, (error) => {
+            console.error("Firebase DB Error:", error);
+            // Fallback so it doesn't hang infinitely
+            setData(INITIAL_DATA);
             setLoading(false);
         });
 

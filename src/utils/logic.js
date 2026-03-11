@@ -65,23 +65,37 @@ export const calculateStandings = (players, matches) => {
         return a.name.localeCompare(b.name);
     };
 
-    const groups = { A: [], B: [], C: [] };
-    Object.values(stats).forEach(p => groups[p.group].push(p));
-
-    groups.A.sort(sortFn);
-    groups.B.sort(sortFn);
-    groups.C.sort(sortFn);
-
-    const thirds = [groups.A[2], groups.B[2], groups.C[2]].filter(Boolean).sort(sortFn);
-
-    let qualified = [];
-    ['A', 'B', 'C'].forEach(g => {
-        if (groups[g][0]) qualified.push({ ...groups[g][0], seedType: `${g}1` });
-        if (groups[g][1]) qualified.push({ ...groups[g][1], seedType: `${g}2` });
+    const groups = {};
+    Object.values(stats).forEach(p => {
+        if (!groups[p.group]) groups[p.group] = [];
+        groups[p.group].push(p);
     });
 
-    if (thirds[0]) qualified.push({ ...thirds[0], seedType: 'Best3' });
-    if (thirds[1]) qualified.push({ ...thirds[1], seedType: 'Best3' });
+    Object.keys(groups).forEach(g => {
+        groups[g].sort(sortFn);
+    });
+
+    let qualified = [];
+    // To ensure exactly 8 players advance to QF regardless of number of groups:
+    const allPlayers = Object.values(groups).flat();
+
+    // Assign a local standing rank within their own group
+    Object.values(groups).forEach(grpPlayers => {
+        grpPlayers.forEach((p, idx) => { p.groupRank = idx + 1; });
+    });
+
+    // Sort globally: Group Rank first, then pts, gd, gf
+    allPlayers.sort((a, b) => {
+        if (a.groupRank !== b.groupRank) return a.groupRank - b.groupRank;
+        if (b.pts !== a.pts) return b.pts - a.pts;
+        if (b.gd !== a.gd) return b.gd - a.gd;
+        if (b.gf !== a.gf) return b.gf - a.gf;
+        return a.name.localeCompare(b.name);
+    });
+
+    qualified = allPlayers.slice(0, 8).map(p => ({ ...p, seedType: `Seed ${p.groupRank}` }));
+
+    const thirds = Object.values(groups).map(g => g[2]).filter(Boolean).sort(sortFn);
 
     qualified.sort(sortFn);
 

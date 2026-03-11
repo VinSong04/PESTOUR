@@ -94,9 +94,10 @@ export default function StandingsView({ standingsData, bracketData }) {
             }}
         >
             <div className="grid lg:grid-cols-2 gap-8 mt-4">
-                {renderTable(standingsData.groups.A, "GROUP A", false, "bg-blue-500")}
-                {renderTable(standingsData.groups.B, "GROUP B", false, "bg-amber-500")}
-                {renderTable(standingsData.groups.C, "GROUP C", false, "bg-emerald-500")}
+                {Object.keys(standingsData.groups).sort().map((grp, idx) => {
+                    const colors = ["bg-blue-500", "bg-amber-500", "bg-emerald-500", "bg-rose-500", "bg-purple-500", "bg-cyan-500"];
+                    return <div key={grp}>{renderTable(standingsData.groups[grp], `GROUP ${grp}`, false, colors[idx % colors.length])}</div>;
+                })}
             </div>
 
             {/* Knockout Bracket on Standings Page */}

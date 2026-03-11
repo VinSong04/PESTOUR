@@ -144,7 +144,6 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
     };
 
     const approvedCount = registrations.filter(r => r.status === 'approved').length;
-    const slotsLeft = Math.max(0, 12 - approvedCount);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -233,25 +232,16 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                     <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Approved</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4 px-6 py-4 bg-[#0A0D14]/50 backdrop-blur-xl border border-white/5 rounded-3xl shadow-lg hover:bg-[#0A0D14]/80 transition-colors">
-                                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
-                                    <Zap className="w-6 h-6 text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-2xl font-outfit font-black text-white leading-none">{slotsLeft}</p>
-                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Slots Left</p>
-                                </div>
-                            </div>
                         </div>
                     )}
                 </div>
             </motion.div>
 
             {/* ===== MAIN CONTENT ===== */}
-            <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-2' : ''} gap-8 relative z-10`}>
+            <div className="flex flex-col items-center w-full relative z-10">
 
                 {/* ===== REGISTRATION FORM ===== */}
-                <motion.div variants={itemVariants} className="bg-[#0A0D14]/80 backdrop-blur-xl rounded-[40px] border border-white/5 shadow-2xl relative overflow-hidden group">
+                <motion.div variants={itemVariants} className="bg-[#0A0D14]/80 backdrop-blur-xl rounded-[40px] border border-white/5 shadow-2xl relative overflow-hidden group w-full max-w-2xl">
                     {/* Glow accents */}
                     <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent"></div>
                     <div className="absolute top-1/2 left-[-100px] w-96 h-96 bg-purple-500/5 blur-[100px] pointer-events-none rounded-full group-hover:bg-purple-500/10 transition-colors duration-700 mix-blend-screen"></div>

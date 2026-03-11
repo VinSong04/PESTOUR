@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, BarChart3, Gamepad2, BookOpen, Sun, Moon, UserPlus } from 'lucide-react';
+import { Home, BarChart3, Gamepad2, BookOpen, Sun, Moon, UserPlus, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../assets/pallet.jpg';
 export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted, lastUpdated }) {
@@ -131,6 +131,16 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                                 className={`transition-all p-2.5 rounded-xl border ${isLightMode ? 'text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'text-slate-400 border-white/10 bg-white/5 hover:text-white hover:bg-white/10'}`}
                             >
                                 {isLightMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                            </motion.button>
+
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setCurrentPage('admin')}
+                                className={`transition-all p-2.5 rounded-xl border ${currentPage === 'admin' ? 'text-rose-400 bg-rose-500/10 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.2)]' : 'text-slate-400 border-white/10 bg-white/5 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20'}`}
+                                title="Admin Panel"
+                            >
+                                <Lock className="w-5 h-5" />
                             </motion.button>
                         </div>
                     </div>

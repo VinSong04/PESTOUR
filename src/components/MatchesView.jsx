@@ -116,7 +116,7 @@ export default function MatchesView({ data, updateData, isAdmin }) {
 
                     {/* Group Filter */}
                     <div className="flex bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl w-full sm:w-auto border border-white/5 shadow-inner overflow-x-auto no-scrollbar">
-                        {['ALL', 'A', 'B', 'C', 'KNOCKOUT'].map(g => (
+                        {['ALL', ...[...new Set(data.matches.map(m => m.groupId))].filter(Boolean).sort(), 'KNOCKOUT'].map(g => (
                             <button
                                 key={g}
                                 onClick={() => setGroupFilter(g)}

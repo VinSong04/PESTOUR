@@ -143,8 +143,6 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
         }
     };
 
-    const approvedCount = registrations.filter(r => r.status === 'approved').length;
-
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -210,30 +208,6 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                     <p className="text-slate-400 text-lg sm:text-2xl font-medium mb-12 tracking-wide max-w-2xl">
                         Secure your spot in the ultimate eFootball showdown. Register now and claim your place.
                     </p>
-
-                    {/* Stats Row - Admin Only */}
-                    {isAdmin && (
-                        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-4">
-                            <div className="flex items-center gap-4 px-6 py-4 bg-[#0A0D14]/50 backdrop-blur-xl border border-white/5 rounded-3xl shadow-lg hover:bg-[#0A0D14]/80 transition-colors">
-                                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                                    <Users className="w-6 h-6 text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-2xl font-outfit font-black text-white leading-none">{registrations.length}</p>
-                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Registered</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 px-6 py-4 bg-[#0A0D14]/50 backdrop-blur-xl border border-white/5 rounded-3xl shadow-lg hover:bg-[#0A0D14]/80 transition-colors">
-                                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                                    <CheckCircle2 className="w-6 h-6 text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-2xl font-outfit font-black text-white leading-none">{approvedCount}</p>
-                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Approved</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </motion.div>
 

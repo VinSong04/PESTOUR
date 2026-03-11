@@ -162,231 +162,375 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         try { await update(ref(db, `registrations/${id}`), { status: 'approved' }); } catch (e) { console.error(e); }
     };
 
-    const [generatedPrompt, setGeneratedPrompt] = useState('');
     const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [renderProgress, setRenderProgress] = useState(0);
     const progressIntervalRef = useRef(null);
 
-    const generateAiPrompt = (type) => {
-        let promptText = "Create an epic, professional sports tournament poster. Style: Sharp geometric shapes like parallelograms and angled banners, split layout. Color scheme: bold reds, maroons, and white. Clean, modern typography. High-quality action photography of soccer players in the background. Inspired by professional Asian football league graphics (like Cambodian Premier League).\n\nDetails to include:\n";
+    const [posterType, setPosterType] = useState('');
 
-        if (type === 'schedule') {
-            const upNext = data.matches.filter(m => !m.played).slice(0, 5);
-            const matchLines = upNext.map(m => {
-                const p1 = data.players.find(p => p.id === m.p1Id)?.name || m.p1Id;
-                const p2 = data.players.find(p => p.id === m.p2Id)?.name || m.p2Id;
-                return `${p1} VS ${p2} at 18:00`;
-            }).join('\n');
-            promptText += `Title: "MATCH SCHEDULE" or "FIXTURE LIVE" at the top in elegant formatting.\nList the following matchups inside sharp, angled horizontal banners:\n${matchLines}`;
-        } else if (type === 'results') {
-            const recent = data.matches.filter(m => m.played).slice(-5);
-            const matchLines = recent.map(m => {
-                const p1 = data.players.find(p => p.id === m.p1Id)?.name || m.p1Id;
-                const p2 = data.players.find(p => p.id === m.p2Id)?.name || m.p2Id;
-                let s1 = 0, s2 = 0;
-                [m.g1, m.g2, m.g3].forEach(g => {
-                    if (g.p1 > g.p2) s1++; if (g.p2 > g.p1) s2++;
-                });
-                return `${p1} [${s1} - ${s2}] ${p2}`;
-            }).join('\n');
-            promptText += `Title: "MATCH RESULTS" or "SUMMARY" at the top.\nList the following final scores centered between the team names inside sharp horizontal boxes:\n${matchLines}`;
-        } else if (type === 'standings') {
-            promptText += `Title: "LEADERBOARD" or "TOP 6". Show a clean, well-organized ranking table inside a sleek graphical panel with red and white accents.`;
-        }
-
-        setGeneratedPrompt(promptText);
-        setGeneratedImageUrl(null);
-        setIsGenerating(false);
-    };
-
-    const handleGenerateImage = async () => {
-        if (!generatedPrompt) return;
-
+    const generatePoster = (type) => {
         setIsGenerating(true);
         setGeneratedImageUrl(null);
         setRenderProgress(0);
+        setPosterType(type);
 
-        // Progress simulation
         let progress = 0;
         const progressInterval = setInterval(() => {
-            progress += progress < 60 ? Math.random() * 8 : progress < 85 ? Math.random() * 3 : Math.random() * 0.5;
-            progress = Math.min(progress, 95);
+            progress += 15;
+            progress = Math.min(progress, 90);
             setRenderProgress(Math.round(progress));
-        }, 500);
+        }, 100);
         progressIntervalRef.current = progressInterval;
 
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+        // Load the logo
+        const logoImg = new Image();
+        logoImg.crossOrigin = 'anonymous';
+        logoImg.src = new URL('../assets/pallet.jpg', import.meta.url).href;
 
-        if (apiKey) {
-            // Try Gemini with available image models
-            for (const model of ['imagen-4.0-fast-generate-001', 'imagen-4.0-generate-001']) {
-                try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            instances: [{ prompt: generatedPrompt }],
-                            parameters: { sampleCount: 1, aspectRatio: "3:4" }
-                        })
-                    });
-
-                    if (!res.ok) {
-                        const errorData = await res.json();
-                        throw new Error(errorData?.error?.message || "Gemini API error");
-                    }
-
-                    const result = await res.json();
-                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                        clearInterval(progressInterval);
-                        setRenderProgress(100);
-                        setGeneratedImageUrl(`data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`);
-                        setIsGenerating(false);
-                        return;
-                    }
-                } catch (error) {
-                    console.warn(`Gemini ${model} failed:`, error.message);
-                }
-            }
-
-            // Try Gemini generateContent with image output
-            for (const model of ['gemini-2.5-flash-image', 'gemini-3.1-flash-image-preview']) {
-                try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: generatedPrompt }] }],
-                            generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
-                        })
-                    });
-
-                    if (!res.ok) throw new Error("API error");
-                    const result = await res.json();
-                    const parts = result?.candidates?.[0]?.content?.parts || [];
-                    const imagePart = parts.find(p => p.inlineData);
-                    if (imagePart) {
-                        clearInterval(progressInterval);
-                        setRenderProgress(100);
-                        setGeneratedImageUrl(`data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`);
-                        setIsGenerating(false);
-                        return;
-                    }
-                } catch (error) {
-                    console.warn(`Gemini ${model} failed:`, error.message);
-                }
-            }
-        }
-
-        // Ultimate fallback: Unsplash background + Canvas text overlay
-        try {
+        const drawPoster = (logo) => {
+            const W = 1080, H = 1440;
             const canvas = document.createElement('canvas');
-            canvas.width = 1080;
-            canvas.height = 1440;
+            canvas.width = W;
+            canvas.height = H;
             const ctx = canvas.getContext('2d');
 
-            // Load a sports background from Unsplash Source (no API key needed)
-            const bgImg = new Image();
-            bgImg.crossOrigin = 'anonymous';
-            bgImg.src = `https://source.unsplash.com/1080x1440/?soccer,football,stadium&${Date.now()}`;
+            // === BACKGROUND GRADIENT (CPL-style maroon/red) ===
+            const bg = ctx.createLinearGradient(0, 0, W, H);
+            bg.addColorStop(0, '#5b1a1a');
+            bg.addColorStop(0.3, '#8b2525');
+            bg.addColorStop(0.6, '#6b2020');
+            bg.addColorStop(1, '#3a0f0f');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, W, H);
 
-            bgImg.onload = () => {
-                // Draw background
-                ctx.drawImage(bgImg, 0, 0, 1080, 1440);
+            // Subtle overlay pattern (diagonal lines)
+            ctx.globalAlpha = 0.04;
+            for (let i = -H; i < W + H; i += 30) {
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + H, H);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
 
-                // Dark overlay
-                const gradient = ctx.createLinearGradient(0, 0, 0, 1440);
-                gradient.addColorStop(0, 'rgba(10,13,20,0.5)');
-                gradient.addColorStop(0.4, 'rgba(10,13,20,0.3)');
-                gradient.addColorStop(0.7, 'rgba(10,13,20,0.7)');
-                gradient.addColorStop(1, 'rgba(10,13,20,0.95)');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, 1080, 1440);
+            // Light gradient on top
+            const topGlow = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, W);
+            topGlow.addColorStop(0, 'rgba(255,200,150,0.12)');
+            topGlow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = topGlow;
+            ctx.fillRect(0, 0, W, H);
 
-                // Red accent bar
-                ctx.fillStyle = 'rgba(220, 38, 38, 0.9)';
-                ctx.fillRect(0, 200, 1080, 8);
-
-                // Title
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 72px Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.shadowColor = 'rgba(0,0,0,0.8)';
-                ctx.shadowBlur = 20;
-                ctx.fillText('PALLET EFOOTBALL', 540, 300);
-
-                // Subtitle
-                ctx.font = 'bold 36px Arial, sans-serif';
-                ctx.fillStyle = '#f59e0b';
-                ctx.fillText('TOURNAMENT 2026', 540, 360);
-
-                // Content lines from the prompt
-                ctx.font = 'bold 28px Arial, sans-serif';
-                ctx.fillStyle = '#e2e8f0';
-                ctx.shadowBlur = 10;
-                const lines = generatedPrompt.split('\n').filter(l => l.trim()).slice(2, 10);
-                lines.forEach((line, i) => {
-                    const cleanLine = line.substring(0, 50);
-                    ctx.fillText(cleanLine, 540, 500 + i * 60);
-                });
-
-                // Bottom accent
-                ctx.fillStyle = 'rgba(220, 38, 38, 0.9)';
-                ctx.fillRect(0, 1380, 1080, 60);
-                ctx.font = 'bold 24px Arial, sans-serif';
-                ctx.fillStyle = '#ffffff';
-                ctx.shadowBlur = 0;
-                ctx.fillText('⚽ PES TOUR • LEGENDS START HERE', 540, 1415);
-
-                clearInterval(progressInterval);
-                setRenderProgress(100);
-                setGeneratedImageUrl(canvas.toDataURL('image/jpeg', 0.95));
-                setIsGenerating(false);
+            // === HELPER FUNCTIONS ===
+            const roundRect = (x, y, w, h, r) => {
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + w - r, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                ctx.lineTo(x + w, y + h - r);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                ctx.lineTo(x + r, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                ctx.lineTo(x, y + r);
+                ctx.quadraticCurveTo(x, y, x + r, y);
+                ctx.closePath();
             };
 
-            bgImg.onerror = () => {
-                // Even if Unsplash fails, generate a pure gradient poster
-                const grad = ctx.createLinearGradient(0, 0, 1080, 1440);
-                grad.addColorStop(0, '#1e1b4b');
-                grad.addColorStop(0.5, '#7f1d1d');
-                grad.addColorStop(1, '#0f172a');
-                ctx.fillStyle = grad;
-                ctx.fillRect(0, 0, 1080, 1440);
+            const drawSkewedBanner = (x, y, w, h, color) => {
+                const skew = 15;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(x + skew, y);
+                ctx.lineTo(x + w, y);
+                ctx.lineTo(x + w - skew, y + h);
+                ctx.lineTo(x, y + h);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.restore();
+            };
 
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 72px Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('PALLET EFOOTBALL', 540, 400);
-                ctx.font = 'bold 36px Arial, sans-serif';
-                ctx.fillStyle = '#f59e0b';
-                ctx.fillText('TOURNAMENT 2026', 540, 460);
+            // === HEADER (Logo + Title) ===
+            // Logo circle background
+            if (logo) {
+                ctx.save();
+                roundRect(40, 30, 100, 100, 20);
+                ctx.clip();
+                ctx.drawImage(logo, 40, 30, 100, 100);
+                ctx.restore();
+                // Logo border
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 2;
+                roundRect(40, 30, 100, 100, 20);
+                ctx.stroke();
+            }
 
-                const lines = generatedPrompt.split('\n').filter(l => l.trim()).slice(2, 10);
-                ctx.font = 'bold 28px Arial, sans-serif';
-                ctx.fillStyle = '#e2e8f0';
-                lines.forEach((line, i) => {
-                    ctx.fillText(line.substring(0, 50), 540, 600 + i * 60);
+            // Title text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 42px Arial, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 10;
+            ctx.fillText('PALLET EFOOTBALL', 160, 80);
+            ctx.font = 'bold 20px Arial, sans-serif';
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillText('TOURNAMENT 2026', 160, 110);
+            ctx.shadowBlur = 0;
+
+            // Type label (top right)
+            ctx.textAlign = 'right';
+            ctx.font = 'bold 18px Arial, sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            const typeLabel = type === 'schedule' ? 'FIXTURE LIVE' : type === 'results' ? 'MATCH RESULTS' : 'LEADERBOARD';
+            ctx.fillText(typeLabel, W - 50, 55);
+            ctx.font = 'bold 14px Arial, sans-serif';
+            ctx.fillText(new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), W - 50, 80);
+
+            // Red divider
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(40, 150, W - 80, 4);
+
+            // === SECTION TITLE ===
+            let sectionTitle = '';
+            if (type === 'schedule') sectionTitle = '⚽  UPCOMING MATCHES';
+            else if (type === 'results') sectionTitle = '🏆  LATEST RESULTS';
+            else sectionTitle = '📊  GROUP STANDINGS';
+
+            drawSkewedBanner(40, 180, 500, 55, '#dc2626');
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'left';
+            ctx.font = 'bold 26px Arial, sans-serif';
+            ctx.fillText(sectionTitle, 70, 217);
+
+            // === CONTENT AREA ===
+            let startY = 280;
+
+            if (type === 'schedule') {
+                const upNext = data.matches.filter(m => !m.played).slice(0, 6);
+                if (upNext.length === 0) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.font = 'bold 32px Arial, sans-serif';
+                    ctx.fillText('No upcoming matches', W / 2, startY + 100);
+                } else {
+                    upNext.forEach((m, i) => {
+                        const y = startY + i * 170;
+                        const p1 = data.players.find(p => p.id === m.p1Id);
+                        const p2 = data.players.find(p => p.id === m.p2Id);
+                        const p1Name = p1?.name || m.p1Id;
+                        const p2Name = p2?.name || m.p2Id;
+                        const group = m.groupId ? `GROUP ${m.groupId}` : 'KNOCKOUT';
+
+                        // Match card background
+                        roundRect(50, y, W - 100, 150, 16);
+                        ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.25)';
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+
+                        // Group label
+                        drawSkewedBanner(50, y, 200, 30, 'rgba(220,38,38,0.8)');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 14px Arial, sans-serif';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(group, 75, y + 22);
+
+                        // Player 1 (left)
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 28px Arial, sans-serif';
+                        ctx.textAlign = 'right';
+                        ctx.fillText(p1Name.toUpperCase(), W / 2 - 90, y + 85);
+                        // Country flag emoji for P1
+                        if (p1?.country) {
+                            ctx.font = '18px Arial, sans-serif';
+                            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                            ctx.fillText(p1.country, W / 2 - 90, y + 115);
+                        }
+
+                        // VS / Time box (center)
+                        roundRect(W / 2 - 65, y + 50, 130, 70, 12);
+                        ctx.fillStyle = 'rgba(220,38,38,0.9)';
+                        ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 36px Arial, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('18:00', W / 2, y + 98);
+
+                        // Player 2 (right)
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 28px Arial, sans-serif';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(p2Name.toUpperCase(), W / 2 + 90, y + 85);
+                        if (p2?.country) {
+                            ctx.font = '18px Arial, sans-serif';
+                            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                            ctx.fillText(p2.country, W / 2 + 90, y + 115);
+                        }
+                    });
+                }
+            } else if (type === 'results') {
+                const recent = data.matches.filter(m => m.played).slice(-6);
+                if (recent.length === 0) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.font = 'bold 32px Arial, sans-serif';
+                    ctx.fillText('No results yet', W / 2, startY + 100);
+                } else {
+                    recent.forEach((m, i) => {
+                        const y = startY + i * 170;
+                        const p1 = data.players.find(p => p.id === m.p1Id);
+                        const p2 = data.players.find(p => p.id === m.p2Id);
+                        const p1Name = p1?.name || m.p1Id;
+                        const p2Name = p2?.name || m.p2Id;
+                        let s1 = 0, s2 = 0;
+                        [m.g1, m.g2, m.g3].forEach(g => {
+                            if (g && g.p1 > g.p2) s1++;
+                            if (g && g.p2 > g.p1) s2++;
+                        });
+
+                        // Match card
+                        roundRect(50, y, W - 100, 150, 16);
+                        ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.25)';
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+
+                        // Winner highlight
+                        const winner = s1 > s2 ? 'p1' : s2 > s1 ? 'p2' : 'draw';
+
+                        // Player 1
+                        ctx.fillStyle = winner === 'p1' ? '#fbbf24' : '#ffffff';
+                        ctx.font = `bold 28px Arial, sans-serif`;
+                        ctx.textAlign = 'right';
+                        ctx.fillText(p1Name.toUpperCase(), W / 2 - 90, y + 85);
+
+                        // Score box
+                        roundRect(W / 2 - 70, y + 45, 140, 75, 12);
+                        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                        ctx.fill();
+                        ctx.strokeStyle = '#dc2626';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 40px Arial, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${s1} - ${s2}`, W / 2, y + 95);
+
+                        // Player 2
+                        ctx.fillStyle = winner === 'p2' ? '#fbbf24' : '#ffffff';
+                        ctx.font = 'bold 28px Arial, sans-serif';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(p2Name.toUpperCase(), W / 2 + 90, y + 85);
+                    });
+                }
+            } else if (type === 'standings') {
+                // Group standings table
+                const groups = {};
+                data.players.filter(p => p.group).forEach(p => {
+                    if (!groups[p.group]) groups[p.group] = [];
+                    groups[p.group].push(p);
                 });
 
-                clearInterval(progressInterval);
-                setRenderProgress(100);
-                setGeneratedImageUrl(canvas.toDataURL('image/jpeg', 0.95));
-                setIsGenerating(false);
-            };
-        } catch (error) {
+                const sortFn = (a, b) => {
+                    const ptsA = (a.w || 0) * 3 + (a.d || 0);
+                    const ptsB = (b.w || 0) * 3 + (b.d || 0);
+                    if (ptsB !== ptsA) return ptsB - ptsA;
+                    const gdA = (a.gf || 0) - (a.ga || 0);
+                    const gdB = (b.gf || 0) - (b.ga || 0);
+                    return gdB - gdA;
+                };
+
+                const groupKeys = Object.keys(groups).sort();
+                let gy = startY;
+
+                groupKeys.forEach((gKey, gi) => {
+                    const players = groups[gKey].sort(sortFn);
+                    const groupColor = ['#dc2626', '#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2'][gi % 6];
+
+                    // Group header
+                    drawSkewedBanner(50, gy, 250, 40, groupColor);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 22px Arial, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`GROUP ${gKey}`, 80, gy + 30);
+
+                    // Table header
+                    gy += 50;
+                    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                    ctx.fillRect(50, gy, W - 100, 35);
+                    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                    ctx.font = 'bold 14px Arial, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('PLAYER', 80, gy + 24);
+                    ctx.textAlign = 'center';
+                    ctx.fillText('P', 620, gy + 24);
+                    ctx.fillText('W', 690, gy + 24);
+                    ctx.fillText('D', 760, gy + 24);
+                    ctx.fillText('L', 830, gy + 24);
+                    ctx.fillText('GD', 900, gy + 24);
+                    ctx.fillText('PTS', 990, gy + 24);
+
+                    gy += 40;
+                    players.forEach((p, pi) => {
+                        const pts = (p.w || 0) * 3 + (p.d || 0);
+                        const gd = (p.gf || 0) - (p.ga || 0);
+                        const played = (p.w || 0) + (p.d || 0) + (p.l || 0);
+
+                        ctx.fillStyle = pi % 2 === 0 ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.15)';
+                        ctx.fillRect(50, gy, W - 100, 40);
+
+                        // Qualify indicator
+                        if (pi < 2) {
+                            ctx.fillStyle = groupColor;
+                            ctx.fillRect(50, gy, 4, 40);
+                        }
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 20px Arial, sans-serif';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(`${pi + 1}. ${p.name}`, 80, gy + 28);
+                        ctx.font = '18px Arial, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(played, 620, gy + 28);
+                        ctx.fillText(p.w || 0, 690, gy + 28);
+                        ctx.fillText(p.d || 0, 760, gy + 28);
+                        ctx.fillText(p.l || 0, 830, gy + 28);
+                        ctx.fillStyle = gd >= 0 ? '#4ade80' : '#f87171';
+                        ctx.fillText(gd >= 0 ? `+${gd}` : gd, 900, gy + 28);
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.font = 'bold 22px Arial, sans-serif';
+                        ctx.fillText(pts, 990, gy + 28);
+
+                        gy += 42;
+                    });
+                    gy += 25;
+                });
+            }
+
+            // === FOOTER BAR ===
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(0, H - 70, W, 70);
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(0, H - 70, W, 3);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 20px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⚽  PES TOUR  •  LEGENDS START HERE  •  SEASON 2026', W / 2, H - 30);
+
             clearInterval(progressInterval);
-            console.error(error);
-            alert("Image Generation Error: " + error.message);
+            setRenderProgress(100);
+            setGeneratedImageUrl(canvas.toDataURL('image/png'));
             setIsGenerating(false);
-            setRenderProgress(0);
-        }
+        };
+
+        logoImg.onload = () => drawPoster(logoImg);
+        logoImg.onerror = () => drawPoster(null);
     };
 
-    const copyPrompt = () => {
-        if (!generatedPrompt) return;
-        navigator.clipboard.writeText(generatedPrompt);
-        alert('Prompt copied to clipboard! You can now paste this into Gemini AI if you prefer manual generation.');
-    };
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -842,70 +986,45 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                 <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-inner">
                                     <Sparkles className="w-8 h-8 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
                                 </div>
-                                Gemini AI Studio
+                                Poster Studio
                             </h3>
-                            <a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-2xl font-bold transition-all backdrop-blur-md shadow-sm">
-                                <ExternalLink className="w-4 h-4" /> Open Gemini
-                            </a>
                         </div>
 
                         <p className="text-slate-400 mb-8 font-medium text-lg relative z-10">
-                            Generate context-aware prompts designed for <strong className="text-amber-400">Gemini AI</strong> to create epic tournament posters, result announcements, and schedule graphics.
+                            Instantly generate <strong className="text-amber-400">professional tournament posters</strong> with your live data — schedule, results, or standings. One click, no waiting.
                         </p>
 
                         <div className="grid md:grid-cols-3 gap-4 mb-8 relative z-10">
-                            <button onClick={() => generateAiPrompt('schedule')} className={`p-6 rounded-2xl border transition-all text-left group shadow-inner ${generatedPrompt.includes('Upcoming Schedule') ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-950/50 border-white/5 hover:border-white/20'}`}>
-                                <ImageIcon className={`w-6 h-6 mb-3 ${generatedPrompt.includes('Upcoming Schedule') ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'text-slate-500'}`} />
-                                <span className={`text-lg font-outfit font-black uppercase tracking-widest block mb-1 ${generatedPrompt.includes('Upcoming Schedule') ? 'text-blue-400' : 'text-slate-300'}`}>Schedule Poster</span>
-                                <span className="text-xs font-bold text-slate-500">Upcoming unplayed matches</span>
+                            <button 
+                                onClick={() => generatePoster('schedule')} 
+                                disabled={isGenerating}
+                                className={`p-6 rounded-2xl border transition-all text-left group shadow-inner disabled:opacity-50 disabled:cursor-not-allowed ${posterType === 'schedule' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-950/50 border-white/5 hover:border-blue-500/20'}`}
+                            >
+                                <ImageIcon className={`w-6 h-6 mb-3 ${posterType === 'schedule' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'text-slate-500'}`} />
+                                <span className={`text-lg font-outfit font-black uppercase tracking-widest block mb-1 ${posterType === 'schedule' ? 'text-blue-400' : 'text-slate-300'}`}>Schedule</span>
+                                <span className="text-xs font-bold text-slate-500">Upcoming match fixtures</span>
                             </button>
-                            <button onClick={() => generateAiPrompt('results')} className={`p-6 rounded-2xl border transition-all text-left group shadow-inner ${generatedPrompt.includes('Latest Results') ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-950/50 border-white/5 hover:border-white/20'}`}>
-                                <Trophy className={`w-6 h-6 mb-3 ${generatedPrompt.includes('Latest Results') ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-slate-500'}`} />
-                                <span className={`text-lg font-outfit font-black uppercase tracking-widest block mb-1 ${generatedPrompt.includes('Latest Results') ? 'text-emerald-400' : 'text-slate-300'}`}>Results Poster</span>
-                                <span className="text-xs font-bold text-slate-500">Recent completed matches</span>
+                            <button 
+                                onClick={() => generatePoster('results')} 
+                                disabled={isGenerating}
+                                className={`p-6 rounded-2xl border transition-all text-left group shadow-inner disabled:opacity-50 disabled:cursor-not-allowed ${posterType === 'results' ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-950/50 border-white/5 hover:border-emerald-500/20'}`}
+                            >
+                                <Trophy className={`w-6 h-6 mb-3 ${posterType === 'results' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-slate-500'}`} />
+                                <span className={`text-lg font-outfit font-black uppercase tracking-widest block mb-1 ${posterType === 'results' ? 'text-emerald-400' : 'text-slate-300'}`}>Results</span>
+                                <span className="text-xs font-bold text-slate-500">Recent match scores</span>
                             </button>
-                            <button onClick={() => generateAiPrompt('standings')} className={`p-6 rounded-2xl border transition-all text-left group shadow-inner ${generatedPrompt.includes('Tournament Update') ? 'bg-purple-500/10 border-purple-500/30' : 'bg-slate-950/50 border-white/5 hover:border-white/20'}`}>
-                                <BarChart3 className={`w-6 h-6 mb-3 ${generatedPrompt.includes('Tournament Update') ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'text-slate-500'}`} />
-                                <span className={`text-lg font-outfit font-black uppercase tracking-widest block mb-1 ${generatedPrompt.includes('Tournament Update') ? 'text-purple-400' : 'text-slate-300'}`}>Update Poster</span>
-                                <span className="text-xs font-bold text-slate-500">General tournament status</span>
+                            <button 
+                                onClick={() => generatePoster('standings')} 
+                                disabled={isGenerating}
+                                className={`p-6 rounded-2xl border transition-all text-left group shadow-inner disabled:opacity-50 disabled:cursor-not-allowed ${posterType === 'standings' ? 'bg-purple-500/10 border-purple-500/30' : 'bg-slate-950/50 border-white/5 hover:border-purple-500/20'}`}
+                            >
+                                <BarChart3 className={`w-6 h-6 mb-3 ${posterType === 'standings' ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'text-slate-500'}`} />
+                                <span className={`text-lg font-outfit font-black uppercase tracking-widest block mb-1 ${posterType === 'standings' ? 'text-purple-400' : 'text-slate-300'}`}>Standings</span>
+                                <span className="text-xs font-bold text-slate-500">Group leaderboard table</span>
                             </button>
                         </div>
 
-                        {generatedPrompt && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="relative z-10 space-y-4">
-                                <div className="space-y-4">
-                                    <label className="text-sm font-outfit font-black text-slate-400 uppercase tracking-[0.2em] ml-2 block">Generated Prompt</label>
-                                    <div className="relative group">
-                                        <textarea 
-                                            readOnly 
-                                            value={generatedPrompt} 
-                                            className="w-full h-48 bg-[#0A0D14] border border-amber-500/20 rounded-2xl p-6 pb-20 text-white font-medium text-sm outline-none resize-none shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)] leading-relaxed"
-                                        />
-                                        <div className="absolute bottom-4 right-4 flex flex-wrap gap-3 pointer-events-none">
-                                            <button 
-                                                onClick={copyPrompt}
-                                                className="pointer-events-auto p-3 sm:px-5 bg-[#131A2B] hover:bg-[#1e293b] text-slate-300 rounded-xl border border-white/10 shadow-lg transition-all flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest"
-                                            >
-                                                <Copy className="w-4 h-4" /> <span className="hidden sm:inline">Copy Prompt</span>
-                                            </button>
-                                            <button 
-                                                onClick={handleGenerateImage}
-                                                disabled={isGenerating}
-                                                className="pointer-events-auto p-3 sm:px-6 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl border border-amber-400/50 shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed group/gen"
-                                            >
-                                                <ImageIcon className={`w-4 h-4 ${isGenerating ? 'animate-bounce' : 'group-hover/gen:rotate-12 transition-transform'}`} /> 
-                                                <span className="hidden sm:inline">{isGenerating ? 'Rendering Magic...' : 'Generate Art (Free)'}</span>
-                                                <span className="sm:hidden">{isGenerating ? '...' : 'Generate'}</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-
-                            </motion.div>
-                        )}
-
-                        {/* Generated Image Preview */}
+                        {/* Generated Poster Preview */}
                         <AnimatePresence>
                             {(isGenerating || generatedImageUrl) && (
                                 <motion.div
@@ -915,69 +1034,46 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                     className="relative z-10 mt-10 origin-top"
                                 >
                                     <h4 className="text-sm font-outfit font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
-                                        <Sparkles className="w-4 h-4 text-amber-400" /> AI Output
+                                        <Sparkles className="w-4 h-4 text-amber-400" /> Poster Output
                                     </h4>
                                     
                                     <div className="w-full max-w-lg mx-auto relative rounded-[32px] overflow-hidden bg-[#0A0D14] border border-white/10 aspect-[3/4] flex items-center justify-center shadow-2xl group/img">
-                                        {/* Background effect */}
-                                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-purple-500/5 pointer-events-none"></div>
-                                        
                                         {isGenerating && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-30 bg-[#0A0D14]/95 w-full px-8">
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-30 bg-[#0A0D14]/95 px-8">
                                                 <div className="relative w-24 h-24">
                                                     <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
                                                         <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(245,158,11,0.15)" strokeWidth="8" />
                                                         <circle cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" strokeWidth="8"
                                                             strokeDasharray={`${renderProgress * 2.64} 264`}
                                                             strokeLinecap="round"
-                                                            className="transition-all duration-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                                                            className="transition-all duration-300 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]"
                                                         />
                                                     </svg>
                                                     <div className="absolute inset-0 flex items-center justify-center">
                                                         <span className="text-2xl font-outfit font-black text-amber-400 tabular-nums">{renderProgress}%</span>
                                                     </div>
                                                 </div>
-                                                <div className="text-amber-400 font-outfit font-black tracking-widest uppercase text-sm text-center">
-                                                    {renderProgress < 30 ? 'Initializing AI...' : renderProgress < 70 ? 'Generating artwork...' : renderProgress < 95 ? 'Finalizing details...' : 'Almost done...'}
-                                                </div>
-                                                <div className="w-full max-w-xs bg-slate-800/60 rounded-full h-2 overflow-hidden">
-                                                    <div className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" style={{width: `${renderProgress}%`}} />
-                                                </div>
+                                                <div className="text-amber-400 font-outfit font-black tracking-widest uppercase text-sm">Generating poster...</div>
                                             </div>
                                         )}
                                         {generatedImageUrl && (
                                             <>
                                                 <img 
                                                     src={generatedImageUrl} 
-                                                    alt="AI Generated Tournament Poster" 
-                                                    className={`w-full h-full object-cover relative z-10 ${isGenerating ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500`}
-                                                    onLoad={() => {
-                                                        if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-                                                        setRenderProgress(100);
-                                                        setTimeout(() => setIsGenerating(false), 500);
-                                                    }}
-                                                    onError={() => {
-                                                        if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-                                                        setIsGenerating(false);
-                                                        setGeneratedImageUrl(null);
-                                                        setRenderProgress(0);
-                                                        alert('Image generation failed. Please try again.');
-                                                    }}
+                                                    alt="Tournament Poster" 
+                                                    className="w-full h-full object-cover relative z-10"
                                                 />
-                                                {!isGenerating && (
-                                                    <div className="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-[#0A0D14] via-[#0A0D14]/60 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end justify-center pb-8 z-20">
-                                                        <a 
-                                                            href={generatedImageUrl} 
-                                                            download="pestour-ai-poster.jpg"
-                                                            className="px-6 py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-outfit font-black uppercase tracking-widest flex items-center gap-3 shadow-[0_0_30px_rgba(245,158,11,0.6)] transition-all transform hover:scale-105"
-                                                        >
-                                                            <ExternalLink className="w-5 h-5" /> Save Image
-                                                        </a>
-                                                    </div>
-                                                )}
+                                                <div className="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-[#0A0D14] via-[#0A0D14]/60 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end justify-center pb-8 z-20">
+                                                    <a 
+                                                        href={generatedImageUrl} 
+                                                        download={`pestour-${posterType}-poster.png`}
+                                                        className="px-6 py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-outfit font-black uppercase tracking-widest flex items-center gap-3 shadow-[0_0_30px_rgba(245,158,11,0.6)] transition-all transform hover:scale-105"
+                                                    >
+                                                        <ExternalLink className="w-5 h-5" /> Save Poster
+                                                    </a>
+                                                </div>
                                             </>
                                         )}
-                                        {!isGenerating && !generatedImageUrl && null}
                                     </div>
                                 </motion.div>
                             )}

@@ -1,18 +1,30 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Gamepad2, CheckCircle2, CircleDashed, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import GameScoreRow from './GameScoreRow';
 import PlayerAvatar from './PlayerAvatar';
 import { getSeriesResult, processBracket } from '../utils/logic';
 import { motion, AnimatePresence } from 'framer-motion';
+import { staggerContainer as containerVariants, springItemScale as cardVariants } from '../constants/animations';
 
 export default function MatchesView({ data, updateData, isAdmin }) {
     const [groupFilter, setGroupFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('UPCOMING');
     const [expandedGames, setExpandedGames] = useState({});
 
-    const toggleGames = (matchId) => {
+    // Build player lookup maps once (O(1) lookup instead of O(n) per match)
+    const playerMap = useMemo(() => {
+        const nameMap = new Map();
+        const logoMap = new Map();
+        data.players.forEach(p => {
+            nameMap.set(p.id, p.name || p.id);
+            logoMap.set(p.id, p.logo || '');
+        });
+        return { nameMap, logoMap };
+    }, [data.players]);
+
+    const toggleGames = useCallback((matchId) => {
         setExpandedGames(prev => ({ ...prev, [matchId]: !prev[matchId] }));
-    };
+    }, []);
 
     const bracketMatches = (data.bracket || []).filter(m => m.p1Id && m.p2Id);
     const allMatches = [...data.matches, ...bracketMatches];
@@ -59,30 +71,12 @@ export default function MatchesView({ data, updateData, isAdmin }) {
         }
     };
 
-    const getPlayerName = (playerId) => {
-        return data.players.find(p => p.id === playerId)?.name || playerId;
-    };
-    const getPlayerLogo = (playerId) => {
-        return data.players.find(p => p.id === playerId)?.logo || '';
-    };
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: { staggerChildren: 0.1 }
-        }
-    };
-
-    const cardVariants = {
-        hidden: { y: 20, opacity: 0, scale: 0.98 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            scale: 1,
-            transition: { type: "spring", stiffness: 100, damping: 15 }
-        }
-    };
+    const getPlayerName = useCallback((playerId) => {
+        return playerMap.nameMap.get(playerId) || playerId;
+    }, [playerMap]);
+    const getPlayerLogo = useCallback((playerId) => {
+        return playerMap.logoMap.get(playerId) || '';
+    }, [playerMap]);
 
     return (
         <motion.div

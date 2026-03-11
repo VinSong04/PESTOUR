@@ -1,3 +1,5 @@
+import { createEmptyBracketMatch } from './matchFactory';
+
 export const getSeriesResult = (match) => {
     let p1Wins = 0;
     let p2Wins = 0;
@@ -115,9 +117,9 @@ export const processBracket = (bracket) => {
 
     let fullBracket = [...bracket];
     if (fullBracket.length === 4) {
-        fullBracket.push({ id: 'SF-1', round: 'SF', p1Id: null, p1Name: 'TBD (QF1)', p1Logo: '', p2Id: null, p2Name: 'TBD (QF2)', p2Logo: '', played: false, g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null } });
-        fullBracket.push({ id: 'SF-2', round: 'SF', p1Id: null, p1Name: 'TBD (QF3)', p1Logo: '', p2Id: null, p2Name: 'TBD (QF4)', p2Logo: '', played: false, g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null } });
-        fullBracket.push({ id: 'F-1', round: 'F', p1Id: null, p1Name: 'TBD (SF1)', p1Logo: '', p2Id: null, p2Name: 'TBD (SF2)', p2Logo: '', played: false, g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null } });
+        fullBracket.push(createEmptyBracketMatch('SF-1', 'SF', 'TBD (QF1)', 'TBD (QF2)'));
+        fullBracket.push(createEmptyBracketMatch('SF-2', 'SF', 'TBD (QF3)', 'TBD (QF4)'));
+        fullBracket.push(createEmptyBracketMatch('F-1', 'F', 'TBD (SF1)', 'TBD (SF2)'));
     }
 
     const getM = id => fullBracket.find(m => m.id === id);

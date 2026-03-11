@@ -3,7 +3,9 @@ import GameScoreRow from './GameScoreRow';
 import PlayerAvatar from './PlayerAvatar';
 import { getSeriesResult } from '../utils/logic';
 
-export default function BracketMatchBox({ match, title, isAdmin, togglePlayed, handleScoreChange, hideGames = false }) {
+import { memo } from 'react';
+
+export default memo(function BracketMatchBox({ match, title, isAdmin, togglePlayed, handleScoreChange, hideGames = false }) {
     const res = getSeriesResult(match);
     const g1 = match.g1 || {};
     const g2 = match.g2 || {};
@@ -86,4 +88,4 @@ export default function BracketMatchBox({ match, title, isAdmin, togglePlayed, h
             </div>
         </div>
     );
-}
+});

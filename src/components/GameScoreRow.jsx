@@ -1,5 +1,6 @@
+import { memo } from 'react';
 
-export default function GameScoreRow({ game, label, match, p1Name, p2Name, onChange, isAdmin }) {
+export default memo(function GameScoreRow({ game, label, match, p1Name, p2Name, onChange, isAdmin }) {
     if (!match) return null;
     const gameData = match[game] || { p1: null, p2: null };
     const p1Score = gameData.p1;
@@ -25,7 +26,7 @@ export default function GameScoreRow({ game, label, match, p1Name, p2Name, onCha
             </div>
         </div>
     );
-}
+})
 
 function ScoreInput({ val, onChange, disabled }) {
     if (disabled) {

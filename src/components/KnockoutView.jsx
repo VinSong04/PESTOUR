@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Trophy, XCircle, CircleDashed, Info, Lock } from 'lucide-react';
 import BracketMatchBox from './BracketMatchBox';
 import { processBracket } from '../utils/logic';
+import { createEmptyGame } from '../utils/matchFactory';
 import { motion, AnimatePresence } from 'framer-motion';
+import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
 
 // Complex Wheel Component directly defined here, or could be split further
 function WheelModal({ qualifiedPlayers, onClose, onComplete }) {
@@ -76,7 +78,7 @@ function WheelModal({ qualifiedPlayers, onClose, onComplete }) {
                     p2Name: selectedPlayer.name,
                     p2Logo: selectedPlayer.logo || '',
                     played: false,
-                    g1: { p1: null, p2: null }, g2: { p1: null, p2: null }, g3: { p1: null, p2: null }
+                    g1: createEmptyGame(), g2: createEmptyGame(), g3: createEmptyGame()
                 };
                 setDrawnMatches([...drawnMatches, newMatch]);
                 setCurrentMatch({ p1: null, p2: null });
@@ -248,7 +250,7 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
         }
     };
 
-    const handleScoreChange = (matchId, gameIndex, playerKey, val) => {
+    const handleScoreChange = useCallback((matchId, gameIndex, playerKey, val) => {
         if (!isAdmin) return;
         const numVal = val === '' ? null : parseInt(val, 10);
         let newBracket = bracketState.map(m => {
@@ -258,9 +260,9 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
         newBracket = processBracket(newBracket);
         setBracketState(newBracket);
         updateData({ ...data, bracket: newBracket });
-    };
+    }, [isAdmin, bracketState, data, updateData]);
 
-    const togglePlayed = (matchId) => {
+    const togglePlayed = useCallback((matchId) => {
         if (!isAdmin) return;
         let newBracket = bracketState.map(m => {
             if (m.id === matchId) return { ...m, played: !m.played };
@@ -269,28 +271,11 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
         newBracket = processBracket(newBracket);
         setBracketState(newBracket);
         updateData({ ...data, bracket: newBracket });
-    };
+    }, [isAdmin, bracketState, data, updateData]);
 
-    const qfs = bracketState.filter(m => m.id.startsWith('QF'));
-    const sfs = bracketState.filter(m => m.id.startsWith('SF'));
-    const finalMatch = bracketState.find(m => m.id.startsWith('F'));
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: { staggerChildren: 0.1 }
-        }
-    };
-
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: "spring", stiffness: 100, damping: 15 }
-        }
-    };
+    const qfs = useMemo(() => bracketState.filter(m => m.id.startsWith('QF')), [bracketState]);
+    const sfs = useMemo(() => bracketState.filter(m => m.id.startsWith('SF')), [bracketState]);
+    const finalMatch = useMemo(() => bracketState.find(m => m.id.startsWith('F')), [bracketState]);
 
     return (
         <motion.div

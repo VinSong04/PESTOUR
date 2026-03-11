@@ -1,35 +1,16 @@
 import { useRef, useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { ref, onValue, push, serverTimestamp } from 'firebase/database';
-import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Users, Zap, Star, DollarSign, Upload, X, Search, ChevronDown } from 'lucide-react';
+import { ref, push, serverTimestamp } from 'firebase/database';
+import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Users, Zap, Star, DollarSign, Search, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Swal from 'sweetalert2';
+import { COUNTRIES } from '../constants/countries';
+import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
+import { swalDarkTheme } from '../utils/swalTheme';
+import useRegistrations from '../hooks/useRegistrations';
 
 export default function RegisterView({ isAdmin, isOpen = true }) {
-    const [registrations, setRegistrations] = useState([]);
-    const BASE_TEAMS = [
-        'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Argentina', 'Armenia', 'Australia', 'Austria',
-        'Azerbaijan', 'Bahrain', 'Bangladesh', 'Belarus', 'Belgium', 'Bhutan', 'Bolivia',
-        'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'British Virgin Islands', 'Brunei Darussalam',
-        'Bulgaria', 'Burkina Faso', 'Cambodia', 'Cameroon', 'Canada', 'Cape Verde', 'Cayman Islands',
-        'Chad', 'Chile', 'China PR', 'Colombia', 'Comoros', 'Congo DR', 'Costa Rica', 'Cote d\'Ivoire',
-        'Croatia', 'Cyprus', 'Czech Republic', 'Denmark', 'Dominican Republic', 'Ecuador', 'Egypt',
-        'El Salvador', 'England', 'Equatorial Guinea', 'Estonia', 'Eswatini', 'Faroe Islands',
-        'Finland', 'France', 'Georgia', 'Germany', 'Ghana', 'Gibraltar', 'Greece', 'Guam', 'Guinea',
-        'Guyana', 'Honduras', 'Hong Kong (China)', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran',
-        'Iraq', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Korea Republic',
-        'Kosovo', 'Kuwait', 'Kyrgyz Republic', 'Laos', 'Latvia', 'Lebanon', 'Libya', 'Liechtenstein',
-        'Lithuania', 'Luxembourg', 'Macau', 'Madagascar', 'Malaysia', 'Maldives', 'Mali', 'Malta',
-        'Mauritius', 'Mexico', 'Moldova', 'Mongolia', 'Montenegro', 'Morocco', 'Myanmar', 'Nepal',
-        'Netherlands', 'New Zealand', 'Nigeria', 'North Macedonia', 'Northern Ireland', 'Norway',
-        'Oman', 'Pakistan', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland',
-        'Portugal', 'Puerto Rico', 'Qatar', 'Republic of Ireland', 'Romania', 'Russia', 'San Marino',
-        'Saudi Arabia', 'Scotland', 'Senegal', 'Serbia', 'Seychelles', 'Slovakia', 'Slovenia',
-        'Somalia', 'South Africa', 'South Sudan', 'Spain', 'Sri Lanka', 'Sweden', 'Switzerland',
-        'Syria', 'Tajikistan', 'Tanzania', 'Thailand', 'Trinidad and Tobago', 'Tunisia', 'Turkey',
-        'Turks and Caicos Islands', 'UAE', 'USA', 'US Virgin Islands', 'Ukraine', 'Uruguay',
-        'Uzbekistan', 'Venezuela', 'Vietnam', 'Wales', 'Zambia', 'Zimbabwe'
-    ].sort();
+    const registrations = useRegistrations();
 
     const [name, setName] = useState('');
     const [baseTeam, setBaseTeam] = useState('');
@@ -38,23 +19,6 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
     const dropdownRef = useRef(null);
     const [paidConfirm, setPaidConfirm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    useEffect(() => {
-        const registrationsRef = ref(db, 'registrations');
-        const unsubscribe = onValue(registrationsRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const parsedRegistrations = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                })).sort((a, b) => b.timestamp - a.timestamp);
-                setRegistrations(parsedRegistrations);
-            } else {
-                setRegistrations([]);
-            }
-        });
-        return () => unsubscribe();
-    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -69,32 +33,16 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const swalConfig = {
-            background: '#131A2B',
-            color: '#fff',
-            backdrop: `rgba(10, 13, 20, 0.85)`,
-            timer: 3500,
-            timerProgressBar: true,
-            showConfirmButton: true,
-            customClass: {
-                popup: 'border border-white/10 rounded-[32px] shadow-2xl',
-                confirmButton: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-outfit font-black uppercase tracking-widest rounded-2xl px-10 py-4 transition-all outline-none focus:ring-4 focus:ring-blue-500/50',
-                title: 'font-outfit font-black text-3xl tracking-wide',
-                htmlContainer: 'font-medium text-slate-300 text-lg'
-            },
-            buttonsStyling: false
-        };
-
         if (!name.trim()) {
-            Swal.fire({ ...swalConfig, title: 'Notice', text: 'In-Game Name is required.', icon: 'info' });
+            Swal.fire({ ...swalDarkTheme, title: 'Notice', text: 'In-Game Name is required.', icon: 'info' });
             return;
         }
         if (!baseTeam.trim()) {
-            Swal.fire({ ...swalConfig, title: 'Notice', text: 'Base Team (Country) is required.', icon: 'info' });
+            Swal.fire({ ...swalDarkTheme, title: 'Notice', text: 'Base Team (Country) is required.', icon: 'info' });
             return;
         }
         if (!paidConfirm) {
-            Swal.fire({ ...swalConfig, title: 'Payment Required', text: 'Please confirm you have paid the registration fee before submitting.', icon: 'info' });
+            Swal.fire({ ...swalDarkTheme, title: 'Payment Required', text: 'Please confirm you have paid the registration fee before submitting.', icon: 'info' });
             return;
         }
 
@@ -103,7 +51,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
         );
 
         if (nameExists) {
-            Swal.fire({ ...swalConfig, title: 'Name Taken!', text: 'This player name is already registered by someone else!', icon: 'warning' });
+            Swal.fire({ ...swalDarkTheme, title: 'Name Taken!', text: 'This player name is already registered by someone else!', icon: 'warning' });
             return;
         }
 
@@ -112,7 +60,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
         );
 
         if (teamExists) {
-            Swal.fire({ ...swalConfig, title: 'Country Taken!', text: `${baseTeam} has already been claimed by another player! Please choose a different country.`, icon: 'warning' });
+            Swal.fire({ ...swalDarkTheme, title: 'Country Taken!', text: `${baseTeam} has already been claimed by another player! Please choose a different country.`, icon: 'warning' });
             return;
         }
 
@@ -127,7 +75,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
             });
 
             Swal.fire({
-                ...swalConfig,
+                ...swalDarkTheme,
                 title: 'Registration Sent!',
                 text: 'Your registration was successful. Please await admin approval.',
                 icon: 'success'
@@ -137,26 +85,9 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
             setPaidConfirm(false);
         } catch (error) {
             console.error("Registration error:", error);
-            Swal.fire({ ...swalConfig, title: 'Error', text: 'Registration failed. Please try again.', icon: 'error' });
+            Swal.fire({ ...swalDarkTheme, title: 'Error', text: 'Registration failed. Please try again.', icon: 'error' });
         } finally {
             setIsSubmitting(false);
-        }
-    };
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: { staggerChildren: 0.1 }
-        }
-    };
-
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: "spring", stiffness: 100, damping: 15 }
         }
     };
 
@@ -285,8 +216,8 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                                         />
                                                     </div>
                                                     <div className="max-h-60 overflow-y-auto no-scrollbar py-2">
-                                                        {BASE_TEAMS.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
-                                                            BASE_TEAMS.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())).map(country => (
+                                                        {COUNTRIES.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
+                                                            COUNTRIES.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())).map(country => (
                                                                 <button
                                                                     key={country}
                                                                     type="button"

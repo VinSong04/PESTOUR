@@ -1,11 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy, Trash2, Sparkles, Image as ImageIcon, Copy, ExternalLink } from 'lucide-react';
-import { INITIAL_DATA, INITIAL_MATCHES } from '../utils/initialData';
+import { INITIAL_DATA } from '../utils/initialData';
+import { createEmptyMatch } from '../utils/matchFactory';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { ref, onValue, remove, update } from 'firebase/database';
+import { ref, remove, update } from 'firebase/database';
 import PlayerAvatar from './PlayerAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
+import useRegistrations from '../hooks/useRegistrations';
+import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
 
 const TABS = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -21,8 +24,14 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     const [passError, setPassError] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
-    const [registrations, setRegistrations] = useState([]);
-    const [totalRegistrations, setTotalRegistrations] = useState(0);
+
+    // Shared Firebase registration listener (also used by RegisterView)
+    const registrations = useRegistrations();
+    const totalRegistrations = registrations.length;
+
+    // Modal state
+    const [modalConfig, setModalConfig] = useState(null);
+    const [promptValue, setPromptValue] = useState('');
 
     // Form states
     const [settings, setSettings] = useState(data.settings);
@@ -33,70 +42,54 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         setPlayers(data.players);
     }, [data]);
 
-    // Listen for registrations
-    useEffect(() => {
-        const regRef = ref(db, 'registrations');
-        const unsub = onValue(regRef, (snap) => {
-            const val = snap.val();
-            if (val) {
-                const parsed = Object.keys(val).map(key => ({
-                    id: key,
-                    ...val[key]
-                })).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                setRegistrations(parsed);
-                setTotalRegistrations(parsed.length);
-            } else {
-                setRegistrations([]);
-                setTotalRegistrations(0);
-            }
-        });
-        return () => unsub();
-    }, []);
-
-    const approvedPlayers = registrations.filter(r => r.status === 'approved');
+    const approvedPlayers = useMemo(() => registrations.filter(r => r.status === 'approved'), [registrations]);
 
     const handleDrawGroups = () => {
         if (approvedPlayers.length < 2) {
-            alert(`Need at least 2 approved players. Currently: ${approvedPlayers.length}`);
+            setModalConfig({
+                title: 'Insufficient Players',
+                message: `Need at least 2 approved players. Currently: ${approvedPlayers.length}`,
+                type: 'alert'
+            });
             return;
         }
-        if (!window.confirm(`Randomly assign ${approvedPlayers.length} players into dynamic groups and reset matches?`)) return;
 
-        const shuffled = [...approvedPlayers].sort(() => Math.random() - 0.5);
+        setModalConfig({
+            title: 'Confirm Group Draw',
+            message: `Randomly assign ${approvedPlayers.length} players into dynamic groups and reset matches? This action cannot be undone.`,
+            type: 'confirm',
+            onConfirm: () => {
+                const shuffled = [...approvedPlayers].sort(() => Math.random() - 0.5);
 
-        // Dynamic group assignment. Target groups of ~4 players.
-        let numGroups = Math.max(1, Math.ceil(approvedPlayers.length / 4));
-        const groups = Array.from({ length: numGroups }, (_, i) => String.fromCharCode(65 + i));
+                // Dynamic group assignment. Target groups of ~4 players.
+                let numGroups = Math.max(1, Math.ceil(approvedPlayers.length / 4));
+                const groups = Array.from({ length: numGroups }, (_, i) => String.fromCharCode(65 + i));
 
-        const newPlayers = [];
-        shuffled.forEach((player, i) => {
-            const g = groups[i % numGroups];
-            const pCount = newPlayers.filter(p => p.group === g).length + 1;
-            newPlayers.push({ group: g, id: `${g}${pCount}`, name: player.name, logo: player.baseTeam || player.logo || '' });
-        });
+                const newPlayers = [];
+                shuffled.forEach((player, i) => {
+                    const g = groups[i % numGroups];
+                    const pCount = newPlayers.filter(p => p.group === g).length + 1;
+                    newPlayers.push({ group: g, id: `${g}${pCount}`, name: player.name, logo: player.baseTeam || player.logo || '' });
+                });
 
-        // Dynamic match generation (round-robin per group)
-        const newMatches = [];
-        groups.forEach(g => {
-            const grpPlayers = newPlayers.filter(p => p.group === g);
-            for (let i = 0; i < grpPlayers.length; i++) {
-                for (let j = i + 1; j < grpPlayers.length; j++) {
-                    newMatches.push({
-                        id: `M-${g}${i + 1}-${j + 1}`,
-                        groupId: g,
-                        p1Id: grpPlayers[i].id,
-                        p2Id: grpPlayers[j].id,
-                        played: false,
-                        g1: { p1: null, p2: null },
-                        g2: { p1: null, p2: null },
-                        g3: { p1: null, p2: null }
-                    });
-                }
+                // Dynamic match generation (round-robin per group)
+                const newMatches = [];
+                groups.forEach(g => {
+                    const grpPlayers = newPlayers.filter(p => p.group === g);
+                    for (let i = 0; i < grpPlayers.length; i++) {
+                        for (let j = i + 1; j < grpPlayers.length; j++) {
+                            newMatches.push(createEmptyMatch(
+                                `M-${g}${i + 1}-${j + 1}`, g, grpPlayers[i].id, grpPlayers[j].id
+                            ));
+                        }
+                    }
+                });
+
+                updateData({ ...data, players: newPlayers, matches: newMatches, bracket: [] });
+                window.location.hash = 'standings';
+                setModalConfig(null);
             }
         });
-
-        updateData({ ...data, players: newPlayers, matches: newMatches, bracket: [] });
-        alert('Groups and matches drawn successfully!');
     };
 
     const handleLogin = async (e) => {
@@ -148,14 +141,35 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     };
 
     const handleReset = () => {
-        if (window.prompt("Type 'RESET' to wipe active season.") === "RESET") {
-            updateData({ ...INITIAL_DATA, history: data.history || {} });
-        }
+        setModalConfig({
+            title: 'Factory Reset Season',
+            message: 'Are you absolutely sure? This will permanently wipe the active season. Type "RESET" to confirm.',
+            type: 'prompt',
+            expectedValue: 'RESET',
+            danger: true,
+            onConfirm: () => {
+                updateData({ ...INITIAL_DATA, history: data.history || {} });
+                setModalConfig({ title: 'Success', message: 'Season data has been wiped.', type: 'alert' });
+            }
+        });
     };
 
     const handleDeleteReg = async (id) => {
-        if (!window.confirm("Remove this registration?")) return;
-        try { await remove(ref(db, `registrations/${id}`)); } catch (e) { console.error(e); }
+        setModalConfig({
+            title: 'Remove Registration',
+            message: 'Are you sure you want to remove this registration?',
+            type: 'confirm',
+            danger: true,
+            onConfirm: async () => {
+                try { 
+                    await remove(ref(db, `registrations/${id}`)); 
+                    setModalConfig(null);
+                } catch (e) { 
+                    console.error(e); 
+                    setModalConfig({ title: 'Error', message: 'Failed to remove registration.', type: 'alert', danger: true });
+                }
+            }
+        });
     };
 
     const handleApproveReg = async (id) => {
@@ -539,23 +553,27 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         logoImg.onerror = () => drawPoster(null);
     };
 
+    // ---------- STAT CARDS (must be before early return to satisfy Rules of Hooks) ----------
+    const statData = useMemo(() => {
+        const played = data.matches.filter(m => m.played).length;
+        const total = data.matches.length;
+        const filled = data.players.filter(p => p.name && p.name.trim()).length;
+        return { playedMatches: played, totalMatches: total, filledPlayers: filled };
+    }, [data.matches, data.players]);
 
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: { staggerChildren: 0.1 }
-        }
-    };
+    const statCards = useMemo(() => [
+        { label: 'Registrations', value: totalRegistrations, icon: UserPlus, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', shadow: 'shadow-[0_0_30px_rgba(251,191,36,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]' },
+        { label: 'Roster Approved', value: approvedPlayers.length, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', shadow: 'shadow-[0_0_30px_rgba(96,165,250,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]' },
+        { label: 'Matches Played', value: `${statData.playedMatches}/${statData.totalMatches}`, icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', shadow: 'shadow-[0_0_30px_rgba(168,85,247,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]' },
+    ], [totalRegistrations, approvedPlayers.length, statData]);
 
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: "spring", stiffness: 100, damping: 15 }
-        }
-    };
+    const rosterGroups = useMemo(() => {
+        const groupKeys = [...new Set(players.map(p => p.group))].filter(Boolean).sort();
+        return groupKeys.map(grp => ({
+            name: grp,
+            members: players.filter(p => p.group === grp)
+        }));
+    }, [players]);
 
     // ---------- LOGIN SCREEN ----------
     if (!isAdmin) {
@@ -597,17 +615,6 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             </motion.div>
         );
     }
-
-    // ---------- STAT CARDS ----------
-    const playedMatches = data.matches.filter(m => m.played).length;
-    const totalMatches = data.matches.length;
-    const filledPlayers = data.players.filter(p => p.name && p.name.trim()).length;
-
-    const statCards = [
-        { label: 'Registrations', value: totalRegistrations, icon: UserPlus, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', shadow: 'shadow-[0_0_30px_rgba(251,191,36,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]' },
-        { label: 'Roster Approved', value: approvedPlayers.length, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', shadow: 'shadow-[0_0_30px_rgba(96,165,250,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]' },
-        { label: 'Matches Played', value: `${playedMatches}/${totalMatches}`, icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', shadow: 'shadow-[0_0_30px_rgba(168,85,247,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]' },
-    ];
 
     // ---------- DASHBOARD ----------
     return (
@@ -871,7 +878,8 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                             </div>
 
                             <div className="grid md:grid-cols-3 gap-8 relative z-10">
-                                {[...new Set(players.map(p => p.group))].sort().map((grp, idx) => {
+                                {rosterGroups.map((groupData, idx) => {
+                                    const grp = groupData.name;
                                     const groupColors = [
                                         'from-blue-500/10 to-transparent border-blue-500/20 text-blue-400',
                                         'from-purple-500/10 to-transparent border-purple-500/20 text-purple-400',
@@ -888,7 +896,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                                 <h4 className="font-outfit font-black text-2xl uppercase tracking-[0.3em]">Group {grp}</h4>
                                             </div>
                                             <div className="space-y-4">
-                                                {players.filter(p => p.group === grp).map((p, pIdx) => (
+                                                {groupData.members.map((p, pIdx) => (
                                                     <div key={p.id} className="group flex items-center gap-4 bg-slate-900/50 p-2.5 rounded-2xl border border-white/5 hover:border-white/20 transition-all shadow-sm relative overflow-hidden">
                                                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/5 group-hover:bg-white/20 transition-colors"></div>
                                                         <div className="font-outfit font-black text-[10px] text-slate-600 tracking-widest w-4 text-center">{pIdx + 1}</div>
@@ -916,33 +924,111 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                         className="space-y-6"
                     >
-                        {/* Group Draw */}
-                        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen group-hover:bg-emerald-500/20 transition-all duration-700"></div>
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] pointer-events-none"></div>
+                        {/* Group Draw Premium UI */}
+                        <div className="bg-[#04080F]/90 backdrop-blur-2xl border border-emerald-500/20 rounded-[40px] p-8 sm:p-12 shadow-[0_0_50px_rgba(16,185,129,0.15)] relative overflow-hidden group">
+                            
+                            {/* Sci-Fi Background Elements */}
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 mix-blend-overlay"></div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-50"></div>
+                            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-teal-500 to-transparent opacity-50"></div>
+                            
+                            {/* Grid and Radar */}
+                            <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.05)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+                            <motion.div 
+                                className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent_0deg,rgba(16,185,129,0.08)_90deg,transparent_90deg)] origin-center pointer-events-none"
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                            ></motion.div>
 
-                            <h3 className="text-3xl font-outfit font-black mb-6 flex items-center gap-4 text-white uppercase tracking-widest relative z-10 drop-shadow-md">
-                                <div className="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 shadow-inner">
-                                    <Users className="w-8 h-8 text-emerald-400 group-hover:scale-110 transition-transform drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-10 relative z-10">
+                                
+                                <div className="flex-1 space-y-8">
+                                    <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-black/50 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] sm:text-xs uppercase tracking-[0.3em] shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                                        <motion.div animate={{ opacity: [1, 0, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></motion.div>
+                                        AI Matchmaking Engine
+                                    </div>
+                                    
+                                    <h3 className="text-5xl sm:text-6xl font-outfit font-black text-transparent bg-clip-text bg-gradient-to-br from-white via-emerald-100 to-emerald-500 uppercase tracking-tighter drop-shadow-lg leading-none">
+                                        Neural <br/>
+                                        <span className="text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.4)] block mt-2">Group Draw</span>
+                                    </h3>
+                                    
+                                    <p className="text-emerald-100/60 font-mono text-sm sm:text-base max-w-xl leading-relaxed border-l-2 border-emerald-500/30 pl-4 py-1">
+                                        &gt; SYS.INIT() ... OK <br/>
+                                        &gt; PARSING REGISTRATIONS ... <strong className="text-emerald-400">{approvedPlayers.length} FOUND</strong> <br/>
+                                        &gt; ENGAGING QUANTUM RANDOMIZATION PROTOCOL to distribute candidates into perfect equilibrium.
+                                    </p>
+                                    
+                                    <div className="flex items-start sm:items-center gap-4 p-5 bg-rose-500/10 border border-rose-500/30 rounded-2xl w-fit xl:max-w-md shadow-[0_0_30px_rgba(244,63,94,0.15)] relative overflow-hidden backdrop-blur-md">
+                                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagonal-stripes.png')] opacity-10"></div>
+                                        <Flame className="w-8 h-8 text-rose-500 animate-[pulse_2s_ease-in-out_Infinity] shrink-0 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                                        <span className="text-rose-400 font-mono uppercase tracking-widest text-xs leading-relaxed relative z-10">
+                                            CRITICAL: Execution will irreversibly overwrite current tournament timeline and match data.
+                                        </span>
+                                    </div>
                                 </div>
-                                <span>{approvedPlayers.length} Approved</span>
-                            </h3>
-                            <p className="text-slate-400 mt-3 font-medium text-lg max-w-sm">
-                                Randomly assign <strong className="text-emerald-400">all currently approved</strong> registrations into dynamic groups. <br />
-                                <span className="text-sm font-bold text-amber-500/80 uppercase tracking-widest block mt-2">Warning: Resets match history</span>
-                            </p>
+                                
+                                <div className="w-full xl:w-[450px] shrink-0 p-8 sm:p-10 rounded-[40px] bg-[#02050A]/80 border border-emerald-500/20 shadow-[inset_0_0_60px_rgba(16,185,129,0.1),0_20px_50px_rgba(0,0,0,0.6)] relative overflow-hidden group/panel z-20 backdrop-blur-xl">
+                                    {/* Hexagon Background Pattern */}
+                                    <div className="absolute inset-0 opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOCIgaGVpZ2h0PSI0OSIgdmlld0JveD0iMCAwIDI4IDQ5Ij48cGF0aCBkPSJNMzkuNSAyNC41TDE5LjUgMzZtMjAtMjBMMTkuNSA0bS0yMCAyMEwtLjUgMTItMjAgMjBMLiUgMjhtLTIwIDIwTC0uNSA2MC0yMCA2OEwtLjUgNzZtMjAtMjBMMTkuNSA2NG0yMC0yMEwxOS41IDg4IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==')]"></div>
 
-                            <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto relative z-10">
-                                <div className={`flex items-center justify-center gap-3 px-6 py-4 rounded-2xl text-lg font-outfit font-black tracking-widest uppercase shadow-sm ${approvedPlayers.length >= 2 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
-                                    <Users className="w-6 h-6" /> {approvedPlayers.length} Approved
+                                    <div className="text-center mb-10 relative z-10 flex flex-col items-center">
+                                        <div className="text-emerald-500 font-mono uppercase tracking-[0.4em] text-[10px] mb-6 animate-pulse">
+                                            Live Participant Uplink
+                                        </div>
+                                        
+                                        {/* Floating holographic avatars / Reactor Core */}
+                                        <div className="relative w-48 h-48 mx-auto flex items-center justify-center mb-6 mt-4">
+                                            {/* Concentric rotating rings */}
+                                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: "linear" }} className="absolute -inset-4 border border-emerald-500/20 rounded-full border-t-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.1)]"></motion.div>
+                                            <motion.div animate={{ rotate: -360 }} transition={{ duration: 25, repeat: Infinity, ease: "linear" }} className="absolute inset-0 border-[3px] border-dashed border-teal-500/30 rounded-full"></motion.div>
+                                            <div className="absolute inset-4 border-[4px] border-emerald-400/20 rounded-full shadow-[0_0_40px_rgba(16,185,129,0.3)] bg-emerald-500/10 backdrop-blur-sm"></div>
+                                            
+                                            {/* Inner counter */}
+                                            <div className="relative z-10 flex flex-col items-center justify-center">
+                                                <span className="text-7xl font-outfit font-black text-white tracking-tighter drop-shadow-[0_0_20px_rgba(16,185,129,0.8)]">
+                                                    {approvedPlayers.length}
+                                                </span>
+                                                <span className="text-[12px] text-emerald-300 font-mono tracking-widest uppercase mt-2 font-bold opacity-80">
+                                                    Nodes Ready
+                                                </span>
+                                            </div>
+
+                                            {/* Orbiting dots */}
+                                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 6, repeat: Infinity, ease: "linear" }} className="absolute -inset-4">
+                                                <div className="w-3 h-3 bg-white rounded-full absolute -top-1.5 left-1/2 -translate-x-1/2 shadow-[0_0_15px_#fff]"></div>
+                                                <div className="w-4 h-4 bg-teal-300 rounded-full absolute -bottom-2 left-1/2 -translate-x-1/2 shadow-[0_0_20px_#5eead4]"></div>
+                                            </motion.div>
+                                        </div>
+                                    </div>
+                                    
+                                    <motion.button
+                                        whileHover={approvedPlayers.length >= 2 ? { scale: 1.05 } : {}}
+                                        whileTap={approvedPlayers.length >= 2 ? { scale: 0.95 } : {}}
+                                        onClick={handleDrawGroups} disabled={approvedPlayers.length < 2}
+                                        className={`w-full py-6 rounded-[24px] font-mono font-black uppercase tracking-[0.3em] transition-all flex flex-col items-center justify-center gap-3 relative overflow-hidden group/btn shadow-[0_0_30px_rgba(0,0,0,0.8)] ${approvedPlayers.length >= 2 ? 'bg-[#061410] border-2 border-emerald-500/50 hover:border-emerald-400 hover:shadow-[0_0_50px_rgba(16,185,129,0.6)] hover:bg-[#071F17] text-emerald-400' : 'bg-black/50 text-slate-700 cursor-not-allowed border-2 border-white/5'}`}>
+                                        
+                                        {/* Button background scanline */}
+                                        {approvedPlayers.length >= 2 && (
+                                            <motion.div 
+                                                initial={{ y: "-100%" }}
+                                                animate={{ y: "100%" }}
+                                                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                                                className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/30 to-transparent pointer-events-none"
+                                            ></motion.div>
+                                        )}
+
+                                        <span className="relative z-10 flex items-center gap-4 text-xl sm:text-2xl drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                                            <Zap className={`w-6 h-6 sm:w-8 sm:h-8 ${approvedPlayers.length >= 2 ? 'group-hover/btn:animate-[pulse_1s_ease-in-out_Infinity]' : ''}`} /> 
+                                            Execute
+                                        </span>
+                                        {approvedPlayers.length >= 2 && (
+                                            <span className="relative z-10 text-[10px] text-emerald-500/80 font-bold tracking-[0.5em] uppercase">
+                                                Initiate Protocol
+                                            </span>
+                                        )}
+                                    </motion.button>
                                 </div>
-                                <motion.button
-                                    whileHover={approvedPlayers.length >= 2 ? { scale: 1.02 } : {}}
-                                    whileTap={approvedPlayers.length >= 2 ? { scale: 0.98 } : {}}
-                                    onClick={handleDrawGroups} disabled={approvedPlayers.length < 2}
-                                    className={`flex-1 w-full py-5 rounded-2xl font-outfit font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 text-lg shadow-lg ${approvedPlayers.length >= 2 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-[0_0_40px_rgba(16,185,129,0.4)]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>
-                                    <Shuffle className="w-6 h-6" /> Auto Draw Groups
-                                </motion.button>
                             </div>
                         </div>
                     </motion.div>
@@ -1115,6 +1201,94 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                             )}
                         </AnimatePresence>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ===== CUSTOM MODAL ===== */}
+            <AnimatePresence>
+                {modalConfig && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-[#0A0D14]/80 backdrop-blur-md"
+                            onClick={() => {
+                                setModalConfig(null);
+                                setPromptValue('');
+                            }}
+                        />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                            className="relative w-full max-w-md bg-slate-900 border border-white/10 rounded-[32px] p-8 shadow-2xl overflow-hidden"
+                        >
+                            <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] pointer-events-none mix-blend-screen opacity-50 ${
+                                modalConfig.danger ? 'bg-rose-500/20' : 
+                                modalConfig.type === 'alert' ? 'bg-emerald-500/20' : 
+                                'bg-amber-500/20'
+                            }`}></div>
+
+                            <div className="relative z-10">
+                                <h3 className={`text-2xl font-outfit font-black mb-2 uppercase tracking-widest ${modalConfig.danger ? 'text-rose-400' : 'text-white'}`}>
+                                    {modalConfig.title}
+                                </h3>
+                                <p className="text-slate-400 font-medium mb-8 leading-relaxed">
+                                    {modalConfig.message}
+                                </p>
+
+                                {modalConfig.type === 'prompt' && (
+                                    <input 
+                                        type="text" 
+                                        value={promptValue} 
+                                        onChange={(e) => setPromptValue(e.target.value)}
+                                        placeholder={`Type '${modalConfig.expectedValue}'`}
+                                        className="w-full bg-slate-950/50 border border-white/10 rounded-2xl px-5 py-4 mb-8 text-white focus:outline-none focus:border-rose-500/50 transition-colors font-mono font-bold uppercase tracking-widest text-center shadow-inner"
+                                        autoFocus
+                                    />
+                                )}
+
+                                <div className="flex gap-4 items-center">
+                                    {(modalConfig.type === 'confirm' || modalConfig.type === 'prompt') && (
+                                        <button 
+                                            onClick={() => { setModalConfig(null); setPromptValue(''); }}
+                                            className="flex-1 px-6 py-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-outfit font-black uppercase tracking-widest transition-all text-sm"
+                                        >
+                                            Cancel
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={() => {
+                                            if (modalConfig.type === 'prompt') {
+                                                if (promptValue === modalConfig.expectedValue) {
+                                                    modalConfig.onConfirm();
+                                                    setPromptValue('');
+                                                } else {
+                                                    setModalConfig({
+                                                        title: 'Invalid Input',
+                                                        message: `You must type '${modalConfig.expectedValue}' exactly.`,
+                                                        type: 'alert',
+                                                        danger: true
+                                                    });
+                                                    setPromptValue('');
+                                                }
+                                            } else {
+                                                if (modalConfig.onConfirm) modalConfig.onConfirm();
+                                                else setModalConfig(null);
+                                            }
+                                        }}
+                                        className={`flex-1 px-6 py-4 rounded-2xl font-outfit font-black uppercase tracking-widest transition-all text-sm shadow-lg ${
+                                            modalConfig.danger ? 'bg-rose-500 hover:bg-rose-400 text-slate-950 shadow-[0_0_20px_rgba(244,63,94,0.4)]' : 
+                                            modalConfig.type === 'alert' ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)]' :
+                                            'bg-white hover:bg-slate-200 text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.2)]'
+                                        }`}
+                                    >
+                                        {modalConfig.type === 'alert' ? 'OK' : 'Confirm'}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </motion.div>

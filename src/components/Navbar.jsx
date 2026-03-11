@@ -1,28 +1,37 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Home, BarChart3, Gamepad2, BookOpen, Sun, Moon, UserPlus, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../assets/pallet.jpg';
 export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted, lastUpdated }) {
     const [showNavbar, setShowNavbar] = useState(true);
     const [scrolled, setScrolled] = useState(false);
+    const rafRef = useRef(null);
 
     useEffect(() => {
         let lastScrollY = window.scrollY;
 
         const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-            setScrolled(currentScrollY > 20);
+            // Throttle with rAF — only process once per frame
+            if (rafRef.current) return;
+            rafRef.current = requestAnimationFrame(() => {
+                const currentScrollY = window.scrollY;
+                setScrolled(currentScrollY > 20);
 
-            if (currentScrollY > lastScrollY && currentScrollY > 60 && !isAdmin) {
-                setShowNavbar(false);
-            } else {
-                setShowNavbar(true);
-            }
-            lastScrollY = currentScrollY;
+                if (currentScrollY > lastScrollY && currentScrollY > 60 && !isAdmin) {
+                    setShowNavbar(false);
+                } else {
+                    setShowNavbar(true);
+                }
+                lastScrollY = currentScrollY;
+                rafRef.current = null;
+            });
         };
 
         window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
     }, [isAdmin]);
 
     const navItems = [

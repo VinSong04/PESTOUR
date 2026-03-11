@@ -1,19 +1,12 @@
+import { useMemo } from 'react';
 import { Trophy } from 'lucide-react';
 import BracketMatchBox from './BracketMatchBox';
 import PlayerAvatar from './PlayerAvatar';
 import { processBracket } from '../utils/logic';
 import { motion } from 'framer-motion';
+import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
 
 export default function StandingsView({ standingsData, bracketData }) {
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: "spring", stiffness: 100, damping: 15 }
-        }
-    };
-
     const renderTable = (players, title, isBestThird = false, dotColor = "bg-blue-500") => (
         <motion.div variants={itemVariants} className="bg-[#131722]/80 backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden shadow-2xl relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
@@ -79,19 +72,20 @@ export default function StandingsView({ standingsData, bracketData }) {
         </motion.div>
     );
 
-    const bracket = bracketData && bracketData.length > 0 ? processBracket(bracketData) : [];
-    const qfs = bracket.filter(m => m.id.startsWith('QF'));
-    const sfs = bracket.filter(m => m.id.startsWith('SF'));
-    const finalMatch = bracket.find(m => m.id.startsWith('F'));
+    const bracket = useMemo(
+        () => bracketData && bracketData.length > 0 ? processBracket(bracketData) : [],
+        [bracketData]
+    );
+    const qfs = useMemo(() => bracket.filter(m => m.id.startsWith('QF')), [bracket]);
+    const sfs = useMemo(() => bracket.filter(m => m.id.startsWith('SF')), [bracket]);
+    const finalMatch = useMemo(() => bracket.find(m => m.id.startsWith('F')), [bracket]);
 
     return (
         <motion.div
             className="space-y-16"
             initial="hidden"
             animate="visible"
-            variants={{
-                visible: { transition: { staggerChildren: 0.1 } }
-            }}
+            variants={containerVariants}
         >
             <div className="grid lg:grid-cols-2 gap-8 mt-4">
                 {Object.keys(standingsData.groups).sort().map((grp, idx) => {

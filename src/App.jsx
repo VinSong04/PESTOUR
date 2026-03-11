@@ -1,19 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { db, auth } from './firebase';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { ref, onValue, set } from 'firebase/database';
 import { INITIAL_DATA } from './utils/initialData';
 import { calculateStandings } from './utils/logic';
 
-// Components
+// Components (eagerly loaded — always visible)
 import Navbar from './components/Navbar';
-import HomeView from './components/HomeView';
-import StandingsView from './components/StandingsView';
-import MatchesView from './components/MatchesView';
-import RulesView from './components/RulesView';
-import KnockoutView from './components/KnockoutView';
-import AdminView from './components/AdminView';
-import RegisterView from './components/RegisterView';
+
+// Lazy-loaded page components (code-split)
+const HomeView = lazy(() => import('./components/HomeView'));
+const StandingsView = lazy(() => import('./components/StandingsView'));
+const MatchesView = lazy(() => import('./components/MatchesView'));
+const RulesView = lazy(() => import('./components/RulesView'));
+const KnockoutView = lazy(() => import('./components/KnockoutView'));
+const AdminView = lazy(() => import('./components/AdminView'));
+const RegisterView = lazy(() => import('./components/RegisterView'));
+
+const PageFallback = () => (
+    <div className="flex items-center justify-center py-32 text-slate-500">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 animate-spin opacity-40">
+            <circle cx="12" cy="12" r="10" strokeDasharray="6 4" />
+        </svg>
+    </div>
+);
 
 export default function App() {
     const getInitialPage = () => {
@@ -118,6 +128,19 @@ export default function App() {
         }
     };
 
+    const history = data ? (data.history || {}) : {};
+    const seasons = ['CURRENT', ...Object.keys(history).sort().reverse()];
+
+    const displayData = selectedSeason === 'CURRENT' ? data : history[selectedSeason];
+    const activeData = displayData || data;
+    const isCurrentSeason = selectedSeason === 'CURRENT';
+    const effectiveIsAdmin = isAdmin && isCurrentSeason;
+
+    const standingsData = useMemo(
+        () => activeData ? calculateStandings(activeData.players, activeData.matches) : null,
+        [activeData]
+    );
+
     if (loading || !data) {
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center text-emerald-400 flex-col gap-4">
@@ -128,16 +151,6 @@ export default function App() {
             </div>
         );
     }
-
-    const history = data.history || {};
-    const seasons = ['CURRENT', ...Object.keys(history).sort().reverse()];
-
-    const displayData = selectedSeason === 'CURRENT' ? data : history[selectedSeason];
-    const activeData = displayData || data; // fallback 
-    const isCurrentSeason = selectedSeason === 'CURRENT';
-    const effectiveIsAdmin = isAdmin && isCurrentSeason;
-
-    const standingsData = calculateStandings(activeData.players, activeData.matches);
 
     return (
         <div className="min-h-screen font-sans selection:bg-blue-500/30">
@@ -155,27 +168,29 @@ export default function App() {
             />
 
             <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 pt-28 md:pt-32">
-                {currentPage === 'home' && <HomeView data={activeData} setCurrentPage={setCurrentPage} isAdmin={effectiveIsAdmin} />}
-                {currentPage === 'register' && <RegisterView isAdmin={effectiveIsAdmin} isOpen={activeData.settings.registrationOpen} />}
-                {currentPage === 'standings' && (activeData.settings.tournamentStarted || isAdmin) && <StandingsView standingsData={standingsData} bracketData={activeData.bracket} />}
-                {currentPage === 'matches' && (activeData.settings.tournamentStarted || isAdmin) && <MatchesView data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />}
-                {currentPage === 'rules' && <RulesView />}
-                {currentPage === 'knockout' && isAdmin && (
-                    <KnockoutView
-                        data={activeData}
-                        updateData={updateData}
-                        standingsData={standingsData}
-                        isAdmin={effectiveIsAdmin}
-                    />
-                )}
-                {currentPage === 'admin' && isCurrentSeason && (
-                    <AdminView
-                        data={data}
-                        updateData={updateData}
-                        isAdmin={isAdmin}
-                        setIsAdmin={setIsAdmin}
-                    />
-                )}
+                <Suspense fallback={<PageFallback />}>
+                    {currentPage === 'home' && <HomeView data={activeData} setCurrentPage={setCurrentPage} isAdmin={effectiveIsAdmin} />}
+                    {currentPage === 'register' && <RegisterView isAdmin={effectiveIsAdmin} isOpen={activeData.settings.registrationOpen} />}
+                    {currentPage === 'standings' && (activeData.settings.tournamentStarted || isAdmin) && <StandingsView standingsData={standingsData} bracketData={activeData.bracket} />}
+                    {currentPage === 'matches' && (activeData.settings.tournamentStarted || isAdmin) && <MatchesView data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />}
+                    {currentPage === 'rules' && <RulesView />}
+                    {currentPage === 'knockout' && isAdmin && (
+                        <KnockoutView
+                            data={activeData}
+                            updateData={updateData}
+                            standingsData={standingsData}
+                            isAdmin={effectiveIsAdmin}
+                        />
+                    )}
+                    {currentPage === 'admin' && isCurrentSeason && (
+                        <AdminView
+                            data={data}
+                            updateData={updateData}
+                            isAdmin={isAdmin}
+                            setIsAdmin={setIsAdmin}
+                        />
+                    )}
+                </Suspense>
             </main>
 
         </div>

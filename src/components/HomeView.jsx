@@ -1,6 +1,7 @@
 import { BarChart3, Gamepad2, Trophy, UserPlus, Sparkles, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import logo from '../assets/pallet.jpg';
+import { staggerContainerDelayed as containerVariants, springItemHero as itemVariants } from '../constants/animations';
 
 export default function HomeView({ data, setCurrentPage, isAdmin }) {
     const isLive = data.settings.tournamentStarted || isAdmin;
@@ -12,24 +13,6 @@ export default function HomeView({ data, setCurrentPage, isAdmin }) {
     const allTotal = totalMatches + bracketTotal;
     const progressPercent = allTotal === 0 ? 0 : Math.round((allPlayed / allTotal) * 100);
     const remaining = allTotal - allPlayed;
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: { staggerChildren: 0.15, delayChildren: 0.1 }
-        }
-    };
-
-    const itemVariants = {
-        hidden: { y: 30, opacity: 0, scale: 0.95 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            scale: 1,
-            transition: { type: "spring", stiffness: 100, damping: 15 }
-        }
-    };
 
     return (
         <motion.div
@@ -211,7 +194,7 @@ export default function HomeView({ data, setCurrentPage, isAdmin }) {
                     </div>
                 </motion.div>
             )}
-            <style jsx>{`
+            <style>{`
                 @keyframes shimmer {
                     100% {
                         transform: translateX(100%);

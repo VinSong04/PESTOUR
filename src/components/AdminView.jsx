@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy, Trash2, Sparkles, Image as ImageIcon, Copy, ExternalLink } from 'lucide-react';
 import { INITIAL_DATA, INITIAL_MATCHES } from '../utils/initialData';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
@@ -166,6 +166,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [renderProgress, setRenderProgress] = useState(0);
+    const progressIntervalRef = useRef(null);
 
     const generateAiPrompt = (type) => {
         let promptText = "Create an epic, professional sports tournament poster. Style: Sharp geometric shapes like parallelograms and angled banners, split layout. Color scheme: bold reds, maroons, and white. Clean, modern typography. High-quality action photography of soccer players in the background. Inspired by professional Asian football league graphics (like Cambodian Premier League).\n\nDetails to include:\n";
@@ -213,6 +214,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             progress = Math.min(progress, 95);
             setRenderProgress(Math.round(progress));
         }, 500);
+        progressIntervalRef.current = progressInterval;
 
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 
@@ -247,28 +249,11 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             }
         }
 
-        // Fallback: Pollinations AI
-        try {
-            const promptEncoded = encodeURIComponent(generatedPrompt);
-            const imageUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=1080&height=1440&nologo=true&seed=${Date.now()}`;
-
-            // Fetch the image as a blob so we know exactly when it's done
-            const response = await fetch(imageUrl);
-            if (!response.ok) throw new Error('Pollinations image generation failed');
-            const blob = await response.blob();
-            const objectUrl = URL.createObjectURL(blob);
-
-            clearInterval(progressInterval);
-            setRenderProgress(100);
-            setGeneratedImageUrl(objectUrl);
-            setIsGenerating(false);
-        } catch (error) {
-            clearInterval(progressInterval);
-            console.error(error);
-            alert("Image Generation Error: " + error.message);
-            setIsGenerating(false);
-            setRenderProgress(0);
-        }
+        // Fallback: Pollinations AI (use img tag directly - no CORS issues)
+        const promptEncoded = encodeURIComponent(generatedPrompt);
+        const imageUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=1080&height=1440&nologo=true&seed=${Date.now()}`;
+        setGeneratedImageUrl(imageUrl);
+        // isGenerating stays true — the <img> onLoad in the render will clear it
     };
 
     const copyPrompt = () => {
@@ -811,8 +796,8 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                         {/* Background effect */}
                                         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-purple-500/5 pointer-events-none"></div>
                                         
-                                        {isGenerating ? (
-                                            <div className="flex flex-col items-center gap-6 relative z-10 w-full px-8">
+                                        {isGenerating && (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-30 bg-[#0A0D14]/95 w-full px-8">
                                                 <div className="relative w-24 h-24">
                                                     <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
                                                         <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(245,158,11,0.15)" strokeWidth="8" />
@@ -833,24 +818,40 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                                     <div className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" style={{width: `${renderProgress}%`}} />
                                                 </div>
                                             </div>
-                                        ) : generatedImageUrl ? (
+                                        )}
+                                        {generatedImageUrl && (
                                             <>
                                                 <img 
                                                     src={generatedImageUrl} 
                                                     alt="AI Generated Tournament Poster" 
-                                                    className="w-full h-full object-cover relative z-10"
+                                                    className={`w-full h-full object-cover relative z-10 ${isGenerating ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500`}
+                                                    onLoad={() => {
+                                                        if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+                                                        setRenderProgress(100);
+                                                        setTimeout(() => setIsGenerating(false), 500);
+                                                    }}
+                                                    onError={() => {
+                                                        if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+                                                        setIsGenerating(false);
+                                                        setGeneratedImageUrl(null);
+                                                        setRenderProgress(0);
+                                                        alert('Image generation failed. Please try again.');
+                                                    }}
                                                 />
-                                                <div className="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-[#0A0D14] via-[#0A0D14]/60 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end justify-center pb-8 z-20">
-                                                    <a 
-                                                        href={generatedImageUrl} 
-                                                        download="pestour-ai-poster.jpg"
-                                                        className="px-6 py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-outfit font-black uppercase tracking-widest flex items-center gap-3 shadow-[0_0_30px_rgba(245,158,11,0.6)] transition-all transform hover:scale-105"
-                                                    >
-                                                        <ExternalLink className="w-5 h-5" /> Save Image
-                                                    </a>
-                                                </div>
+                                                {!isGenerating && (
+                                                    <div className="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-[#0A0D14] via-[#0A0D14]/60 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end justify-center pb-8 z-20">
+                                                        <a 
+                                                            href={generatedImageUrl} 
+                                                            download="pestour-ai-poster.jpg"
+                                                            className="px-6 py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-outfit font-black uppercase tracking-widest flex items-center gap-3 shadow-[0_0_30px_rgba(245,158,11,0.6)] transition-all transform hover:scale-105"
+                                                        >
+                                                            <ExternalLink className="w-5 h-5" /> Save Image
+                                                        </a>
+                                                    </div>
+                                                )}
                                             </>
-                                        ) : null}
+                                        )}
+                                        {!isGenerating && !generatedImageUrl && null}
                                     </div>
                                 </motion.div>
                             )}

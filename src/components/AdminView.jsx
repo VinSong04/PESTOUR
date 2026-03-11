@@ -168,6 +168,10 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     const progressIntervalRef = useRef(null);
 
     const [posterType, setPosterType] = useState('');
+    const [posterTitle, setPosterTitle] = useState('PALLET EFOOTBALL');
+    const [posterSubtitle, setPosterSubtitle] = useState('TOURNAMENT 2026');
+    const [posterFooter, setPosterFooter] = useState('⚽  PES TOUR  •  LEGENDS START HERE  •  SEASON 2026');
+    const [posterAccent, setPosterAccent] = useState('#dc2626');
 
     const generatePoster = (type) => {
         setIsGenerating(true);
@@ -273,10 +277,10 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             ctx.textAlign = 'left';
             ctx.shadowColor = 'rgba(0,0,0,0.5)';
             ctx.shadowBlur = 10;
-            ctx.fillText('PALLET EFOOTBALL', 160, 80);
+            ctx.fillText(posterTitle, 160, 80);
             ctx.font = 'bold 20px Arial, sans-serif';
             ctx.fillStyle = '#fbbf24';
-            ctx.fillText('TOURNAMENT 2026', 160, 110);
+            ctx.fillText(posterSubtitle, 160, 110);
             ctx.shadowBlur = 0;
 
             // Type label (top right)
@@ -288,8 +292,8 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             ctx.font = 'bold 14px Arial, sans-serif';
             ctx.fillText(new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), W - 50, 80);
 
-            // Red divider
-            ctx.fillStyle = '#dc2626';
+            // Accent divider
+            ctx.fillStyle = posterAccent;
             ctx.fillRect(40, 150, W - 80, 4);
 
             // === SECTION TITLE ===
@@ -298,7 +302,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             else if (type === 'results') sectionTitle = '🏆  LATEST RESULTS';
             else sectionTitle = '📊  GROUP STANDINGS';
 
-            drawSkewedBanner(40, 180, 500, 55, '#dc2626');
+            drawSkewedBanner(40, 180, 500, 55, posterAccent);
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'left';
             ctx.font = 'bold 26px Arial, sans-serif';
@@ -332,7 +336,9 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                         ctx.stroke();
 
                         // Group label
-                        drawSkewedBanner(50, y, 200, 30, 'rgba(220,38,38,0.8)');
+                        ctx.globalAlpha = 0.8;
+                        drawSkewedBanner(50, y, 200, 30, posterAccent);
+                        ctx.globalAlpha = 1.0;
                         ctx.fillStyle = '#ffffff';
                         ctx.font = 'bold 14px Arial, sans-serif';
                         ctx.textAlign = 'left';
@@ -352,8 +358,10 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
 
                         // VS / Time box (center)
                         roundRect(W / 2 - 65, y + 50, 130, 70, 12);
-                        ctx.fillStyle = 'rgba(220,38,38,0.9)';
+                        ctx.globalAlpha = 0.9;
+                        ctx.fillStyle = posterAccent;
                         ctx.fill();
+                        ctx.globalAlpha = 1.0;
                         ctx.fillStyle = '#ffffff';
                         ctx.font = 'bold 36px Arial, sans-serif';
                         ctx.textAlign = 'center';
@@ -412,7 +420,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                         roundRect(W / 2 - 70, y + 45, 140, 75, 12);
                         ctx.fillStyle = 'rgba(0,0,0,0.5)';
                         ctx.fill();
-                        ctx.strokeStyle = '#dc2626';
+                        ctx.strokeStyle = posterAccent;
                         ctx.lineWidth = 2;
                         ctx.stroke();
                         ctx.fillStyle = '#ffffff';
@@ -449,7 +457,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
 
                 groupKeys.forEach((gKey, gi) => {
                     const players = groups[gKey].sort(sortFn);
-                    const groupColor = ['#dc2626', '#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2'][gi % 6];
+                    const groupColor = [posterAccent, '#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2'][gi % 6];
 
                     // Group header
                     drawSkewedBanner(50, gy, 250, 40, groupColor);
@@ -514,12 +522,12 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             // === FOOTER BAR ===
             ctx.fillStyle = 'rgba(0,0,0,0.6)';
             ctx.fillRect(0, H - 70, W, 70);
-            ctx.fillStyle = '#dc2626';
+            ctx.fillStyle = posterAccent;
             ctx.fillRect(0, H - 70, W, 3);
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 20px Arial, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('⚽  PES TOUR  •  LEGENDS START HERE  •  SEASON 2026', W / 2, H - 30);
+            ctx.fillText(posterFooter, W / 2, H - 30);
 
             clearInterval(progressInterval);
             setRenderProgress(100);
@@ -993,6 +1001,34 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                         <p className="text-slate-400 mb-8 font-medium text-lg relative z-10">
                             Instantly generate <strong className="text-amber-400">professional tournament posters</strong> with your live data — schedule, results, or standings. One click, no waiting.
                         </p>
+
+                        {/* POSTER TEMPLATE EDITOR */}
+                        <div className="bg-slate-950/50 border border-white/5 rounded-[24px] p-6 sm:p-8 mb-8 relative z-10 shadow-inner">
+                            <h4 className="text-sm font-outfit font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+                                <Settings className="w-4 h-4 text-amber-500" /> Template Settings
+                            </h4>
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-[10px] text-slate-500 font-outfit font-black mb-2 uppercase tracking-[0.2em] ml-2">Main Title</label>
+                                    <input value={posterTitle} onChange={e => setPosterTitle(e.target.value)} className="w-full bg-[#0A0D14] border border-white/10 text-white rounded-xl px-4 py-3 focus:border-amber-500/50 outline-none text-sm font-bold shadow-inner" />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] text-slate-500 font-outfit font-black mb-2 uppercase tracking-[0.2em] ml-2">Subtitle / Season</label>
+                                    <input value={posterSubtitle} onChange={e => setPosterSubtitle(e.target.value)} className="w-full bg-[#0A0D14] border border-white/10 text-white rounded-xl px-4 py-3 focus:border-amber-500/50 outline-none text-sm font-bold shadow-inner" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-[10px] text-slate-500 font-outfit font-black mb-2 uppercase tracking-[0.2em] ml-2">Footer Text</label>
+                                    <input value={posterFooter} onChange={e => setPosterFooter(e.target.value)} className="w-full bg-[#0A0D14] border border-white/10 text-white rounded-xl px-4 py-3 focus:border-amber-500/50 outline-none text-sm font-bold shadow-inner" />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] text-slate-500 font-outfit font-black mb-2 uppercase tracking-[0.2em] ml-2">Accent Color</label>
+                                    <div className="flex items-center gap-3">
+                                        <input type="color" value={posterAccent} onChange={e => setPosterAccent(e.target.value)} className="w-12 h-12 rounded-xl border border-white/10 cursor-pointer bg-transparent" />
+                                        <div className="text-xs font-mono font-bold text-slate-400 uppercase">{posterAccent}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div className="grid md:grid-cols-3 gap-4 mb-8 relative z-10">
                             <button 

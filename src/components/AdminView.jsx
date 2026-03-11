@@ -207,7 +207,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         setGeneratedImageUrl(null);
         setRenderProgress(0);
 
-        // Progress simulation (speeds up at the start, slows near the end)
+        // Progress simulation
         let progress = 0;
         const progressInterval = setInterval(() => {
             progress += progress < 60 ? Math.random() * 8 : progress < 85 ? Math.random() * 3 : Math.random() * 0.5;
@@ -219,41 +219,167 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 
         if (apiKey) {
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        instances: [{ prompt: generatedPrompt }],
-                        parameters: { sampleCount: 1, aspectRatio: "3:4" }
-                    })
-                });
+            // Try Gemini with available image models
+            for (const model of ['imagen-4.0-fast-generate-001', 'imagen-4.0-generate-001']) {
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            instances: [{ prompt: generatedPrompt }],
+                            parameters: { sampleCount: 1, aspectRatio: "3:4" }
+                        })
+                    });
 
-                if (!res.ok) {
-                    const errorData = await res.json();
-                    throw new Error(errorData?.error?.message || "Gemini API error");
-                }
+                    if (!res.ok) {
+                        const errorData = await res.json();
+                        throw new Error(errorData?.error?.message || "Gemini API error");
+                    }
 
-                const result = await res.json();
-                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    clearInterval(progressInterval);
-                    setRenderProgress(100);
-                    setGeneratedImageUrl(`data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`);
-                    setIsGenerating(false);
-                    return;
-                } else {
-                    throw new Error("No image data returned from Gemini.");
+                    const result = await res.json();
+                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                        clearInterval(progressInterval);
+                        setRenderProgress(100);
+                        setGeneratedImageUrl(`data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`);
+                        setIsGenerating(false);
+                        return;
+                    }
+                } catch (error) {
+                    console.warn(`Gemini ${model} failed:`, error.message);
                 }
-            } catch (error) {
-                console.warn("Gemini Imagen failed, falling back to Pollinations:", error.message);
+            }
+
+            // Try Gemini generateContent with image output
+            for (const model of ['gemini-2.5-flash-image', 'gemini-3.1-flash-image-preview']) {
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: generatedPrompt }] }],
+                            generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
+                        })
+                    });
+
+                    if (!res.ok) throw new Error("API error");
+                    const result = await res.json();
+                    const parts = result?.candidates?.[0]?.content?.parts || [];
+                    const imagePart = parts.find(p => p.inlineData);
+                    if (imagePart) {
+                        clearInterval(progressInterval);
+                        setRenderProgress(100);
+                        setGeneratedImageUrl(`data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`);
+                        setIsGenerating(false);
+                        return;
+                    }
+                } catch (error) {
+                    console.warn(`Gemini ${model} failed:`, error.message);
+                }
             }
         }
 
-        // Fallback: Pollinations AI (use img tag directly - no CORS issues)
-        const promptEncoded = encodeURIComponent(generatedPrompt);
-        const imageUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=1080&height=1440&nologo=true&seed=${Date.now()}`;
-        setGeneratedImageUrl(imageUrl);
-        // isGenerating stays true — the <img> onLoad in the render will clear it
+        // Ultimate fallback: Unsplash background + Canvas text overlay
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1080;
+            canvas.height = 1440;
+            const ctx = canvas.getContext('2d');
+
+            // Load a sports background from Unsplash Source (no API key needed)
+            const bgImg = new Image();
+            bgImg.crossOrigin = 'anonymous';
+            bgImg.src = `https://source.unsplash.com/1080x1440/?soccer,football,stadium&${Date.now()}`;
+
+            bgImg.onload = () => {
+                // Draw background
+                ctx.drawImage(bgImg, 0, 0, 1080, 1440);
+
+                // Dark overlay
+                const gradient = ctx.createLinearGradient(0, 0, 0, 1440);
+                gradient.addColorStop(0, 'rgba(10,13,20,0.5)');
+                gradient.addColorStop(0.4, 'rgba(10,13,20,0.3)');
+                gradient.addColorStop(0.7, 'rgba(10,13,20,0.7)');
+                gradient.addColorStop(1, 'rgba(10,13,20,0.95)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 1080, 1440);
+
+                // Red accent bar
+                ctx.fillStyle = 'rgba(220, 38, 38, 0.9)';
+                ctx.fillRect(0, 200, 1080, 8);
+
+                // Title
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 72px Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 20;
+                ctx.fillText('PALLET EFOOTBALL', 540, 300);
+
+                // Subtitle
+                ctx.font = 'bold 36px Arial, sans-serif';
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillText('TOURNAMENT 2026', 540, 360);
+
+                // Content lines from the prompt
+                ctx.font = 'bold 28px Arial, sans-serif';
+                ctx.fillStyle = '#e2e8f0';
+                ctx.shadowBlur = 10;
+                const lines = generatedPrompt.split('\n').filter(l => l.trim()).slice(2, 10);
+                lines.forEach((line, i) => {
+                    const cleanLine = line.substring(0, 50);
+                    ctx.fillText(cleanLine, 540, 500 + i * 60);
+                });
+
+                // Bottom accent
+                ctx.fillStyle = 'rgba(220, 38, 38, 0.9)';
+                ctx.fillRect(0, 1380, 1080, 60);
+                ctx.font = 'bold 24px Arial, sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 0;
+                ctx.fillText('⚽ PES TOUR • LEGENDS START HERE', 540, 1415);
+
+                clearInterval(progressInterval);
+                setRenderProgress(100);
+                setGeneratedImageUrl(canvas.toDataURL('image/jpeg', 0.95));
+                setIsGenerating(false);
+            };
+
+            bgImg.onerror = () => {
+                // Even if Unsplash fails, generate a pure gradient poster
+                const grad = ctx.createLinearGradient(0, 0, 1080, 1440);
+                grad.addColorStop(0, '#1e1b4b');
+                grad.addColorStop(0.5, '#7f1d1d');
+                grad.addColorStop(1, '#0f172a');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 1080, 1440);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 72px Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('PALLET EFOOTBALL', 540, 400);
+                ctx.font = 'bold 36px Arial, sans-serif';
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillText('TOURNAMENT 2026', 540, 460);
+
+                const lines = generatedPrompt.split('\n').filter(l => l.trim()).slice(2, 10);
+                ctx.font = 'bold 28px Arial, sans-serif';
+                ctx.fillStyle = '#e2e8f0';
+                lines.forEach((line, i) => {
+                    ctx.fillText(line.substring(0, 50), 540, 600 + i * 60);
+                });
+
+                clearInterval(progressInterval);
+                setRenderProgress(100);
+                setGeneratedImageUrl(canvas.toDataURL('image/jpeg', 0.95));
+                setIsGenerating(false);
+            };
+        } catch (error) {
+            clearInterval(progressInterval);
+            console.error(error);
+            alert("Image Generation Error: " + error.message);
+            setIsGenerating(false);
+            setRenderProgress(0);
+        }
     };
 
     const copyPrompt = () => {

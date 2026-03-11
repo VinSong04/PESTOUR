@@ -165,6 +165,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     const [generatedPrompt, setGeneratedPrompt] = useState('');
     const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [renderProgress, setRenderProgress] = useState(0);
 
     const generateAiPrompt = (type) => {
         let promptText = "Create an epic, professional sports tournament poster. Style: Sharp geometric shapes like parallelograms and angled banners, split layout. Color scheme: bold reds, maroons, and white. Clean, modern typography. High-quality action photography of soccer players in the background. Inspired by professional Asian football league graphics (like Cambodian Premier League).\n\nDetails to include:\n";
@@ -203,11 +204,19 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
 
         setIsGenerating(true);
         setGeneratedImageUrl(null);
+        setRenderProgress(0);
+
+        // Progress simulation (speeds up at the start, slows near the end)
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += progress < 60 ? Math.random() * 8 : progress < 85 ? Math.random() * 3 : Math.random() * 0.5;
+            progress = Math.min(progress, 95);
+            setRenderProgress(Math.round(progress));
+        }, 500);
 
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 
         if (apiKey) {
-            // Try Gemini Imagen first
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, {
                     method: "POST",
@@ -225,6 +234,8 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
 
                 const result = await res.json();
                 if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    clearInterval(progressInterval);
+                    setRenderProgress(100);
                     setGeneratedImageUrl(`data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`);
                     setIsGenerating(false);
                     return;
@@ -236,15 +247,27 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             }
         }
 
-        // Fallback to Pollinations AI (free, no key needed)
+        // Fallback: Pollinations AI
         try {
             const promptEncoded = encodeURIComponent(generatedPrompt);
-            const imageUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=1080&height=1440&nologo=true`;
-            setGeneratedImageUrl(imageUrl);
+            const imageUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=1080&height=1440&nologo=true&seed=${Date.now()}`;
+
+            // Fetch the image as a blob so we know exactly when it's done
+            const response = await fetch(imageUrl);
+            if (!response.ok) throw new Error('Pollinations image generation failed');
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+
+            clearInterval(progressInterval);
+            setRenderProgress(100);
+            setGeneratedImageUrl(objectUrl);
+            setIsGenerating(false);
         } catch (error) {
+            clearInterval(progressInterval);
             console.error(error);
             alert("Image Generation Error: " + error.message);
             setIsGenerating(false);
+            setRenderProgress(0);
         }
     };
 
@@ -789,13 +812,26 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-purple-500/5 pointer-events-none"></div>
                                         
                                         {isGenerating ? (
-                                            <div className="flex flex-col items-center gap-6 relative z-10">
-                                                <div className="relative w-20 h-20">
-                                                    <div className="absolute inset-0 border-4 border-amber-500/20 rounded-full"></div>
-                                                    <div className="absolute inset-0 border-4 border-amber-500 rounded-full animate-spin border-t-transparent"></div>
-                                                    <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-amber-400 animate-pulse" />
+                                            <div className="flex flex-col items-center gap-6 relative z-10 w-full px-8">
+                                                <div className="relative w-24 h-24">
+                                                    <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                                                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(245,158,11,0.15)" strokeWidth="8" />
+                                                        <circle cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" strokeWidth="8"
+                                                            strokeDasharray={`${renderProgress * 2.64} 264`}
+                                                            strokeLinecap="round"
+                                                            className="transition-all duration-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                                                        />
+                                                    </svg>
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <span className="text-2xl font-outfit font-black text-amber-400 tabular-nums">{renderProgress}%</span>
+                                                    </div>
                                                 </div>
-                                                <div className="text-amber-400 font-outfit font-black tracking-widest uppercase animate-pulse text-sm">Rendering via Pollinations AI...</div>
+                                                <div className="text-amber-400 font-outfit font-black tracking-widest uppercase text-sm text-center">
+                                                    {renderProgress < 30 ? 'Initializing AI...' : renderProgress < 70 ? 'Generating artwork...' : renderProgress < 95 ? 'Finalizing details...' : 'Almost done...'}
+                                                </div>
+                                                <div className="w-full max-w-xs bg-slate-800/60 rounded-full h-2 overflow-hidden">
+                                                    <div className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" style={{width: `${renderProgress}%`}} />
+                                                </div>
                                             </div>
                                         ) : generatedImageUrl ? (
                                             <>
@@ -803,7 +839,6 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                                     src={generatedImageUrl} 
                                                     alt="AI Generated Tournament Poster" 
                                                     className="w-full h-full object-cover relative z-10"
-                                                    onLoad={() => setIsGenerating(false)}
                                                 />
                                                 <div className="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-[#0A0D14] via-[#0A0D14]/60 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end justify-center pb-8 z-20">
                                                     <a 

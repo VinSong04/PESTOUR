@@ -20,18 +20,37 @@ const useVoting = (pollId = 'primary_poll') => {
         return () => unsubscribe();
     }, [pollId]);
 
+
     const castVote = (optionId) => {
-        if (userVote) return; // Prevent double voting
+        if (userVote === optionId) return; // Prevent voting same option
 
         const votesRef = ref(db, `votes/${pollId}`);
-        update(votesRef, {
-            [optionId]: increment(1)
-        });
+        // If user has already voted, decrement previous vote
+        if (userVote) {
+            update(votesRef, {
+                [userVote]: increment(-1),
+                [optionId]: increment(1)
+            });
+        } else {
+            update(votesRef, {
+                [optionId]: increment(1)
+            });
+        }
         localStorage.setItem(`voted_${pollId}`, optionId);
         setUserVote(optionId);
     };
 
-    return { votes, loading, castVote, userVote, hasVoted: !!userVote };
+    const clearVote = () => {
+        if (!userVote) return;
+        const votesRef = ref(db, `votes/${pollId}`);
+        update(votesRef, {
+            [userVote]: increment(-1)
+        });
+        localStorage.removeItem(`voted_${pollId}`);
+        setUserVote(null);
+    };
+
+    return { votes, loading, castVote, clearVote, userVote, hasVoted: !!userVote };
 };
 
 export default useVoting;

@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThumbsUp, Trophy, RefreshCw } from 'lucide-react';
 import useVoting from '../hooks/useVoting';
@@ -8,13 +9,42 @@ const VotingView = ({ data, onAdminAccess }) => {
     const votingTitle = data?.settings?.votingTitle || "COMMUNITY VOTE";
     const votingOptions = data?.settings?.votingOptions || [];
 
-    const { votes, loading, castVote, userVote, hasVoted } = useVoting('primary_poll');
+    const { votes, loading, castVote, clearVote, userVote, hasVoted } = useVoting('primary_poll');
+    const [selectedOption, setSelectedOption] = useState(null);
+    const [showModal, setShowModal] = useState(false);
     const totalVotes = Object.values(votes).reduce((sum, v) => sum + v, 0);
 
+    const [showConfirm, setShowConfirm] = useState(false);
     const handleClearLocalVote = () => {
-        localStorage.removeItem('voted_primary_poll');
-        window.location.reload();
+        setShowConfirm(true);
     };
+    const confirmClearVote = () => {
+        clearVote();
+        setSelectedOption(null);
+        setShowConfirm(false);
+    };
+    const cancelClearVote = () => {
+        setShowConfirm(false);
+    };
+
+    const handleSelectOption = (optionId) => {
+        if (!hasVoted && votingEnabled && !isFinished) {
+            setSelectedOption(optionId);
+            setShowModal(true);
+        }
+    };
+    const handleSubmitVote = () => {
+        if (selectedOption) {
+            castVote(selectedOption);
+            setSelectedOption(null);
+            setShowModal(false);
+        }
+    };
+    const handleCancelVote = () => {
+        setSelectedOption(null);
+        setShowModal(false);
+    };
+
     const isFinished = votingStatus === 'finished';
 
     // Find the winner
@@ -41,18 +71,25 @@ const VotingView = ({ data, onAdminAccess }) => {
             </div>
         );
     }
-
     return (
-        <div className="max-w-3xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 font-sans">
+        <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 font-sans pb-24">
+
+
             {/* Header Section */}
             <div className="text-center space-y-6">
+                <h1 className="text-4xl md:text-6xl font-black flex justify-center py-8">
+                    <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400 bg-clip-text text-transparent inline-block py-12 px-6 -my-12 leading-[1.8]">
+                        {votingTitle}
+                    </span>
+                </h1>
+
                 <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     className={`inline-flex items-center gap-2 px-5 py-2 rounded-full border text-[10px] font-black uppercase tracking-[0.2em] ${isFinished
                         ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                         : hasVoted
-                            ? 'bg-[#1a233a] border-blue-900/50 text-blue-400'
+                            ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
                             : 'bg-slate-800/50 border-white/5 text-slate-400'
                         }`}
                 >
@@ -69,14 +106,10 @@ const VotingView = ({ data, onAdminAccess }) => {
                         </button>
                     </div>
                 )}
-
-                <h1 className="text-3xl md:text-5xl font-black text-[#4b70db] tracking-wide leading-tight">
-                    {votingTitle}
-                </h1>
             </div>
 
             {/* Voting Options List */}
-            <div className="space-y-4">
+            <div className="space-y-4 max-w-3xl mx-auto">
                 <AnimatePresence>
                     {votingOptions.map((option, index) => {
                         const voteId = option.id;
@@ -87,33 +120,20 @@ const VotingView = ({ data, onAdminAccess }) => {
                         const isUserChoice = userVote === voteId;
                         const isWinner = isFinished && winnerId === voteId;
                         const isDisabled = isFinished || !votingEnabled || hasVoted;
+                        const isSelected = selectedOption === voteId;
 
-                        // Extracted Classes for better readability
+                        // Card classes for glassmorphism and expansion
                         const cardClasses = `
-                            w-full text-left bg-[#0a0c10] border rounded-2xl p-5 sm:p-6 
-                            flex items-center gap-5 transition-all relative overflow-hidden group
-                            ${hasVoted && !isUserChoice ? 'opacity-60' : ''}
-                            ${!isDisabled ? 'hover:border-blue-500/40 hover:bg-slate-900/60 active:scale-[0.99] cursor-pointer' : 'cursor-default'}
-                            ${isUserChoice ? 'border-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.05)]' : 'border-white/5'}
-                            ${isWinner ? 'border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.05)]' : ''}
+                            w-full text-left bg-slate-900/40 backdrop-blur-3xl border rounded-3xl p-6 flex items-center gap-6 transition-all relative overflow-hidden group
+                            ${hasVoted && !isUserChoice ? 'opacity-40 grayscale-[0.3]' : ''}
+                            ${isSelected ? 'ring-2 ring-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.2)]' : 'border-white/5'}
+                            ${!isDisabled ? 'hover:border-blue-500/30 hover:bg-slate-900/60 active:scale-[0.99] cursor-pointer' : 'cursor-default'}
+                            ${isUserChoice ? 'border-blue-500/40 bg-blue-500/5 shadow-[0_0_30px_rgba(59,130,246,0.1)]' : ''}
+                            ${isWinner ? 'border-emerald-500/40 bg-emerald-500/10' : ''}
                         `;
 
-                        const iconContainerClasses = `
-                            w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all
-                            ${isWinner ? 'bg-emerald-500 text-slate-950' : ''}
-                            ${isUserChoice && !isWinner ? 'bg-blue-500 text-white' : ''}
-                            ${!isUserChoice && !isWinner ? 'bg-[#13151A] border border-white/5 group-hover:border-blue-500/30' : ''}
-                        `;
-
-                        const titleClasses = `
-                            text-lg sm:text-xl font-black uppercase tracking-tight transition-colors
-                            ${isWinner ? 'text-emerald-400' : isUserChoice ? 'text-[#5a8af2]' : 'text-white'}
-                        `;
-
-                        const percentageClasses = `
-                            text-3xl sm:text-4xl font-black leading-none tracking-tighter
-                            ${isWinner ? 'text-emerald-400' : isUserChoice ? 'text-[#5a8af2]' : 'text-white'}
-                        `;
+                        // Avatar/image support
+                        const avatarUrl = option.avatar || option.image || null;
 
                         return (
                             <motion.div
@@ -123,36 +143,38 @@ const VotingView = ({ data, onAdminAccess }) => {
                                 transition={{ delay: index * 0.1 }}
                             >
                                 <button
-                                    onClick={() => !isDisabled && castVote(voteId)}
+                                    onClick={() => handleSelectOption(voteId)}
                                     disabled={isDisabled}
                                     className={cardClasses}
                                 >
-                                    {/* Left Icon */}
-                                    <div className={iconContainerClasses}>
-                                        {isWinner ? (
-                                            <Trophy className="w-5 h-5" />
+                                    {/* Avatar/Icon */}
+                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border transition-all ${isWinner ? 'bg-emerald-500 border-emerald-400 text-slate-950' : isUserChoice ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-950/50 border-white/10 text-white group-hover:border-blue-500/30'}`}>
+                                        {avatarUrl ? (
+                                            <img src={avatarUrl} alt={option.label} className="w-full h-full object-cover rounded-2xl" />
+                                        ) : isWinner ? (
+                                            <Trophy className="w-7 h-7" />
                                         ) : isUserChoice ? (
-                                            <ThumbsUp className="w-5 h-5" />
+                                            <ThumbsUp className="w-7 h-7" />
                                         ) : (
-                                            <div className="w-3 h-3 rounded-[4px] bg-white/10" />
+                                            <div className="w-3 h-3 rounded-[4px] bg-current opacity-20" />
                                         )}
                                     </div>
 
-                                    {/* Middle: Title & Progress */}
+                                    {/* Main content */}
                                     <div className="flex-1 space-y-3">
                                         <div className="flex items-center gap-3">
-                                            <h3 className={titleClasses}>
+                                            <h3 className={`text-xl sm:text-2xl font-black leading-relaxed transition-colors break-words ${isWinner ? 'text-emerald-400' : isUserChoice ? 'text-blue-400' : 'text-white'}`}>
                                                 {option.label || `Option ${index + 1}`}
                                             </h3>
                                             {isUserChoice && (
-                                                <span className="text-[9px] font-bold bg-[#1e2b4a] px-2.5 py-1 rounded-full tracking-[0.15em] text-[#5a8af2]">
+                                                <span className="text-[9px] font-bold bg-blue-400/10 px-2.5 py-1 rounded-full tracking-[0.15em] text-blue-400">
                                                     YOUR VOTE
                                                 </span>
                                             )}
                                         </div>
 
                                         {/* Progress Bar */}
-                                        <div className="relative h-1 w-full bg-[#13151A] rounded-full overflow-hidden">
+                                        <div className="relative h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-white/5">
                                             <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${percentage}%` }}
@@ -162,9 +184,9 @@ const VotingView = ({ data, onAdminAccess }) => {
                                         </div>
                                     </div>
 
-                                    {/* Right: Stats */}
+                                    {/* Stats */}
                                     <div className="text-right min-w-[80px] shrink-0">
-                                        <div className={percentageClasses}>
+                                        <div className={`text-3xl sm:text-4xl font-black leading-none tracking-tighter ${isWinner ? 'text-emerald-400' : isUserChoice ? 'text-blue-400' : 'text-white'}`}>
                                             {Math.round(percentage)}%
                                         </div>
                                         <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">
@@ -172,18 +194,81 @@ const VotingView = ({ data, onAdminAccess }) => {
                                         </div>
                                     </div>
                                 </button>
+
+                                {/* Confirmation Overlay inside card list */}
+                                <AnimatePresence>
+                                    {isSelected && !hasVoted && !isFinished && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="mt-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 flex items-center justify-between gap-4">
+                                                <div className="text-sm font-bold text-blue-400 px-2">Ready to submit?</div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={handleSubmitVote}
+                                                        className="px-6 py-2 rounded-xl bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-blue-400 transition"
+                                                    >Confirm</button>
+                                                    <button
+                                                        onClick={handleCancelVote}
+                                                        className="px-6 py-2 rounded-xl bg-slate-800 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition"
+                                                    >Cancel</button>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </motion.div>
                         );
                     })}
                 </AnimatePresence>
             </div>
 
+
+
+            {/* Confirm dialog for changing vote */}
+            <AnimatePresence>
+                {showConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 flex items-center justify-center z-50 bg-slate-950/80 backdrop-blur-md p-6"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-slate-900 border border-white/10 rounded-[40px] p-10 shadow-2xl max-w-md w-full text-center"
+                        >
+                            <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <RefreshCw className="w-10 h-10 text-blue-400" />
+                            </div>
+                            <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">Change Your Vote?</h2>
+                            <p className="text-slate-400 mb-8 leading-relaxed">This will remove your current selection and allow you to pick another candidate. Are you sure?</p>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={confirmClearVote}
+                                    className="flex-1 py-4 rounded-2xl bg-blue-500 hover:bg-blue-400 text-white font-black uppercase tracking-widest transition-all"
+                                >Yes, Reset</button>
+                                <button
+                                    onClick={cancelClearVote}
+                                    className="flex-1 py-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-400 font-black uppercase tracking-widest transition-all border border-white/5"
+                                >Cancel</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Admin Access Footer */}
             {onAdminAccess && (
-                <div className="pt-16 pb-8 text-center">
+                <div className="pt-24 pb-8 text-center">
                     <button
                         onClick={onAdminAccess}
-                        className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] hover:text-slate-300 hover:tracking-[0.4em] transition-all duration-500 py-3 px-8 rounded-full hover:bg-white/5"
+                        className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] hover:text-slate-300 transition-all duration-500 py-3 px-8 rounded-full hover:bg-white/5 border border-transparent hover:border-white/5"
                     >
                         Admin Portal Access
                     </button>

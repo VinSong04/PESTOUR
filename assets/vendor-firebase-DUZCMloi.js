@@ -2790,4 +2790,4 @@ FIREBASE: `))}restoreState_(){this.tryAuth(),this.tryAppCheck();for(const e of t
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */const qp={".sv":"timestamp"};function i_(){return qp}se.prototype.simpleListen=function(n,e){this.sendRequest("q",{p:n},e)};se.prototype.echo=function(n,e){this.sendRequest("echo",{d:n},e)};Gp();export{n_ as a,t_ as b,zp as c,jp as d,Yp as e,Zp as f,Qp as g,i_ as h,ll as i,Kp as o,Xp as p,Jp as r,La as s,e_ as u};
+ */const qp={".sv":"timestamp"};function i_(){return qp}function s_(n){return{".sv":{increment:n}}}se.prototype.simpleListen=function(n,e){this.sendRequest("q",{p:n},e)};se.prototype.echo=function(n,e){this.sendRequest("echo",{d:n},e)};Gp();export{n_ as a,t_ as b,zp as c,jp as d,Yp as e,Zp as f,Qp as g,i_ as h,ll as i,s_ as j,Kp as o,Xp as p,Jp as r,La as s,e_ as u};

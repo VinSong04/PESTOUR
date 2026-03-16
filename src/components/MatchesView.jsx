@@ -155,6 +155,8 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                         const g3 = match.g3 || {};
                         const g1Played = g1.p1 !== undefined && g1.p1 !== null && g1.p2 !== undefined && g1.p2 !== null;
                         const g2Played = g2.p1 !== undefined && g2.p1 !== null && g2.p2 !== undefined && g2.p2 !== null;
+                        const isLive = !match.played && (g1Played || g2Played);
+                        
                         let needG3 = false;
                         if (g1Played && g2Played) {
                             let tempP1W = (g1.p1 > g1.p2 ? 1 : 0) + (g2.p1 > g2.p2 ? 1 : 0);
@@ -175,61 +177,96 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ type: "spring", stiffness: 100, damping: 15 }}
                                 key={match.id}
-                                className={`relative flex flex-col overflow-hidden w-full border backdrop-blur-xl transition-all duration-300 rounded-[28px] group ${match.played ? 'bg-slate-900/80 border-white/5 shadow-lg' : 'bg-slate-800/60 hover:bg-slate-800/80 border-white/10 hover:border-blue-500/30 shadow-xl'}`}
+                                className={`relative flex flex-col overflow-hidden w-full border backdrop-blur-xl transition-all duration-500 rounded-[32px] group ${match.played ? 'bg-slate-900/80 border-white/5 shadow-lg' : isLive ? 'bg-indigo-950/30 border-indigo-500/30 shadow-[0_0_50px_rgba(79,70,229,0.1)]' : 'bg-slate-800/60 hover:bg-slate-800/80 border-white/10 hover:border-blue-500/30 shadow-xl'}`}
                             >
                                 {/* Gradient Hover Overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 
+                                {isLive && (
+                                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 animate-pulse"></div>
+                                )}
+
                                 {/* Main Card */}
-                                <div className="flex flex-col items-center w-full px-4 sm:px-8 py-8 relative z-10">
+                                <div className="flex flex-col items-center w-full px-4 sm:px-10 py-10 relative z-10">
                                     {/* Match Header */}
-                                    <div className="flex items-center gap-3 mb-8 w-full justify-center">
-                                        <div className="px-4 py-1.5 rounded-full bg-slate-950/50 border border-white/5 backdrop-blur-md shadow-inner">
-                                            <span className="text-[10px] sm:text-[11px] font-outfit font-black tracking-[0.25em] flex items-center gap-2 sm:gap-4 uppercase">
-                                                <span className={`${match.played ? 'text-slate-400' : 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.6)]'}`}>{label}</span>
-                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
-                                                <span className="text-slate-300">MATCH {match.id.replace(/\D/g, '') || match.id}</span>
-                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
-                                                <span className={`${match.played ? 'text-slate-400' : 'text-emerald-400'}`}>BO3</span>
-                                                {match.played && (
-                                                    <>
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
-                                                        <span className="text-emerald-500 flex items-center gap-1.5 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]">
-                                                            <CheckCircle2 className="w-3.5 h-3.5" /> OFFICIAL
-                                                        </span>
-                                                    </>
-                                                )}
-                                            </span>
+                                    <div className="flex items-center gap-4 mb-8 w-full justify-center">
+                                        <div className="px-5 py-2 rounded-full bg-slate-950/60 border border-white/10 backdrop-blur-md shadow-2xl flex items-center gap-3">
+                                            {isLive ? (
+                                                <div className="flex items-center gap-2 px-2.5 py-1 bg-rose-500/20 rounded-lg border border-rose-500/30">
+                                                    <span className="relative flex h-2 w-2">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                                                    </span>
+                                                    <span className="text-[9px] font-black text-rose-400 tracking-widest uppercase">LIVE</span>
+                                                </div>
+                                            ) : (
+                                                <span className={`text-[10px] font-black tracking-[0.2em] uppercase ${match.played ? 'text-slate-500' : 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.6)]'}`}>
+                                                    {label}
+                                                </span>
+                                            )}
+                                            
+                                            <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+                                            <span className="text-[10px] font-black text-slate-300 tracking-[0.2em] uppercase">MATCH {match.id.replace(/\D/g, '') || match.id}</span>
+                                            <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+                                            <span className="text-[10px] font-black text-emerald-500/80 tracking-[0.2em] uppercase">BO3</span>
+                                            
+                                            {match.played && (
+                                                <>
+                                                    <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+                                                    <span className="text-emerald-500 flex items-center gap-2 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)] text-[10px] font-black tracking-widest uppercase">
+                                                        <CheckCircle2 className="w-4 h-4" /> OFFICIAL
+                                                    </span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 
                                     {/* Players Row */}
-                                    <div className="flex justify-between items-center w-full max-w-4xl mx-auto">
-                                        <div className="flex items-center gap-3 sm:gap-6 w-[40%] justify-start">
+                                    <div className="flex justify-between items-center w-full max-w-5xl mx-auto">
+                                        <div className="flex items-center gap-4 sm:gap-8 w-[42%] justify-start group/p1">
                                             <motion.div whileHover={{ scale: 1.1, rotate: -5 }} className="relative shrink-0">
-                                                <div className={`absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent blur-xl rounded-full ${res.p1Wins > res.p2Wins ? 'opacity-100' : 'opacity-0'}`}></div>
-                                                <PlayerAvatar name={p1Name} logo={getPlayerLogo(match.p1Id)} className="relative w-16 h-16 sm:w-24 sm:h-24 text-sm sm:text-xl drop-shadow-2xl border-2 border-white/5" />
+                                                <div className={`absolute inset-0 bg-gradient-to-br from-blue-500/30 to-transparent blur-2xl rounded-full transition-opacity duration-500 ${res.p1Wins > res.p2Wins ? 'opacity-100' : 'opacity-0'}`}></div>
+                                                <PlayerAvatar name={p1Name} logo={getPlayerLogo(match.p1Id)} className="relative w-16 h-16 sm:w-28 sm:h-28 text-sm sm:text-2xl drop-shadow-2xl border-2 border-white/10 ring-4 ring-white/5" />
                                             </motion.div>
-                                            <span className={`font-outfit font-black text-xl sm:text-4xl truncate tracking-tight transition-colors ${res.p1Wins > res.p2Wins ? 'text-white' : 'text-slate-300 group-hover:text-white'}`} title={p1Name}>{p1Name}</span>
+                                            <div className="flex flex-col">
+                                                <span className={`font-outfit font-black text-xl sm:text-5xl truncate tracking-tighter transition-all duration-300 ${res.p1Wins > res.p2Wins ? 'text-white scale-105 origin-left' : 'text-slate-400 group-hover:text-white'}`} title={p1Name}>{p1Name}</span>
+                                                {res.p1Wins > res.p2Wins && match.played && (
+                                                    <span className="text-[10px] font-black text-amber-500 tracking-[0.3em] uppercase mt-2 animate-pulse">Winner</span>
+                                                )}
+                                            </div>
                                         </div>
 
-                                        <div className="flex flex-col items-center justify-center w-[20%] z-20">
+                                        <div className="flex flex-col items-center justify-center w-[16%] z-20">
                                             {(match.played || res.p1Wins > 0 || res.p2Wins > 0) ? (
-                                                <div className="flex items-center gap-4 bg-slate-950/80 px-6 py-3 rounded-2xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-                                                    <span className={`text-4xl sm:text-6xl font-outfit font-black tracking-tighter ${res.p1Wins > res.p2Wins ? 'text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]' : 'text-white'}`}>{res.p1Wins}</span>
-                                                    <span className="text-slate-600 font-black text-xl">-</span>
-                                                    <span className={`text-4xl sm:text-6xl font-outfit font-black tracking-tighter ${res.p2Wins > res.p1Wins ? 'text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]' : 'text-white'}`}>{res.p2Wins}</span>
+                                                <div className="flex flex-col items-center">
+                                                    <div className="flex items-center gap-5 bg-slate-950/90 px-8 py-4 rounded-[24px] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.6)] backdrop-blur-2xl relative overflow-hidden group/score">
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent pointer-events-none"></div>
+                                                        <span className={`text-5xl sm:text-7xl font-outfit font-black tracking-tighter transition-all duration-500 ${res.p1Wins > res.p2Wins ? 'text-amber-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)] scale-110' : 'text-white'}`}>{res.p1Wins}</span>
+                                                        <span className="text-slate-700 font-black text-2xl sm:text-4xl opacity-50">:</span>
+                                                        <span className={`text-5xl sm:text-7xl font-outfit font-black tracking-tighter transition-all duration-500 ${res.p2Wins > res.p1Wins ? 'text-amber-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)] scale-110' : 'text-white'}`}>{res.p2Wins}</span>
+                                                    </div>
+                                                    {isLive && (
+                                                        <span className="mt-4 text-[10px] font-black text-indigo-400 tracking-[0.4em] uppercase animate-pulse">In Progress</span>
+                                                    )}
                                                 </div>
                                             ) : (
-                                                <span className="text-sm sm:text-2xl font-outfit font-black tracking-[0.4em] text-slate-500 uppercase italic">VS</span>
+                                                <div className="relative group/vs">
+                                                    <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full scale-150 opacity-0 group-hover/vs:opacity-100 transition-opacity duration-700"></div>
+                                                    <span className="text-lg sm:text-3xl font-outfit font-black tracking-[0.5em] text-slate-600 uppercase italic relative z-10">VS</span>
+                                                </div>
                                             )}
                                         </div>
 
-                                        <div className="flex items-center justify-end gap-3 sm:gap-6 w-[40%] text-right">
-                                            <span className={`font-outfit font-black text-xl sm:text-4xl truncate tracking-tight transition-colors ${res.p2Wins > res.p1Wins ? 'text-white' : 'text-slate-300 group-hover:text-white'}`} title={p2Name}>{p2Name}</span>
+                                        <div className="flex items-center justify-end gap-4 sm:gap-8 w-[42%] text-right group/p2">
+                                            <div className="flex flex-col items-end">
+                                                <span className={`font-outfit font-black text-xl sm:text-5xl truncate tracking-tighter transition-all duration-300 ${res.p2Wins > res.p1Wins ? 'text-white scale-105 origin-right' : 'text-slate-400 group-hover:text-white'}`} title={p2Name}>{p2Name}</span>
+                                                {res.p2Wins > res.p1Wins && match.played && (
+                                                    <span className="text-[10px] font-black text-amber-500 tracking-[0.3em] uppercase mt-2 animate-pulse">Winner</span>
+                                                )}
+                                            </div>
                                             <motion.div whileHover={{ scale: 1.1, rotate: 5 }} className="relative shrink-0">
-                                                <div className={`absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent blur-xl rounded-full ${res.p2Wins > res.p1Wins ? 'opacity-100' : 'opacity-0'}`}></div>
-                                                <PlayerAvatar name={p2Name} logo={getPlayerLogo(match.p2Id)} className="relative w-16 h-16 sm:w-24 sm:h-24 text-sm sm:text-xl drop-shadow-2xl border-2 border-white/5" />
+                                                <div className={`absolute inset-0 bg-gradient-to-br from-blue-500/30 to-transparent blur-2xl rounded-full transition-opacity duration-500 ${res.p2Wins > res.p1Wins ? 'opacity-100' : 'opacity-0'}`}></div>
+                                                <PlayerAvatar name={p2Name} logo={getPlayerLogo(match.p2Id)} className="relative w-16 h-16 sm:w-28 sm:h-28 text-sm sm:text-2xl drop-shadow-2xl border-2 border-white/10 ring-4 ring-white/5" />
                                             </motion.div>
                                         </div>
                                     </div>

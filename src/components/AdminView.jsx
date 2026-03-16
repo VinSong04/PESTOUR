@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy, Trash2, Sparkles, Image as ImageIcon, Copy, ExternalLink, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy, Trash2, Sparkles, Image as ImageIcon, Copy, ExternalLink, AlertTriangle, ThumbsUp, Plus } from 'lucide-react';
 import { INITIAL_DATA } from '../utils/initialData';
 import { createEmptyMatch } from '../utils/matchFactory';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
@@ -15,6 +15,7 @@ const TABS = [
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'roster', label: 'Roster', icon: Users },
     { id: 'season', label: 'Season', icon: Trophy },
+    { id: 'voting', label: 'Voting', icon: ThumbsUp },
     { id: 'studio', label: 'AI Studio', icon: Sparkles },
     { id: 'danger', label: 'Danger', icon: Flame },
 ];
@@ -150,6 +151,26 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             onConfirm: () => {
                 updateData({ ...INITIAL_DATA, history: data.history || {} });
                 setModalConfig({ title: 'Success', message: 'Season data has been wiped.', type: 'alert' });
+            }
+        });
+    };
+
+    const handleResetVotes = () => {
+        setModalConfig({
+            title: 'Reset Election Votes',
+            message: 'This will permanently delete ALL recorded votes for the current poll. Type "RESET POLL" to confirm.',
+            type: 'prompt',
+            expectedValue: 'RESET POLL',
+            danger: true,
+            onConfirm: async () => {
+                try {
+                    const votesRef = ref(db, `votes/primary_poll`);
+                    await remove(votesRef);
+                    setModalConfig({ title: 'Success', message: 'All votes have been cleared.', type: 'alert' });
+                } catch (e) {
+                    console.error(e);
+                    setModalConfig({ title: 'Error', message: 'Failed to reset votes.', type: 'alert' });
+                }
             }
         });
     };
@@ -782,12 +803,25 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                         <span className="text-xs font-bold text-slate-500">Show standings & schedule publicly</span>
                                     </div>
                                     <div className={`w-14 h-8 rounded-full p-1 transition-colors cursor-pointer flex-shrink-0 shadow-inner ${settings.tournamentStarted ? 'bg-emerald-500' : 'bg-slate-800 border border-white/10'}`}
-                                        onClick={() => setSettings({ ...settings, tournamentStarted: !settings.tournamentStarted })}>
-                                        <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform ${settings.tournamentStarted ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
+                                         onClick={() => setSettings({ ...settings, tournamentStarted: !settings.tournamentStarted })}>
+                                         <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform ${settings.tournamentStarted ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                     </div>
+                                 </label>
+                                 <label className="flex items-center justify-between p-6 bg-slate-950/50 backdrop-blur-md border border-white/10 rounded-3xl cursor-pointer hover:border-blue-500/50 hover:bg-slate-900/80 transition-all shadow-inner group/toggle">
+                                     <div>
+                                         <span className="text-lg font-outfit font-black text-white block tracking-widest uppercase flex items-center gap-2">
+                                            <ThumbsUp className="w-4 h-4 text-blue-400" /> Voting Mode
+                                         </span>
+                                         <span className="text-xs font-bold text-slate-500">Lock site for community vote</span>
+                                     </div>
+                                     <div className={`w-14 h-8 rounded-full p-1 transition-colors cursor-pointer flex-shrink-0 shadow-inner ${settings.votingEnabled ? 'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'bg-slate-800 border border-white/10'}`}
+                                         onClick={() => setSettings({ ...settings, votingEnabled: !settings.votingEnabled })}>
+                                         <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform ${settings.votingEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                     </div>
+                                 </label>
+                             </div>
+                         </div>
+
                         <motion.button
                             whileHover={!isSavedSettings ? { scale: 1.02 } : {}}
                             whileTap={!isSavedSettings ? { scale: 0.98 } : {}}
@@ -795,6 +829,138 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                             className={`w-full mt-10 py-5 rounded-3xl font-outfit font-black tracking-[0.2em] uppercase transition-all text-lg shadow-lg relative overflow-hidden group/btn ${isSavedSettings ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-[0_0_40px_rgba(79,70,229,0.5)]'}`}>
                             <span className="relative z-10 flex items-center justify-center gap-3">
                                 {isSavedSettings ? <><CheckCircle2 className="w-6 h-6" /> Settings Saved!</> : 'Save Settings'}
+                            </span>
+                            {!isSavedSettings && <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] animate-shimmer"></div>}
+                        </motion.button>
+                    </motion.div>
+                )}
+
+                {/* ===== VOTING TAB ===== */}
+                {activeTab === 'voting' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                        className="bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-[40px] p-8 sm:p-12 shadow-2xl relative overflow-hidden"
+                    >
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px] pointer-events-none mix-blend-screen"></div>
+
+                        <h3 className="text-3xl font-outfit font-black mb-10 flex items-center gap-4 text-white uppercase tracking-widest drop-shadow-md relative z-10">
+                            <div className="p-4 rounded-3xl bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-inner">
+                                <ThumbsUp className="w-8 h-8 drop-shadow-[0_0_15px_rgba(96,165,250,0.5)]" />
+                            </div>
+                            Voting Management
+                        </h3>
+
+                        {/* Form Section - Matches Sketch */}
+                        <div className="space-y-10 relative z-10 max-w-3xl mx-auto">
+                            <div className="space-y-6 bg-slate-950/40 p-10 rounded-[40px] border border-white/5 shadow-inner">
+                                <div className="space-y-4">
+                                    <label className="block text-sm font-outfit font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Description</label>
+                                    <textarea 
+                                        value={settings.votingTitle} 
+                                        onChange={e => setSettings({ ...settings, votingTitle: e.target.value })}
+                                        rows={2}
+                                        className="w-full bg-slate-900/80 border border-white/10 text-white rounded-[24px] px-6 py-5 focus:border-blue-500/50 outline-none shadow-inner transition-all font-bold text-lg leading-relaxed"
+                                        placeholder="e.g., MVP of the Week - Season 1" 
+                                    />
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between px-2">
+                                        <h4 className="text-sm font-outfit font-black text-slate-400 uppercase tracking-[0.3em]">Options</h4>
+                                    </div>
+
+                                    <div className="grid gap-4">
+                                        {(settings.votingOptions || []).map((opt, idx) => (
+                                            <motion.div 
+                                                key={opt.id}
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                className="flex gap-4 items-center group/opt"
+                                            >
+                                                <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center font-black text-blue-400 shadow-inner group-hover/opt:border-blue-500/30 transition-colors">
+                                                    {String.fromCharCode(65 + idx)}
+                                                </div>
+                                                <input 
+                                                    value={opt.label} 
+                                                    onChange={e => {
+                                                        const newOpts = [...settings.votingOptions];
+                                                        newOpts[idx].label = e.target.value;
+                                                        setSettings({ ...settings, votingOptions: newOpts });
+                                                    }}
+                                                    className="flex-1 bg-slate-900/80 border border-white/10 text-white rounded-2xl px-6 py-4 focus:border-blue-500/50 outline-none text-base font-bold shadow-inner"
+                                                    placeholder={`Enter option ${String.fromCharCode(65 + idx)}...`}
+                                                />
+                                                <button 
+                                                    onClick={() => {
+                                                        const newOpts = settings.votingOptions.filter((_, i) => i !== idx);
+                                                        setSettings({ ...settings, votingOptions: newOpts });
+                                                    }}
+                                                    className="p-4 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400/40 hover:text-rose-400 border border-white/5 hover:border-rose-500/30 rounded-2xl transition-all"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </motion.div>
+                                        ))}
+
+                                        <button 
+                                            onClick={() => setSettings({
+                                                ...settings,
+                                                votingOptions: [...(settings.votingOptions || []), { id: Date.now().toString(), label: '', votes: 0 }]
+                                            })}
+                                            className="w-full mt-4 flex items-center justify-center gap-3 py-4 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 border border-dashed border-blue-500/20 rounded-[24px] transition-all text-sm font-black uppercase tracking-widest group"
+                                        >
+                                            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" /> Add New Option
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Admin Toggles Section */}
+                            <div className="grid md:grid-cols-2 gap-6 pt-6">
+                                <label className="flex items-center justify-between p-6 bg-slate-950/30 backdrop-blur-md border border-white/5 rounded-[32px] cursor-pointer hover:border-blue-500/20 hover:bg-slate-900/50 transition-all group/toggle">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-black text-white block tracking-widest uppercase mb-1">Voting Mode</span>
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Global Lock</span>
+                                    </div>
+                                    <div className={`w-12 h-7 rounded-full p-1 transition-colors cursor-pointer flex-shrink-0 ${settings.votingEnabled ? 'bg-blue-600' : 'bg-slate-800 border border-white/10'}`}
+                                        onClick={() => setSettings({ ...settings, votingEnabled: !settings.votingEnabled })}>
+                                        <div className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform ${settings.votingEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                    </div>
+                                </label>
+
+                                <label className="flex items-center justify-between p-6 bg-slate-950/30 backdrop-blur-md border border-white/5 rounded-[32px] cursor-pointer hover:border-emerald-500/20 hover:bg-slate-900/50 transition-all group/toggle">
+                                    <div className="pr-4">
+                                        <span className="text-sm font-black text-white block tracking-widest uppercase mb-1">Status</span>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest ${settings.votingStatus === 'finished' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                                            {settings.votingStatus === 'finished' ? 'Finished' : 'Active'}
+                                        </span>
+                                    </div>
+                                    <div className={`w-12 h-7 rounded-full p-1 transition-colors cursor-pointer flex-shrink-0 ${settings.votingStatus === 'finished' ? 'bg-emerald-600' : 'bg-slate-800 border border-white/10'}`}
+                                        onClick={() => setSettings({ ...settings, votingStatus: settings.votingStatus === 'finished' ? 'starting' : 'finished' })}>
+                                        <div className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform ${settings.votingStatus === 'finished' ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            {/* Reset Votes Section */}
+                            <div className="pt-8 border-t border-white/5">
+                                <button 
+                                    onClick={handleResetVotes}
+                                    className="w-full flex items-center justify-center gap-3 py-5 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-[32px] transition-all text-xs font-black uppercase tracking-[0.3em] group"
+                                >
+                                    <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-700" /> Reset All Election Votes
+                                </button>
+                                <p className="text-center mt-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">Warning: This action is permanent and cannot be undone.</p>
+                            </div>
+                        </div>
+
+                        <motion.button
+                            whileHover={!isSavedSettings ? { scale: 1.02 } : {}}
+                            whileTap={!isSavedSettings ? { scale: 0.98 } : {}}
+                            onClick={handleSaveSettings} disabled={isSavedSettings}
+                            className={`w-full mt-10 py-5 rounded-3xl font-outfit font-black tracking-[0.2em] uppercase transition-all text-lg shadow-lg relative overflow-hidden group/btn ${isSavedSettings ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-[0_0_40px_rgba(79,70,229,0.5)]'}`}>
+                            <span className="relative z-10 flex items-center justify-center gap-3">
+                                {isSavedSettings ? <><CheckCircle2 className="w-6 h-6" /> Voting Updated!</> : 'Save Voting Settings'}
                             </span>
                             {!isSavedSettings && <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] animate-shimmer"></div>}
                         </motion.button>

@@ -34,55 +34,55 @@ export default memo(function BracketMatchBox({ match, title, isAdmin, togglePlay
     }
 
     return (
-        <div className={`relative bg-[#131722] border ${isTbd ? 'border-[#1E2738] opacity-70' : 'border-[#222B3D] hover:border-[#334155]'} rounded-2xl overflow-hidden shadow-xl transition-all duration-300 group`}>
+        <div className={`relative bg-slate-900/60 backdrop-blur-xl border ${isTbd ? 'border-white/5 opacity-60' : 'border-white/10 hover:border-blue-500/30'} rounded-[24px] overflow-hidden shadow-2xl transition-all duration-500 group`}>
             {/* Round left border strip */}
-            <div className={`absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b ${roundColorClass} shadow-[0_0_10px_currentColor]`}></div>
+            <div className={`absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b ${roundColorClass} shadow-[0_0_15px_currentColor] opacity-80`}></div>
 
-            <div className="p-5 pl-7">
-                <div className="flex justify-between items-center mb-5 pb-3 border-b border-[#1E2738]">
-                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${titleColorClass}`}>{title}</span>
+            <div className="p-6 pl-8">
+                <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/5">
+                    <span className={`text-[10px] font-black uppercase tracking-[0.25em] ${titleColorClass} drop-shadow-[0_0_8px_currentColor]`}>{title}</span>
 
                     <div className="flex items-center gap-4">
-                        <div className="text-xl font-black tracking-widest text-white drop-shadow-md">
-                            {res.p1Wins} <span className="text-[#64748B] mx-1">-</span> {res.p2Wins}
+                        <div className="text-2xl font-outfit font-black tracking-widest text-white drop-shadow-lg">
+                            {res.p1Wins} <span className="text-slate-600 mx-1">:</span> {res.p2Wins}
                         </div>
 
                         {isAdmin && !isTbd && togglePlayed && (
-                            <button onClick={() => togglePlayed(match.id)} className={`p-1.5 rounded-lg border transition-all ${match.played ? 'bg-[#10B981]/20 border-[#10B981]/50 text-[#10B981] shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-[#1E2738] border-[#334155] text-[#94A3B8] hover:bg-[#334155] hover:text-white'}`}>
+                            <button onClick={() => togglePlayed(match.id)} className={`p-2 rounded-xl border transition-all ${match.played ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-slate-800 border-white/10 text-slate-400 hover:bg-slate-700 hover:text-white'}`}>
                                 {match.played ? <CheckCircle2 className="w-4 h-4" /> : <CircleDashed className="w-4 h-4" />}
                             </button>
                         )}
                         {!isAdmin && match.played && !isTbd && (
-                            <span className="text-[9px] text-[#10B981] font-black tracking-widest uppercase border border-[#10B981]/30 bg-[#10B981]/10 px-2.5 py-1.5 rounded flex items-center gap-1 shadow-[0_0_12px_rgba(16,185,129,0.15)]">
-                                <CheckCircle2 className="w-3 h-3" /> Done
+                            <span className="text-[9px] text-emerald-400 font-black tracking-widest uppercase border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Done
                             </span>
                         )}
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    <div className="flex justify-between items-center px-1 mb-3">
-                        <div className="flex items-center gap-2 w-2/5">
-                            <PlayerAvatar name={match.p1Name} logo={match.p1Logo} className="w-7 h-7 text-[10px] rounded-md" />
-                            <span className="font-bold text-sm text-[#E2E8F0] truncate" title={match.p1Name}>{match.p1Name || 'TBD'}</span>
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center px-1 mb-4">
+                        <div className="flex items-center gap-3 w-[45%]">
+                            <PlayerAvatar name={match.p1Name} logo={match.p1Logo} className="w-8 h-8 text-[10px] rounded-lg border border-white/5 shadow-md" />
+                            <span className={`font-outfit font-black text-sm transition-colors truncate ${res.p1Wins > res.p2Wins ? 'text-white' : 'text-slate-400'}`} title={match.p1Name}>{match.p1Name || 'TBD'}</span>
                         </div>
-                        <span className="text-[10px] font-black tracking-widest text-[#64748B] uppercase">VS</span>
-                        <div className="flex items-center justify-end gap-2 w-2/5">
-                            <span className="font-bold text-sm text-[#E2E8F0] truncate text-right" title={match.p2Name}>{match.p2Name || 'TBD'}</span>
-                            <PlayerAvatar name={match.p2Name} logo={match.p2Logo} className="w-7 h-7 text-[10px] rounded-md" />
+                        <span className="text-[9px] font-black tracking-[0.3em] text-slate-700 uppercase italic">VS</span>
+                        <div className="flex items-center justify-end gap-3 w-[45%] text-right">
+                            <span className={`font-outfit font-black text-sm transition-colors truncate ${res.p2Wins > res.p1Wins ? 'text-white' : 'text-slate-400'}`} title={match.p2Name}>{match.p2Name || 'TBD'}</span>
+                            <PlayerAvatar name={match.p2Name} logo={match.p2Logo} className="w-8 h-8 text-[10px] rounded-lg border border-white/5 shadow-md" />
                         </div>
                     </div>
 
                     {!hideGames && (
-                        <>
+                        <div className="space-y-2 pt-2 border-t border-white/5">
                             <GameScoreRow game="g1" label="G1" match={match} p1Name={""} p2Name={""} onChange={handleScoreChange} isAdmin={isAdmin && !isTbd} />
                             <GameScoreRow game="g2" label="G2" match={match} p1Name={""} p2Name={""} onChange={handleScoreChange} isAdmin={isAdmin && !isTbd} />
                             {(needG3 || (g3.p1 !== undefined && g3.p1 !== null) || isAdmin) && (
-                                <div className={`transition-all duration-500 overflow-hidden ${needG3 || (g3.p1 !== undefined && g3.p1 !== null) || isAdmin ? 'opacity-100 max-h-32 mt-3 pt-3 border-t border-dashed border-[#1E2738]' : 'opacity-0 max-h-0'}`}>
+                                <div className="transition-all duration-500">
                                     <GameScoreRow game="g3" label="G3" match={match} p1Name={""} p2Name={""} onChange={handleScoreChange} isAdmin={isAdmin && !isTbd} />
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
                 </div>
             </div>

@@ -3,7 +3,14 @@ export const INITIAL_SETTINGS = {
     season: "Summer 2026",
     tagline: "Legends Start Here",
     registrationOpen: true,
-    tournamentStarted: false
+    tournamentStarted: false,
+    votingEnabled: false,
+    votingStatus: 'starting', // 'starting' or 'finished'
+    votingTitle: "Most Valuable Player",
+    votingOptions: [
+        { id: '1', label: 'Player 1', votes: 0 },
+        { id: '2', label: 'Player 2', votes: 0 }
+    ]
 };
 
 export const INITIAL_PLAYERS = [

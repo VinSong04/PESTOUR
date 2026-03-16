@@ -55,11 +55,11 @@ export default function HomeView({ data, setCurrentPage, isAdmin }) {
                         variants={itemVariants}
                         whileHover={{ scale: 1.05, rotate: [-1, 1, -1] }}
                         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        className="mb-10 inline-flex items-center justify-center rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-800 p-1 overflow-hidden shadow-[0_0_60px_rgba(79,70,229,0.5)] group relative"
+                        className="mb-10 inline-flex items-center justify-center rounded-[2.2rem] bg-gradient-to-br from-blue-600 to-indigo-800 p-1.5 overflow-hidden shadow-[0_0_80px_rgba(79,70,229,0.4)] group relative"
                     >
                         <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20"></div>
-                        <div className="w-full h-full bg-slate-950 rounded-[1.8rem] flex items-center justify-center relative overflow-hidden backdrop-blur-xl">
-                            <img src={logo} alt="PES TOUR Logo" className="w-[320px] h-auto object-contain relative z-10 group-hover:scale-105 transition-transform duration-500 rounded-[1.8rem]" />
+                        <div className="w-full h-full bg-white rounded-[2rem] flex items-center justify-center relative overflow-hidden backdrop-blur-xl">
+                            <img src={logo} alt="PES TOUR Logo" className="w-[360px] h-auto object-cover relative z-10 group-hover:scale-105 transition-transform duration-500" />
                         </div>
                     </motion.div>
 

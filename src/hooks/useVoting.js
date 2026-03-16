@@ -1,39 +1,37 @@
 import { useState, useEffect } from 'react';
-import { db } from '../../firebase'; // Import Firebase configuration
+import { db } from '../firebase';
+import { ref, onValue, update, increment } from 'firebase/database';
 
-const useVoting = (pollId) => {
+const useVoting = (pollId = 'primary_poll') => {
     const [votes, setVotes] = useState({});
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const unsubscribe = db.collection('polls').doc(pollId)
-            .onSnapshot((doc) => {
-                if (doc.exists) {
-                    setVotes(doc.data().votes);
-                }
-                setLoading(false);
-            });
+    const [userVote, setUserVote] = useState(null);
 
-        return () => unsubscribe(); // Cleanup on unmount
+    useEffect(() => {
+        const savedVote = localStorage.getItem(`voted_${pollId}`);
+        if (savedVote) setUserVote(savedVote);
+
+        const votesRef = ref(db, `votes/${pollId}`);
+        const unsubscribe = onValue(votesRef, (snapshot) => {
+            setVotes(snapshot.val() || {});
+            setLoading(false);
+        });
+        return () => unsubscribe();
     }, [pollId]);
 
-    const castVote = async (option) => {
-        // Prevent duplicate votes by checking if the user already voted
-        if (votes && votes[option]) {
-            console.error('Duplicate vote detected!');
-            return;
-        }
+    const castVote = (optionId) => {
+        if (userVote) return; // Prevent double voting
 
-        try {
-            await db.collection('polls').doc(pollId).update({
-                [`votes.${option}`]: (votes[option] || 0) + 1
-            });
-        } catch (error) {
-            console.error('Error casting vote: ', error);
-        }
+        const votesRef = ref(db, `votes/${pollId}`);
+        update(votesRef, {
+            [optionId]: increment(1)
+        });
+        localStorage.setItem(`voted_${pollId}`, optionId);
+        setUserVote(optionId);
     };
 
-    return { votes, loading, castVote };
+    return { votes, loading, castVote, userVote, hasVoted: !!userVote };
 };
 
 export default useVoting;

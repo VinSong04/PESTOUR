@@ -16,6 +16,7 @@ const RulesView = lazy(() => import('./components/RulesView'));
 const KnockoutView = lazy(() => import('./components/KnockoutView'));
 const AdminView = lazy(() => import('./components/AdminView'));
 const RegisterView = lazy(() => import('./components/RegisterView'));
+const VotingView = lazy(() => import('./components/VotingView'));
 
 const PageFallback = () => (
     <div className="flex items-center justify-center py-32 text-slate-500">
@@ -54,6 +55,8 @@ export default function App() {
     const [data, setData] = useState(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [authInitialized, setAuthInitialized] = useState(false);
+    const [showLogin, setShowLogin] = useState(false);
     const [selectedSeason, setSelectedSeason] = useState('CURRENT');
     const [isLightMode, setIsLightMode] = useState(() => {
         return localStorage.getItem('theme') === 'light';
@@ -75,12 +78,14 @@ export default function App() {
         let unsubscribeAuth;
 
         unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setIsAdmin(!user.isAnonymous);
+            if (user && !user.isAnonymous) {
+                // Ensure it's the admin account
+                setIsAdmin(user.email === 'admin@pestour.com' || user.email === 'admin@admin.com'); // added a backup admin email just in case
             } else {
                 setIsAdmin(false);
-                signInAnonymously(auth).catch(console.error);
+                if (!user) signInAnonymously(auth).catch(console.error);
             }
+            setAuthInitialized(true);
         });
 
         const dbRef = ref(db, 'tournament');
@@ -93,6 +98,9 @@ export default function App() {
                 val.players = val.players || [];
                 val.matches = val.matches || [];
                 val.bracket = val.bracket || [];
+                // Ensure voting defaults exist
+                if (!val.settings.votingTitle) val.settings.votingTitle = INITIAL_DATA.settings.votingTitle;
+                if (!val.settings.votingOptions) val.settings.votingOptions = INITIAL_DATA.settings.votingOptions;
                 setData(val);
             } else {
                 // Initialize if empty. We wrap in try-catch in case write permissions are disabled for guests.
@@ -141,54 +149,70 @@ export default function App() {
         [activeData]
     );
 
-    if (loading || !data) {
+    const isVotingLocked = activeData?.settings?.votingEnabled && !isAdmin && !(showLogin && currentPage === 'admin');
+
+    if (loading || !data || !authInitialized) {
         return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center text-emerald-400 flex-col gap-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 animate-spin">
-                    <circle cx="12" cy="12" r="10" strokeDasharray="6 4" />
-                </svg>
-                <p className="font-mono uppercase tracking-widest text-sm">Loading Tournament Data...</p>
+            <div className="min-h-screen bg-[#020617] flex items-center justify-center text-blue-400 flex-col gap-6">
+                <div className="relative">
+                    <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin shadow-[0_0_15px_rgba(59,130,246,0.3)]"></div>
+                    <div className="absolute inset-0 flex items-center justify-center font-outfit font-black text-xs">GO</div>
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-200/30 animate-pulse">Initializing Systems</p>
             </div>
         );
     }
 
     return (
         <div className="min-h-screen font-sans selection:bg-blue-500/30">
-            <Navbar
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-                isAdmin={isAdmin}
-                isLightMode={isLightMode}
-                setIsLightMode={setIsLightMode}
-                selectedSeason={selectedSeason}
-                setSelectedSeason={setSelectedSeason}
-                seasons={seasons}
-                tournamentStarted={activeData.settings.tournamentStarted}
-                lastUpdated={activeData.lastUpdated}
-            />
+            {!isVotingLocked && (
+                <Navbar
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
+                    isAdmin={isAdmin}
+                    isLightMode={isLightMode}
+                    setIsLightMode={setIsLightMode}
+                    selectedSeason={selectedSeason}
+                    setSelectedSeason={setSelectedSeason}
+                    seasons={seasons}
+                    tournamentStarted={activeData.settings.tournamentStarted}
+                    votingEnabled={activeData.settings.votingEnabled}
+                    lastUpdated={activeData.lastUpdated}
+                />
+            )}
 
             <main className="max-w-7xl mx-auto px-4 md:px-6 pb-24 pt-28 md:pt-32">
                 <Suspense fallback={<PageFallback />}>
-                    {currentPage === 'home' && <HomeView data={activeData} setCurrentPage={setCurrentPage} isAdmin={effectiveIsAdmin} />}
-                    {currentPage === 'register' && <RegisterView isAdmin={effectiveIsAdmin} isOpen={activeData.settings.registrationOpen} />}
-                    {currentPage === 'standings' && (activeData.settings.tournamentStarted || isAdmin) && <StandingsView standingsData={standingsData} bracketData={activeData.bracket} />}
-                    {currentPage === 'matches' && (activeData.settings.tournamentStarted || isAdmin) && <MatchesView data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />}
-                    {currentPage === 'rules' && <RulesView />}
-                    {currentPage === 'knockout' && (activeData.settings.tournamentStarted || isAdmin) && (
-                        <KnockoutView
-                            data={activeData}
-                            updateData={updateData}
-                            standingsData={standingsData}
-                            isAdmin={effectiveIsAdmin}
-                        />
-                    )}
-                    {currentPage === 'admin' && isCurrentSeason && (
-                        <AdminView
-                            data={data}
-                            updateData={updateData}
-                            isAdmin={isAdmin}
-                            setIsAdmin={setIsAdmin}
-                        />
+                    {isVotingLocked ? (
+                        <VotingView data={activeData} onAdminAccess={() => {
+                            setCurrentPage('admin');
+                            setShowLogin(true);
+                        }} />
+                    ) : (
+                        <>
+                            {currentPage === 'home' && <HomeView data={activeData} setCurrentPage={setCurrentPage} isAdmin={effectiveIsAdmin} />}
+                            {currentPage === 'register' && <RegisterView isAdmin={effectiveIsAdmin} isOpen={activeData.settings.registrationOpen} />}
+                            {currentPage === 'standings' && (activeData.settings.tournamentStarted || isAdmin) && <StandingsView standingsData={standingsData} bracketData={activeData.bracket} />}
+                            {currentPage === 'matches' && (activeData.settings.tournamentStarted || isAdmin) && <MatchesView data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />}
+                            {currentPage === 'voting' && <VotingView data={activeData} />}
+                            {currentPage === 'rules' && <RulesView />}
+                            {currentPage === 'knockout' && (activeData.settings.tournamentStarted || isAdmin) && (
+                                <KnockoutView
+                                    data={activeData}
+                                    updateData={updateData}
+                                    standingsData={standingsData}
+                                    isAdmin={effectiveIsAdmin}
+                                />
+                            )}
+                            {currentPage === 'admin' && isCurrentSeason && (
+                                <AdminView
+                                    data={data}
+                                    updateData={updateData}
+                                    isAdmin={isAdmin}
+                                    setIsAdmin={setIsAdmin}
+                                />
+                            )}
+                        </>
                     )}
                 </Suspense>
             </main>

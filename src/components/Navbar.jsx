@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Home, BarChart3, Gamepad2, BookOpen, Sun, Moon, UserPlus, Lock, Trophy } from 'lucide-react';
+import { Home, BarChart3, Gamepad2, BookOpen, Sun, Moon, UserPlus, Lock, Trophy, ThumbsUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../assets/pallet.jpg';
-export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted, lastUpdated }) {
+export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted, votingEnabled, lastUpdated }) {
     const [showNavbar, setShowNavbar] = useState(true);
     const [scrolled, setScrolled] = useState(false);
     const rafRef = useRef(null);
@@ -34,18 +34,26 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
         };
     }, [isAdmin]);
 
-    const navItems = [
-        { id: 'home', icon: Home, label: 'Home' },
-        { id: 'register', icon: UserPlus, label: 'Register' },
-    ];
+    const navItems = [];
+    
+    // If voting is enabled and not admin, hide all navigation
+    const isVotingLocked = !isAdmin && votingEnabled;
 
-    if (tournamentStarted || isAdmin) {
-        navItems.push({ id: 'standings', icon: BarChart3, label: 'Standings' });
-        navItems.push({ id: 'matches', icon: Gamepad2, label: 'Schedule' });
-        navItems.push({ id: 'knockout', icon: Trophy, label: 'Bracket' });
+    if (!isVotingLocked) {
+        navItems.push({ id: 'home', icon: Home, label: 'Home' });
+        navItems.push({ id: 'register', icon: UserPlus, label: 'Register' });
+        if (isAdmin) {
+            // navItems.push({ id: 'voting', icon: ThumbsUp, label: 'Voting' });
+        }
+
+        if (tournamentStarted || isAdmin) {
+            navItems.push({ id: 'standings', icon: BarChart3, label: 'Standings' });
+            navItems.push({ id: 'matches', icon: Gamepad2, label: 'Schedule' });
+            navItems.push({ id: 'knockout', icon: Trophy, label: 'Bracket' });
+        }
+
+        navItems.push({ id: 'rules', icon: BookOpen, label: 'Rules' });
     }
-
-    navItems.push({ id: 'rules', icon: BookOpen, label: 'Rules' });
 
     return (
         <AnimatePresence>
@@ -68,10 +76,10 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                             className="flex items-center gap-4 cursor-pointer relative z-10"
                             onClick={() => setCurrentPage('home')}
                         >
-                            <div className="h-12 w-auto flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl p-0.5 overflow-hidden shadow-[0_0_20px_rgba(99,102,241,0.4)] group relative flex items-center justify-center">
-                                <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity z-20"></div>
-                                <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center relative overflow-hidden">
-                                    <img src={logo} alt="PES TOUR Logo" className="h-[44px] w-auto object-contain relative z-10 group-hover:scale-105 transition-transform duration-500 rounded-lg p-0.5" />
+                            <div className="h-14 w-auto flex-shrink-0 bg-gradient-to-br from-blue-500/50 to-purple-600/50 rounded-xl p-0.5 overflow-hidden shadow-[0_0_25px_rgba(99,102,241,0.3)] group relative flex items-center justify-center">
+                                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity z-20"></div>
+                                <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center relative overflow-hidden">
+                                    <img src={logo} alt="PES TOUR Logo" className="h-full w-auto object-cover relative z-10 group-hover:scale-110 transition-transform duration-500" />
                                 </div>
                             </div>
                             <span className="font-outfit font-black text-2xl tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-indigo-100 hidden sm:block p-1">

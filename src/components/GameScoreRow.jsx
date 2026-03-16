@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default memo(function GameScoreRow({ game, label, match, p1Name, p2Name, onChange, isAdmin }) {
     if (!match) return null;
@@ -10,39 +11,80 @@ export default memo(function GameScoreRow({ game, label, match, p1Name, p2Name, 
     const p2Wins = isComplete && p2Score > p1Score;
 
     return (
-        <div className="flex items-center justify-between text-sm bg-[#0a0b10] rounded-xl p-3 border border-[#1E2738] shadow-inner transition-colors hover:border-[#334155]/50">
-            <div className={`flex-1 text-right pr-4 font-black tracking-wide truncate ${p1Wins ? 'text-[#10B981]' : p2Wins ? 'text-[#64748B]' : 'text-[#E2E8F0]'}`}>
-                {p1Name}
+        <div className="flex items-center justify-between text-sm bg-slate-900/40 backdrop-blur-md rounded-2xl p-4 border border-white/5 shadow-inner transition-all hover:bg-slate-900/60 hover:border-white/10 group/row">
+            {p1Name && (
+                <div className={`flex-1 text-right pr-6 font-outfit font-black tracking-wide truncate transition-colors ${p1Wins ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]' : p2Wins ? 'text-slate-600' : 'text-slate-300 group-hover/row:text-white'}`}>
+                    {p1Name}
+                </div>
+            )}
+
+            <div className="flex items-center gap-4 mx-auto">
+                <div className="relative">
+                    <ScoreInput val={p1Score} onChange={(v) => onChange(match.id, game, 'p1', v)} disabled={!isAdmin} isWinner={p1Wins} />
+                    {p1Wins && <div className="absolute -top-1 -left-1 w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_#10b981]"></div>}
+                </div>
+
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 bg-slate-950/50 px-3 py-1 rounded-full border border-white/5 shadow-inner min-w-[40px] text-center">
+                        {label}
+                    </span>
+                    <AnimatePresence>
+                        {isComplete && (
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="h-1 w-1 rounded-full bg-blue-500/50 mt-1"
+                            />
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                <div className="relative">
+                    <ScoreInput val={p2Score} onChange={(v) => onChange(match.id, game, 'p2', v)} disabled={!isAdmin} isWinner={p2Wins} />
+                    {p2Wins && <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_#10b981]"></div>}
+                </div>
             </div>
 
-            <div className="flex items-center gap-3">
-                <ScoreInput val={p1Score} onChange={(v) => onChange(match.id, game, 'p1', v)} disabled={!isAdmin} />
-                <span className="text-[#64748B] text-[10px] font-black uppercase tracking-widest bg-[#131722] px-2 py-1 rounded-md border border-[#222B3D]">{label}</span>
-                <ScoreInput val={p2Score} onChange={(v) => onChange(match.id, game, 'p2', v)} disabled={!isAdmin} />
-            </div>
-
-            <div className={`flex-1 pl-4 font-black tracking-wide truncate ${p2Wins ? 'text-[#10B981]' : p1Wins ? 'text-[#64748B]' : 'text-[#E2E8F0]'}`}>
-                {p2Name}
-            </div>
+            {p2Name && (
+                <div className={`flex-1 pl-6 font-outfit font-black tracking-wide truncate transition-colors ${p2Wins ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]' : p1Wins ? 'text-slate-600' : 'text-slate-300 group-hover/row:text-white'}`}>
+                    {p2Name}
+                </div>
+            )}
         </div>
     );
 })
 
-function ScoreInput({ val, onChange, disabled }) {
+function ScoreInput({ val, onChange, disabled, isWinner }) {
+    const hasValue = val !== null && val !== undefined;
+    
     if (disabled) {
         return (
-            <div className={`w-9 h-9 flex items-center justify-center rounded-lg font-black text-lg ${(val !== null && val !== undefined) ? 'bg-[#1E2738] text-white border border-[#334155] shadow-md' : 'bg-transparent text-[#475569] border border-dashed border-[#334155]'}`}>
-                {(val !== null && val !== undefined) ? val : '-'}
+            <div className={`w-12 h-12 flex items-center justify-center rounded-xl font-outfit font-black text-xl transition-all ${
+                hasValue 
+                    ? isWinner 
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
+                        : 'bg-slate-800/80 text-white border border-white/5 shadow-lg'
+                    : 'bg-slate-950/30 text-slate-700 border border-dashed border-white/5'
+            }`}>
+                {hasValue ? val : '-'}
             </div>
         );
     }
+    
     return (
         <input
             type="number"
             min="0"
-            value={(val === null || val === undefined) ? '' : val}
+            value={hasValue ? val : ''}
             onChange={(e) => onChange(e.target.value)}
-            className="w-10 h-10 text-center bg-[#131722] border border-[#334155] text-white font-black text-lg focus:border-[#4770FF] focus:ring-2 focus:ring-[#4770FF]/50 outline-none hide-arrows transition-all rounded-lg shadow-inner"
+            placeholder="-"
+            className={`w-12 h-12 text-center bg-slate-950/50 border rounded-xl font-outfit font-black text-xl focus:ring-2 outline-none transition-all hide-arrows placeholder:text-slate-800 shadow-inner ${
+                hasValue 
+                    ? isWinner 
+                        ? 'border-emerald-500/50 text-emerald-400 ring-emerald-500/20' 
+                        : 'border-white/20 text-white focus:border-blue-500/50 ring-blue-500/20'
+                    : 'border-white/5 text-slate-500 focus:border-blue-500/30'
+            }`}
         />
     );
 }

@@ -5,10 +5,11 @@ import { createEmptyMatch } from '../utils/matchFactory';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { ref, remove, update } from 'firebase/database';
-import PlayerAvatar from './PlayerAvatar';
+import PlayerAvatar from '../components/ui/PlayerAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import useRegistrations from '../hooks/useRegistrations';
 import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
+import { renderClassicPoster, renderNeonPoster } from '../utils/posterGenerator';
 
 const TABS = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -207,6 +208,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     const [posterSubtitle, setPosterSubtitle] = useState('TOURNAMENT 2026');
     const [posterFooter, setPosterFooter] = useState('⚽  PES TOUR  •  LEGENDS START HERE  •  SEASON 2026');
     const [posterAccent, setPosterAccent] = useState('#dc2626');
+    const [posterTheme, setPosterTheme] = useState('classic');
 
     const generatePoster = (type) => {
         setIsGenerating(true);
@@ -222,7 +224,6 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         }, 100);
         progressIntervalRef.current = progressInterval;
 
-        // Load the logo
         const logoImg = new Image();
         logoImg.crossOrigin = 'anonymous';
         logoImg.src = new URL('../assets/pallet.jpg', import.meta.url).href;
@@ -233,336 +234,13 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             canvas.width = W;
             canvas.height = H;
             const ctx = canvas.getContext('2d');
+            const config = { posterTitle, posterSubtitle, posterFooter, posterAccent };
 
-            // === BACKGROUND GRADIENT (CPL-style maroon/red) ===
-            const bg = ctx.createLinearGradient(0, 0, W, H);
-            bg.addColorStop(0, '#5b1a1a');
-            bg.addColorStop(0.3, '#8b2525');
-            bg.addColorStop(0.6, '#6b2020');
-            bg.addColorStop(1, '#3a0f0f');
-            ctx.fillStyle = bg;
-            ctx.fillRect(0, 0, W, H);
-
-            // Subtle overlay pattern (diagonal lines)
-            ctx.globalAlpha = 0.04;
-            for (let i = -H; i < W + H; i += 30) {
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i + H, H);
-                ctx.stroke();
+            if (posterTheme === 'neon') {
+                renderNeonPoster(ctx, W, H, logo, type, data, config);
+            } else {
+                renderClassicPoster(ctx, W, H, logo, type, data, config);
             }
-            ctx.globalAlpha = 1;
-
-            // Light gradient on top
-            const topGlow = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, W);
-            topGlow.addColorStop(0, 'rgba(255,200,150,0.12)');
-            topGlow.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = topGlow;
-            ctx.fillRect(0, 0, W, H);
-
-            // === HELPER FUNCTIONS ===
-            const roundRect = (x, y, w, h, r) => {
-                ctx.beginPath();
-                ctx.moveTo(x + r, y);
-                ctx.lineTo(x + w - r, y);
-                ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-                ctx.lineTo(x + w, y + h - r);
-                ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-                ctx.lineTo(x + r, y + h);
-                ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-                ctx.lineTo(x, y + r);
-                ctx.quadraticCurveTo(x, y, x + r, y);
-                ctx.closePath();
-            };
-
-            const drawSkewedBanner = (x, y, w, h, color) => {
-                const skew = 15;
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(x + skew, y);
-                ctx.lineTo(x + w, y);
-                ctx.lineTo(x + w - skew, y + h);
-                ctx.lineTo(x, y + h);
-                ctx.closePath();
-                ctx.fillStyle = color;
-                ctx.fill();
-                ctx.restore();
-            };
-
-            // === HEADER (Logo + Title) ===
-            // Logo circle background
-            if (logo) {
-                ctx.save();
-                roundRect(40, 30, 100, 100, 20);
-                ctx.clip();
-                ctx.drawImage(logo, 40, 30, 100, 100);
-                ctx.restore();
-                // Logo border
-                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-                ctx.lineWidth = 2;
-                roundRect(40, 30, 100, 100, 20);
-                ctx.stroke();
-            }
-
-            // Title text
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 42px Arial, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.shadowColor = 'rgba(0,0,0,0.5)';
-            ctx.shadowBlur = 10;
-            ctx.fillText(posterTitle, 160, 80);
-            ctx.font = 'bold 20px Arial, sans-serif';
-            ctx.fillStyle = '#fbbf24';
-            ctx.fillText(posterSubtitle, 160, 110);
-            ctx.shadowBlur = 0;
-
-            // Type label (top right)
-            ctx.textAlign = 'right';
-            ctx.font = 'bold 18px Arial, sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            const typeLabel = type === 'schedule' ? 'FIXTURE LIVE' : type === 'results' ? 'MATCH RESULTS' : 'LEADERBOARD';
-            ctx.fillText(typeLabel, W - 50, 55);
-            ctx.font = 'bold 14px Arial, sans-serif';
-            ctx.fillText(new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), W - 50, 80);
-
-            // Accent divider
-            ctx.fillStyle = posterAccent;
-            ctx.fillRect(40, 150, W - 80, 4);
-
-            // === SECTION TITLE ===
-            let sectionTitle = '';
-            if (type === 'schedule') sectionTitle = '⚽  UPCOMING MATCHES';
-            else if (type === 'results') sectionTitle = '🏆  LATEST RESULTS';
-            else sectionTitle = '📊  GROUP STANDINGS';
-
-            drawSkewedBanner(40, 180, 500, 55, posterAccent);
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'left';
-            ctx.font = 'bold 26px Arial, sans-serif';
-            ctx.fillText(sectionTitle, 70, 217);
-
-            // === CONTENT AREA ===
-            let startY = 280;
-
-            if (type === 'schedule') {
-                const upNext = data.matches.filter(m => !m.played).slice(0, 6);
-                if (upNext.length === 0) {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.textAlign = 'center';
-                    ctx.font = 'bold 32px Arial, sans-serif';
-                    ctx.fillText('No upcoming matches', W / 2, startY + 100);
-                } else {
-                    upNext.forEach((m, i) => {
-                        const y = startY + i * 170;
-                        const p1 = data.players.find(p => p.id === m.p1Id);
-                        const p2 = data.players.find(p => p.id === m.p2Id);
-                        const p1Name = p1?.name || m.p1Id;
-                        const p2Name = p2?.name || m.p2Id;
-                        const group = m.groupId ? `GROUP ${m.groupId}` : 'KNOCKOUT';
-
-                        // Match card background
-                        roundRect(50, y, W - 100, 150, 16);
-                        ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.25)';
-                        ctx.fill();
-                        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-
-                        // Group label
-                        ctx.globalAlpha = 0.8;
-                        drawSkewedBanner(50, y, 200, 30, posterAccent);
-                        ctx.globalAlpha = 1.0;
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 14px Arial, sans-serif';
-                        ctx.textAlign = 'left';
-                        ctx.fillText(group, 75, y + 22);
-
-                        // Player 1 (left)
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 28px Arial, sans-serif';
-                        ctx.textAlign = 'right';
-                        ctx.fillText(p1Name.toUpperCase(), W / 2 - 90, y + 85);
-                        // Country flag emoji for P1
-                        if (p1?.country) {
-                            ctx.font = '18px Arial, sans-serif';
-                            ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                            ctx.fillText(p1.country, W / 2 - 90, y + 115);
-                        }
-
-                        // VS / Time box (center)
-                        roundRect(W / 2 - 65, y + 50, 130, 70, 12);
-                        ctx.globalAlpha = 0.9;
-                        ctx.fillStyle = posterAccent;
-                        ctx.fill();
-                        ctx.globalAlpha = 1.0;
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 36px Arial, sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('18:00', W / 2, y + 98);
-
-                        // Player 2 (right)
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 28px Arial, sans-serif';
-                        ctx.textAlign = 'left';
-                        ctx.fillText(p2Name.toUpperCase(), W / 2 + 90, y + 85);
-                        if (p2?.country) {
-                            ctx.font = '18px Arial, sans-serif';
-                            ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                            ctx.fillText(p2.country, W / 2 + 90, y + 115);
-                        }
-                    });
-                }
-            } else if (type === 'results') {
-                const recent = data.matches.filter(m => m.played).slice(-6);
-                if (recent.length === 0) {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.textAlign = 'center';
-                    ctx.font = 'bold 32px Arial, sans-serif';
-                    ctx.fillText('No results yet', W / 2, startY + 100);
-                } else {
-                    recent.forEach((m, i) => {
-                        const y = startY + i * 170;
-                        const p1 = data.players.find(p => p.id === m.p1Id);
-                        const p2 = data.players.find(p => p.id === m.p2Id);
-                        const p1Name = p1?.name || m.p1Id;
-                        const p2Name = p2?.name || m.p2Id;
-                        let s1 = 0, s2 = 0;
-                        [m.g1, m.g2, m.g3].forEach(g => {
-                            if (g && g.p1 > g.p2) s1++;
-                            if (g && g.p2 > g.p1) s2++;
-                        });
-
-                        // Match card
-                        roundRect(50, y, W - 100, 150, 16);
-                        ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.25)';
-                        ctx.fill();
-                        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-
-                        // Winner highlight
-                        const winner = s1 > s2 ? 'p1' : s2 > s1 ? 'p2' : 'draw';
-
-                        // Player 1
-                        ctx.fillStyle = winner === 'p1' ? '#fbbf24' : '#ffffff';
-                        ctx.font = `bold 28px Arial, sans-serif`;
-                        ctx.textAlign = 'right';
-                        ctx.fillText(p1Name.toUpperCase(), W / 2 - 90, y + 85);
-
-                        // Score box
-                        roundRect(W / 2 - 70, y + 45, 140, 75, 12);
-                        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                        ctx.fill();
-                        ctx.strokeStyle = posterAccent;
-                        ctx.lineWidth = 2;
-                        ctx.stroke();
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 40px Arial, sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(`${s1} - ${s2}`, W / 2, y + 95);
-
-                        // Player 2
-                        ctx.fillStyle = winner === 'p2' ? '#fbbf24' : '#ffffff';
-                        ctx.font = 'bold 28px Arial, sans-serif';
-                        ctx.textAlign = 'left';
-                        ctx.fillText(p2Name.toUpperCase(), W / 2 + 90, y + 85);
-                    });
-                }
-            } else if (type === 'standings') {
-                // Group standings table
-                const groups = {};
-                data.players.filter(p => p.group).forEach(p => {
-                    if (!groups[p.group]) groups[p.group] = [];
-                    groups[p.group].push(p);
-                });
-
-                const sortFn = (a, b) => {
-                    const ptsA = (a.w || 0) * 3 + (a.d || 0);
-                    const ptsB = (b.w || 0) * 3 + (b.d || 0);
-                    if (ptsB !== ptsA) return ptsB - ptsA;
-                    const gdA = (a.gf || 0) - (a.ga || 0);
-                    const gdB = (b.gf || 0) - (b.ga || 0);
-                    return gdB - gdA;
-                };
-
-                const groupKeys = Object.keys(groups).sort();
-                let gy = startY;
-
-                groupKeys.forEach((gKey, gi) => {
-                    const players = groups[gKey].sort(sortFn);
-                    const groupColor = [posterAccent, '#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2'][gi % 6];
-
-                    // Group header
-                    drawSkewedBanner(50, gy, 250, 40, groupColor);
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 22px Arial, sans-serif';
-                    ctx.textAlign = 'left';
-                    ctx.fillText(`GROUP ${gKey}`, 80, gy + 30);
-
-                    // Table header
-                    gy += 50;
-                    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-                    ctx.fillRect(50, gy, W - 100, 35);
-                    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-                    ctx.font = 'bold 14px Arial, sans-serif';
-                    ctx.textAlign = 'left';
-                    ctx.fillText('PLAYER', 80, gy + 24);
-                    ctx.textAlign = 'center';
-                    ctx.fillText('P', 620, gy + 24);
-                    ctx.fillText('W', 690, gy + 24);
-                    ctx.fillText('D', 760, gy + 24);
-                    ctx.fillText('L', 830, gy + 24);
-                    ctx.fillText('GD', 900, gy + 24);
-                    ctx.fillText('PTS', 990, gy + 24);
-
-                    gy += 40;
-                    players.forEach((p, pi) => {
-                        const pts = (p.w || 0) * 3 + (p.d || 0);
-                        const gd = (p.gf || 0) - (p.ga || 0);
-                        const played = (p.w || 0) + (p.d || 0) + (p.l || 0);
-
-                        ctx.fillStyle = pi % 2 === 0 ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.15)';
-                        ctx.fillRect(50, gy, W - 100, 40);
-
-                        // Qualify indicator
-                        if (pi < 2) {
-                            ctx.fillStyle = groupColor;
-                            ctx.fillRect(50, gy, 4, 40);
-                        }
-
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 20px Arial, sans-serif';
-                        ctx.textAlign = 'left';
-                        ctx.fillText(`${pi + 1}. ${p.name}`, 80, gy + 28);
-                        ctx.font = '18px Arial, sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(played, 620, gy + 28);
-                        ctx.fillText(p.w || 0, 690, gy + 28);
-                        ctx.fillText(p.d || 0, 760, gy + 28);
-                        ctx.fillText(p.l || 0, 830, gy + 28);
-                        ctx.fillStyle = gd >= 0 ? '#4ade80' : '#f87171';
-                        ctx.fillText(gd >= 0 ? `+${gd}` : gd, 900, gy + 28);
-                        ctx.fillStyle = '#fbbf24';
-                        ctx.font = 'bold 22px Arial, sans-serif';
-                        ctx.fillText(pts, 990, gy + 28);
-
-                        gy += 42;
-                    });
-                    gy += 25;
-                });
-            }
-
-            // === FOOTER BAR ===
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
-            ctx.fillRect(0, H - 70, W, 70);
-            ctx.fillStyle = posterAccent;
-            ctx.fillRect(0, H - 70, W, 3);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 20px Arial, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(posterFooter, W / 2, H - 30);
 
             clearInterval(progressInterval);
             setRenderProgress(100);
@@ -1236,6 +914,13 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                         <input type="color" value={posterAccent} onChange={e => setPosterAccent(e.target.value)} className="w-12 h-12 rounded-xl border border-white/10 cursor-pointer bg-transparent" />
                                         <div className="text-xs font-mono font-bold text-slate-400 uppercase">{posterAccent}</div>
                                     </div>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] text-slate-500 font-outfit font-black mb-2 uppercase tracking-[0.2em] ml-2">Theme Layout</label>
+                                    <select value={posterTheme} onChange={e => setPosterTheme(e.target.value)} className="w-full bg-[#0A0D14] border border-white/10 text-white rounded-xl px-4 py-3 h-[48px] focus:border-amber-500/50 outline-none text-sm font-bold shadow-inner">
+                                        <option value="classic">Classic Maroon</option>
+                                        <option value="neon">Neon Esports (Dark)</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>

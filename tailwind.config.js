@@ -10,6 +10,14 @@ export default {
                 sans: ['Inter', 'sans-serif'],
                 outfit: ['Outfit', 'sans-serif'],
             },
+            animation: {
+                shimmer: 'shimmer 2s linear infinite',
+            },
+            keyframes: {
+                shimmer: {
+                    '100%': { transform: 'translateX(100%)' },
+                },
+            },
         },
     },
     plugins: [

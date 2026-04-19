@@ -1,8 +1,8 @@
 import { memo } from 'react';
-import { COUNTRY_CODES, getFlagUrl } from '../constants/countries';
+import { COUNTRY_CODES, getFlagUrl } from '../../constants/countries';
 
 // Eager load all player images from the assets folder using Vite
-const avatarModules = import.meta.glob('../assets/*.{png,jpg,jpeg,webp}', { eager: true });
+const avatarModules = import.meta.glob('../../assets/*.{png,jpg,jpeg,webp}', { eager: true });
 
 // Cache for avatar URL lookups to avoid scanning all modules on every render
 const avatarCache = new Map();

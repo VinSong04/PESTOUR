@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Trophy, Crown } from 'lucide-react';
-import BracketMatchBox from './BracketMatchBox';
-import PlayerAvatar from './PlayerAvatar';
+import BracketMatchBox from '../components/ui/BracketMatchBox';
+import PlayerAvatar from '../components/ui/PlayerAvatar';
 import { processBracket } from '../utils/logic';
 import { motion } from 'framer-motion';
 import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';

@@ -60,9 +60,9 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                             className="flex items-center gap-3.5 cursor-pointer relative z-10"
                             onClick={() => handleNav('home')}
                         >
-                            <div className="h-11 w-11 flex-shrink-0 rounded-xl overflow-hidden ring-1 ring-white/10 shadow-lg relative group">
+                            <div className="h-10 sm:h-11 flex-shrink-0 rounded-xl overflow-hidden ring-1 ring-white/10 shadow-lg relative group bg-[#060a13] flex items-center">
                                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
-                                <img src={logo} alt="PES TOUR Logo" className="h-full w-full object-cover relative" />
+                                <img src={logo} alt="PES TOUR Logo" className="h-full w-auto object-contain relative px-2 py-1" />
                             </div>
                             <div className="hidden sm:flex flex-col">
                                 <span className="font-outfit font-black text-lg tracking-tight text-white leading-none">

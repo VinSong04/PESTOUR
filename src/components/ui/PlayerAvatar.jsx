@@ -71,7 +71,7 @@ export default memo(function PlayerAvatar({ name, logo, className = "w-8 h-8 tex
 
         return (
             <div className={`flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/10 shadow-sm ${defaultRounding} ${className}`}>
-                <img src={displayUrl} alt={name || 'Player avatar'} className={`w-full h-full ${objectFit}`} loading="lazy" />
+                <img src={displayUrl} alt={name || 'Player avatar'} className={`w-full h-full ${objectFit}`} loading="lazy" decoding="async" />
             </div>
         );
     }
@@ -82,7 +82,7 @@ export default memo(function PlayerAvatar({ name, logo, className = "w-8 h-8 tex
     if (url) {
         return (
             <div className={`flex-shrink-0 flex items-center justify-center ${className.replace(/rounded-\w+/, '').replace(/shadow-\w+/, '').replace(/border\b/, '')}`}>
-                <img src={url} alt={name || 'Player avatar'} className="w-full h-full object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" loading="lazy" />
+                <img src={url} alt={name || 'Player avatar'} className="w-full h-full object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" loading="lazy" decoding="async" />
             </div>
         );
     }

@@ -59,7 +59,7 @@ export default function HomeView({ data, setCurrentPage, isAdmin }) {
                         className="mb-10 inline-flex items-center justify-center rounded-2xl p-[3px] overflow-hidden shadow-[0_0_60px_rgba(34,211,238,0.12)] relative bg-gradient-to-br from-cyan-500/30 to-purple-500/30 w-full max-w-[260px] sm:max-w-[340px]"
                     >
                         <div className="w-full bg-[#060a13] rounded-[14px] flex items-center justify-center relative overflow-hidden aspect-[2/1]">
-                            <img src={logo} alt="PES TOUR Logo" className="w-full h-full object-contain relative z-10 group-hover:scale-[1.03] transition-transform duration-700 p-2" />
+                            <img src={logo} alt="PES TOUR Logo" width="400" height="196" className="w-full h-full object-contain relative z-10 group-hover:scale-[1.03] transition-transform duration-700 p-2" />
                         </div>
                     </motion.div>
 

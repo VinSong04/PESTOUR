@@ -3,11 +3,57 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#060a13" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>PES TOUR | Legends Start Here</title>
-    <meta name="description" content="Join the ultimate eFootball PES Tour tournament." />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <meta name="description" content="Join the ultimate eFootball PES Tour tournament. Compete in group stages, knockouts, and claim the championship." />
+
+    <!-- Preconnect to critical origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://firebaseio.com" />
+    <link rel="preconnect" href="https://flagcdn.com" />
+    <link rel="dns-prefetch" href="https://apis.google.com" />
+
+    <!-- Async Google Fonts (non-render-blocking) -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" />
+    </noscript>
+
+    <!-- Critical inline CSS for initial loading state -->
+    <style>
+      body { margin: 0; background: #060a13; }
+      #root:empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+      #root:empty::before {
+        content: '';
+        width: 3.5rem;
+        height: 3.5rem;
+        border: 2px solid rgba(34,211,238,0.15);
+        border-top-color: #22d3ee;
+        border-radius: 50%;
+        animation: _spin 0.8s linear infinite;
+      }
+      #root:empty::after {
+        content: 'Loading';
+        font-family: system-ui, sans-serif;
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4em;
+        color: rgba(71,85,105,0.8);
+      }
+      @keyframes _spin { to { transform: rotate(360deg) } }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -12,6 +12,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
     const registrations = useRegistrations();
 
     const [name, setName] = useState('');
+    const [teamName, setTeamName] = useState('');
     const [paidConfirm, setPaidConfirm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -20,6 +21,10 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
 
         if (!name.trim()) {
             Swal.fire({ ...swalDarkTheme, title: 'Notice', text: 'In-Game Name is required.', icon: 'info' });
+            return;
+        }
+        if (!teamName.trim()) {
+            Swal.fire({ ...swalDarkTheme, title: 'Notice', text: 'Dream Team Name is required.', icon: 'info' });
             return;
         }
         if (!paidConfirm) {
@@ -36,12 +41,21 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
             return;
         }
 
+        const teamExists = registrations.some(
+            reg => reg.baseTeam?.toLowerCase() === teamName.trim().toLowerCase()
+        );
+
+        if (teamExists) {
+            Swal.fire({ ...swalDarkTheme, title: 'Team Name Taken!', text: `"${teamName.trim()}" is already used by another player! Choose a different team name.`, icon: 'warning' });
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             const registrationsRef = ref(db, 'registrations');
             await push(registrationsRef, {
                 name: name.trim(),
-                baseTeam: 'Dream Team',
+                baseTeam: teamName.trim(),
                 timestamp: serverTimestamp(),
                 status: 'pending'
             });
@@ -53,6 +67,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                 icon: 'success'
             });
             setName('');
+            setTeamName('');
             setPaidConfirm(false);
         } catch (error) {
             Swal.fire({ ...swalDarkTheme, title: 'Error', text: 'Registration failed. Please try again.', icon: 'error' });
@@ -135,17 +150,14 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                         className="w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]" />
                                 </div>
 
-                                {/* Dream Team Info */}
-                                <div className="bg-cyan-500/[0.03] border border-cyan-500/10 rounded-2xl p-5 relative overflow-hidden">
-                                    <div className="flex items-center gap-3.5 relative z-10">
-                                        <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/15 flex-shrink-0">
-                                            <Sparkles className="w-5 h-5 text-cyan-400" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-white">Mode: <span className="text-cyan-400 ml-1">Dream Team</span></p>
-                                            <p className="text-[10px] font-medium text-slate-500 tracking-wider uppercase mt-0.5">Build your own squad &mdash; no country restrictions</p>
-                                        </div>
-                                    </div>
+                                {/* Dream Team Name */}
+                                <div className="space-y-2.5">
+                                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
+                                        Dream Team Name <span className="text-rose-400">*</span>
+                                    </label>
+                                    <input type="text" value={teamName} onChange={(e) => setTeamName(e.target.value)}
+                                        placeholder="e.g. FC Legends, Galaxy XI"
+                                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]" />
                                 </div>
 
                                 {/* Fee Section */}

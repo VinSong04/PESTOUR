@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { ref, push, serverTimestamp } from 'firebase/database';
+import { ref, push, serverTimestamp, get, update } from 'firebase/database';
 import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Star, DollarSign } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Swal from 'sweetalert2';
 import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
 import { swalDarkTheme } from '../utils/swalTheme';
 import useRegistrations from '../hooks/useRegistrations';
+import { processPaywayPayment, getPaymentParams } from '../services/payment_service/paywayService';
 
 export default function RegisterView({ isAdmin, isOpen = true }) {
     const registrations = useRegistrations();
@@ -15,6 +16,50 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
     const [teamName, setTeamName] = useState('');
     const [baseTeam, setBaseTeam] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Handle incoming redirect from PayWay (Webhook simulation)
+    useEffect(() => {
+        const { tran_id, status } = getPaymentParams();
+        
+        if (tran_id && status === 'success') {
+            const verifyPayment = async () => {
+                try {
+                    const registrationsRef = ref(db, 'registrations');
+                    const snapshot = await get(registrationsRef);
+                    if (snapshot.exists()) {
+                        let userKey = null;
+                        snapshot.forEach(child => {
+                            if (child.val().tran_id === tran_id) {
+                                userKey = child.key;
+                            }
+                        });
+
+                        if (userKey) {
+                            const userRef = ref(db, `registrations/${userKey}`);
+                            await update(userRef, { status: 'paid' });
+                            
+                            Swal.fire({
+                                ...swalDarkTheme,
+                                title: 'Payment Successful!',
+                                text: 'Your transaction was completed and your registration is confirmed.',
+                                icon: 'success'
+                            });
+
+                            // Clean up URL
+                            if (window.location.hash.includes('?')) {
+                                window.location.hash = window.location.hash.split('?')[0];
+                            } else {
+                                window.history.replaceState({}, document.title, window.location.pathname);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error verifying payment", error);
+                }
+            };
+            verifyPayment();
+        }
+    }, [db]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -52,29 +97,34 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
 
         setIsSubmitting(true);
         try {
+            const tran_id = "PES_" + Date.now();
             const registrationsRef = ref(db, 'registrations');
+            
+            // 1. Create DB entry in payment_pending state
             await push(registrationsRef, {
                 name: name.trim(),
                 teamName: teamName.trim(),
                 baseTeam: baseTeam.trim(),
                 timestamp: serverTimestamp(),
-                status: 'pending'
+                tran_id: tran_id,
+                status: 'payment_pending'
             });
 
+            // 2. Alert the user that they are being redirected
             Swal.fire({
                 ...swalDarkTheme,
                 title: 'Registration Initiated!',
-                text: 'Redirecting to ABA PayWay to complete your $2.00 payment.',
+                text: 'Redirecting to ABA PayWay securely...',
                 icon: 'success',
-                timer: 3000,
+                timer: 2000,
                 showConfirmButton: false
             });
 
-            // Redirect to PayWay link
-            setTimeout(() => {
-                // Replace this URL with your actual ABA PayWay Link
-                window.location.href = "https://payway.ababank.com/";
-            }, 3000);
+            // 3. Initiate the payment flow wrapper
+            setTimeout(async () => {
+                await processPaywayPayment({ name: name.trim() }, tran_id);
+                // processPaywayPayment automatically creates and submits a form to redirect
+            }, 2000);
 
             setName('');
             setTeamName('');

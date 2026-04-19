@@ -48,12 +48,22 @@ export default function RulesView() {
                     </h3>
                     <div className="space-y-4 relative z-10">
                         <p className="font-medium text-slate-200 text-[15px]">Every matchup is a <strong className="text-white bg-white/[0.06] px-2 py-0.5 rounded-md border border-white/[0.06]">Best-of-3 series</strong>. The first player to win 2 games wins the series.</p>
-                        <ul className="space-y-3 pt-1">
+                        <ul className="space-y-3 pt-1 mb-6">
                             <BulletItem>Each &quot;game&quot; is a full eFootball match.</BulletItem>
                             <BulletItem>The series ends immediately if a player wins the first 2 games (2-0).</BulletItem>
                             <BulletItem>Game 3 is only played if the series is tied 1-1.</BulletItem>
                             <BulletItem>Goals from all games count towards overall Goal Difference.</BulletItem>
                         </ul>
+
+                        <div className="pt-2 border-t border-white/[0.06]">
+                            <h4 className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-4">In-Game Settings</h4>
+                            <ul className="space-y-3">
+                                <BulletItem>Match Time: <strong className="text-white">12 Minutes</strong></BulletItem>
+                                <BulletItem>Extra Time & Penalties: <strong className="text-white">Enabled</strong></BulletItem>
+                                <BulletItem>Substitutions: <strong className="text-white">5</strong> (3 intervals + 1 in extra time)</BulletItem>
+                                <BulletItem>Player Form/Condition: <strong className="text-white">Excellent</strong></BulletItem>
+                            </ul>
+                        </div>
                     </div>
                 </motion.div>
 

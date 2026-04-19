@@ -144,7 +144,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
 
             {/* Registration Form */}
             <div className="flex flex-col items-center w-full relative z-10">
-                <motion.div variants={itemVariants} className="glass-card rounded-3xl relative overflow-hidden group w-full max-w-2xl">
+                <motion.div variants={itemVariants} className="glass-card rounded-3xl relative group w-full max-w-2xl">
                     <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent"></div>
 
                     <div className="p-7 sm:p-10">
@@ -182,7 +182,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                 </div>
 
                                 {/* Base Team (Country) Dropdown */}
-                                <div className="space-y-2.5" ref={dropdownRef}>
+                                <div className="space-y-2.5 relative z-20" ref={dropdownRef}>
                                     <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
                                         Base Team (Country) <span className="text-rose-400">*</span>
                                     </label>

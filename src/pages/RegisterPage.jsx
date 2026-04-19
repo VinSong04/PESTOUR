@@ -1,10 +1,9 @@
-import { useRef, useState, useEffect } from 'react';
+import { useState } from 'react';
 import { db } from '../firebase';
 import { ref, push, serverTimestamp } from 'firebase/database';
-import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Star, DollarSign, Search, ChevronDown } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Star, DollarSign } from 'lucide-react';
+import { motion } from 'framer-motion';
 import Swal from 'sweetalert2';
-import { COUNTRIES } from '../constants/countries';
 import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
 import { swalDarkTheme } from '../utils/swalTheme';
 import useRegistrations from '../hooks/useRegistrations';
@@ -15,21 +14,8 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
     const [name, setName] = useState('');
     const [teamName, setTeamName] = useState('');
     const [baseTeam, setBaseTeam] = useState('');
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const dropdownRef = useRef(null);
     const [paidConfirm, setPaidConfirm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsDropdownOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -43,7 +29,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
             return;
         }
         if (!baseTeam.trim()) {
-            Swal.fire({ ...swalDarkTheme, title: 'Notice', text: 'Base Team (Country) is required.', icon: 'info' });
+            Swal.fire({ ...swalDarkTheme, title: 'Notice', text: 'Base Team is required.', icon: 'info' });
             return;
         }
         if (!paidConfirm) {
@@ -181,69 +167,14 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                         className="w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]" />
                                 </div>
 
-                                {/* Base Team (Country) Dropdown */}
-                                <div className="space-y-2.5 relative z-20" ref={dropdownRef}>
+                                {/* Base Team Input */}
+                                <div className="space-y-2.5">
                                     <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
-                                        Base Team (Country) <span className="text-rose-400">*</span>
+                                        Base Team (Club / Country) <span className="text-rose-400">*</span>
                                     </label>
-                                    <div className="relative">
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                            className={`w-full bg-white/[0.03] border ${isDropdownOpen ? 'border-cyan-500/30 bg-white/[0.04]' : 'border-white/[0.06]'} text-white px-5 py-4 rounded-xl flex items-center justify-between transition-all font-semibold text-[15px] cursor-pointer text-left`}
-                                        >
-                                            <span className={baseTeam ? 'text-white' : 'text-slate-700'}>
-                                                {baseTeam || 'Select a Country'}
-                                            </span>
-                                            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                                        </button>
-
-                                        <AnimatePresence>
-                                            {isDropdownOpen && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: -8 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, y: -8 }}
-                                                    transition={{ duration: 0.2 }}
-                                                    className="absolute z-50 w-full mt-2 bg-[#0c1220]/98 backdrop-blur-2xl border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden"
-                                                >
-                                                    <div className="p-2.5 border-b border-white/[0.04] relative">
-                                                        <Search className="w-4 h-4 text-slate-500 absolute left-5 top-1/2 -translate-y-1/2" />
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Search country..."
-                                                            value={searchQuery}
-                                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                                            className="w-full bg-white/[0.03] text-white pl-9 pr-3 py-2.5 rounded-lg outline-none border border-transparent focus:border-cyan-500/20 transition-all text-sm font-medium placeholder:text-slate-600"
-                                                            autoFocus
-                                                        />
-                                                    </div>
-                                                    <div className="max-h-52 overflow-y-auto no-scrollbar py-1">
-                                                        {COUNTRIES.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
-                                                            COUNTRIES.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())).map(country => (
-                                                                <button
-                                                                    key={country}
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setBaseTeam(country);
-                                                                        setIsDropdownOpen(false);
-                                                                        setSearchQuery('');
-                                                                    }}
-                                                                    className={`w-full text-left px-4 py-2.5 hover:bg-cyan-500/[0.05] transition-colors font-medium text-sm ${baseTeam === country ? 'text-cyan-400 bg-cyan-500/[0.03]' : 'text-slate-300'}`}
-                                                                >
-                                                                    {country}
-                                                                </button>
-                                                            ))
-                                                        ) : (
-                                                            <div className="px-4 py-5 text-center text-slate-600 font-medium text-sm">
-                                                                No countries found
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
+                                    <input type="text" value={baseTeam} onChange={(e) => setBaseTeam(e.target.value)}
+                                        placeholder="e.g. Manchester United, Brazil"
+                                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]" />
                                 </div>
 
                                 {/* Fee Section */}

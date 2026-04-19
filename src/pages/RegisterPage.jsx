@@ -14,7 +14,6 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
     const [name, setName] = useState('');
     const [teamName, setTeamName] = useState('');
     const [baseTeam, setBaseTeam] = useState('');
-    const [paidConfirm, setPaidConfirm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e) => {
@@ -30,10 +29,6 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
         }
         if (!baseTeam.trim()) {
             Swal.fire({ ...swalDarkTheme, title: 'Notice', text: 'Base Team is required.', icon: 'info' });
-            return;
-        }
-        if (!paidConfirm) {
-            Swal.fire({ ...swalDarkTheme, title: 'Payment Required', text: 'Please confirm you have paid the registration fee before submitting.', icon: 'info' });
             return;
         }
 
@@ -68,14 +63,22 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
 
             Swal.fire({
                 ...swalDarkTheme,
-                title: 'Registration Sent!',
-                text: 'Your Dream Team registration was successful. Please await admin approval.',
-                icon: 'success'
+                title: 'Registration Initiated!',
+                text: 'Redirecting to ABA PayWay to complete your $2.00 payment.',
+                icon: 'success',
+                timer: 3000,
+                showConfirmButton: false
             });
+
+            // Redirect to PayWay link
+            setTimeout(() => {
+                // Replace this URL with your actual ABA PayWay Link
+                window.location.href = "https://payway.ababank.com/";
+            }, 3000);
+
             setName('');
             setTeamName('');
             setBaseTeam('');
-            setPaidConfirm(false);
         } catch (error) {
             Swal.fire({ ...swalDarkTheme, title: 'Error', text: 'Registration failed. Please try again.', icon: 'error' });
         } finally {
@@ -177,42 +180,6 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                         className="w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]" />
                                 </div>
 
-                                {/* Fee & Payment Section */}
-                                <div className="bg-amber-500/[0.03] border border-amber-500/10 rounded-2xl p-5 sm:p-6 space-y-4 relative overflow-hidden">
-                                    <div className="flex items-center gap-3.5 relative z-10">
-                                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/15 flex-shrink-0">
-                                            <DollarSign className="w-5 h-5 text-amber-400" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-white">Registration Fee: <span className="text-amber-400 ml-1 text-lg font-bold">$2.00</span></p>
-                                            <p className="text-[10px] font-medium text-slate-500 tracking-wider uppercase mt-0.5">Pay via ABA PayWay before submitting</p>
-                                        </div>
-                                    </div>
-
-                                    {/* PayWay Details Block */}
-                                    <div className="bg-[#00529c]/10 border border-[#00529c]/30 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
-                                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
-                                            <div className="bg-[#00529c] text-white font-black px-3 py-1.5 rounded-lg text-sm tracking-wider shadow-lg flex-shrink-0">
-                                                ABA PayWay
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-slate-300 font-medium text-sm">Transfer exactly <strong className="text-amber-400">$2.00</strong> to the admin:</p>
-                                                <p className="text-white text-base font-bold tracking-wide">000 000 000 <span className="text-slate-500 font-normal ml-2 text-sm">(Admin Name)</span></p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <label className="flex items-center gap-3 cursor-pointer group relative z-10 bg-white/[0.02] p-3 rounded-xl border border-white/[0.04] hover:bg-white/[0.03] transition-colors mt-2">
-                                        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all flex-shrink-0 ${paidConfirm ? 'bg-amber-500 border-amber-500 text-[#060a13]' : 'border-white/15 group-hover:border-amber-500/40'
-                                            }`} onClick={() => setPaidConfirm(!paidConfirm)}>
-                                            {paidConfirm && <CheckCircle2 className="w-4 h-4" />}
-                                        </div>
-                                        <span className="text-sm font-medium text-slate-300" onClick={() => setPaidConfirm(!paidConfirm)}>
-                                            I confirm I have transferred the <strong className="text-amber-400">$2</strong> fee via PayWay
-                                        </span>
-                                    </label>
-                                </div>
-
                                 {/* Submit */}
                                 <motion.button
                                     whileHover={!isSubmitting ? { scale: 1.01 } : {}}
@@ -224,7 +191,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                         }`}>
                                     <span className="relative z-10 flex items-center justify-center gap-3">
                                         <UserPlus className="w-5 h-5" />
-                                        {isSubmitting ? 'Submitting...' : 'Register Now'}
+                                        {isSubmitting ? 'Redirecting...' : 'Pay $2.00 & Register'}
                                     </span>
                                     {!isSubmitting && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] animate-[shimmer_3s_infinite]"></div>}
                                 </motion.button>

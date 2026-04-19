@@ -3,11 +3,12 @@ import { db } from '../firebase';
 import { ref, push, serverTimestamp, get, update } from 'firebase/database';
 import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Star, DollarSign } from 'lucide-react';
 import { motion } from 'framer-motion';
+
 import Swal from 'sweetalert2';
 import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
 import { swalDarkTheme } from '../utils/swalTheme';
 import useRegistrations from '../hooks/useRegistrations';
-import { processPaywayPayment, getPaymentParams } from '../services/payment_service/paywayService';
+import { processPaywayPayment, getPaymentParams } from '../services/payment_service/payment_handler';
 
 export default function RegisterView({ isAdmin, isOpen = true }) {
     const registrations = useRegistrations();

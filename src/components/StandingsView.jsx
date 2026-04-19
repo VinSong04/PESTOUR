@@ -107,7 +107,7 @@ export default function StandingsView({ standingsData, bracketData }) {
         >
             <div className="grid lg:grid-cols-2 gap-5 mt-4">
                 {Object.keys(standingsData.groups).sort().map((grp, idx) => (
-                    <div key={grp}>{renderTable(standingsData.groups[grp], `GROUP ${grp}`, false, accentColors[idx % accentColors.length])}</div>
+                    <div key={grp} className="min-w-0">{renderTable(standingsData.groups[grp], `GROUP ${grp}`, false, accentColors[idx % accentColors.length])}</div>
                 ))}
             </div>
 

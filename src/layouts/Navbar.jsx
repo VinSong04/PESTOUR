@@ -51,7 +51,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                         : 'bg-transparent border-b border-transparent'
                         }`}
                 >
-                    <div className="max-w-7xl mx-auto px-4 lg:px-6 h-[72px] flex items-center justify-between relative">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 h-[72px] flex items-center justify-between relative gap-1 sm:gap-2">
 
                         {/* Logo */}
                         <motion.div
@@ -103,8 +103,8 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                         </div>
 
                         {/* Mobile Nav - Compact pill buttons */}
-                        <div className="flex lg:hidden flex-1 justify-center mx-2">
-                            <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.04]">
+                        <div className="flex lg:hidden flex-1 justify-center mx-1 sm:mx-2">
+                            <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.04] max-w-full">
                                 {navItems.map(item => {
                                     const isActive = currentPage === item.id;
                                     return (
@@ -112,7 +112,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                                             key={item.id}
                                             onClick={() => handleNav(item.id)}
                                             className={`relative flex items-center justify-center p-2 rounded-lg transition-all flex-shrink-0 ${isActive
-                                                ? 'text-cyan-400 bg-white/[0.08]'
+                                                ? 'text-cyan-400 bg-black/5 dark:bg-white/[0.08]'
                                                 : 'text-slate-500'
                                                 }`}
                                         >
@@ -124,7 +124,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                         </div>
 
                         {/* Right Actions */}
-                        <div className="flex items-center gap-2 relative z-10 shrink-0">
+                        <div className="flex items-center gap-1 sm:gap-2 relative z-10 shrink-0">
                             {seasons && seasons.length > 1 && (
                                 <div className="relative hidden sm:block">
                                     <select
@@ -144,7 +144,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => setIsLightMode(prev => !prev)}
-                                className={`p-2 rounded-xl border transition-all ${isLightMode
+                                className={`p-1.5 sm:p-2 rounded-xl border transition-all ${isLightMode
                                     ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
                                     : 'text-slate-500 border-white/[0.06] bg-white/[0.03] hover:text-white hover:bg-white/[0.06]'
                                     }`}
@@ -156,7 +156,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => handleNav('admin')}
-                                className={`p-2 rounded-xl border transition-all ${currentPage === 'admin'
+                                className={`p-1.5 sm:p-2 rounded-xl border transition-all ${currentPage === 'admin'
                                     ? 'text-rose-400 bg-rose-500/10 border-rose-500/20'
                                     : 'text-slate-500 border-white/[0.06] bg-white/[0.03] hover:text-rose-400 hover:bg-rose-500/10'
                                     }`}

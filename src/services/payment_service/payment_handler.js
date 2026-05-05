@@ -21,22 +21,22 @@ export async function processPaywayPayment(playerDetails, tran_id) {
     }
 
     const { name } = playerDetails;
-    
+
     const req_time = new Date().toISOString().replace(/[-:TZ.]/g, '').substring(0, 14); // Format: YYYYMMDDHHmmss
     const amount = "2.00";
-    
+
     // Construct return URL. This is where ABA PayWay redirects the user after payment is successful or failed.
     // We append the URL parameters so our React app can catch them on reload.
     const baseUrl = window.location.origin + window.location.pathname;
     const return_url = `${baseUrl}?tran_id=${tran_id}&payment_status=success#register`;
-    
+
     // Data String required by PayWay to generate the Hash (HMAC-SHA512)
     // Typical ABA PayWay Hash String order: req_time + merchant_id + tran_id + amount + ...
     // Note: If you have additional fields (like return_url or items), they must be added to this string in the exact order specified by your ABA PayWay Integration Guide.
     const stringToHash = `${req_time}${MERCHANT_ID}${tran_id}${amount}`;
-    
+
     const hash = await generatePaywayHash(stringToHash, API_KEY);
-    
+
     // Create a hidden form to POST to the ABA PayWay API
     const form = document.createElement("form");
     form.method = "POST";
@@ -65,7 +65,7 @@ export async function processPaywayPayment(playerDetails, tran_id) {
     });
 
     document.body.appendChild(form);
-    
+
     // Submit the form which will redirect the user to the ABA PayWay Gateway
     form.submit();
 }
@@ -78,23 +78,23 @@ async function generatePaywayHash(dataStr, keyStr) {
     const encoder = new TextEncoder();
     const keyData = encoder.encode(keyStr);
     const data = encoder.encode(dataStr);
-    
+
     // Import the secret key for HMAC SHA-512
     const cryptoKey = await window.crypto.subtle.importKey(
-        'raw', 
-        keyData, 
-        { name: 'HMAC', hash: 'SHA-512' }, 
-        false, 
+        'raw',
+        keyData,
+        { name: 'HMAC', hash: 'SHA-512' },
+        false,
         ['sign']
     );
-    
+
     // Generate the signature
     const signature = await window.crypto.subtle.sign('HMAC', cryptoKey, data);
-    
+
     // Convert ArrayBuffer signature to Base64 String
     const hashArray = Array.from(new Uint8Array(signature));
     const hashBase64 = btoa(String.fromCharCode(...hashArray));
-    
+
     return hashBase64;
 }
 
@@ -104,7 +104,7 @@ async function generatePaywayHash(dataStr, keyStr) {
 export function getPaymentParams() {
     // Check standard query string
     const searchParams = new URLSearchParams(window.location.search);
-    
+
     // Also check hash string if params appended after hash (e.g. #register?tran_id=...)
     let hashParams = new URLSearchParams();
     if (window.location.hash.includes('?')) {

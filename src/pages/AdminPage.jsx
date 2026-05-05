@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy, Trash2, Sparkles, Image as ImageIcon, Copy, ExternalLink, AlertTriangle, ThumbsUp, Plus } from 'lucide-react';
+import { ShieldCheck, LogOut, Settings, Flame, RefreshCw, Users, CheckCircle2, Lock, Shuffle, Zap, BarChart3, UserPlus, Trophy, Trash2, Sparkles, Image as ImageIcon, ExternalLink, AlertTriangle, ThumbsUp, Plus, DollarSign, QrCode, CreditCard, Clock, Search } from 'lucide-react';
 import { INITIAL_DATA } from '../utils/initialData';
 import { createEmptyMatch } from '../utils/matchFactory';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
@@ -8,7 +8,7 @@ import { ref, remove, update } from 'firebase/database';
 import PlayerAvatar from '../components/ui/PlayerAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import useRegistrations from '../hooks/useRegistrations';
-import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
+import { staggerContainer as containerVariants } from '../constants/animations';
 import { renderClassicPoster, renderNeonPoster } from '../utils/posterGenerator';
 
 const TABS = [
@@ -38,6 +38,10 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     // Form states
     const [settings, setSettings] = useState(data.settings);
     const [players, setPlayers] = useState(data.players);
+
+    // Filter states for roster
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
 
     useEffect(() => {
         setSettings(data.settings);
@@ -198,6 +202,10 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         try { await update(ref(db, `registrations/${id}`), { status: 'approved' }); } catch (e) { console.error(e); }
     };
 
+    const handleConfirmPayment = async (id) => {
+        try { await update(ref(db, `registrations/${id}`), { status: 'paid' }); } catch (e) { console.error(e); }
+    };
+
     const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [renderProgress, setRenderProgress] = useState(0);
@@ -260,11 +268,15 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         return { playedMatches: played, totalMatches: total, filledPlayers: filled };
     }, [data.matches, data.players]);
 
+    const paidRegistrations = useMemo(() => registrations.filter(r => r.status === 'paid' || r.status === 'approved'), [registrations]);
+    // const pendingPayments = useMemo(() => registrations.filter(r => r.status === 'payment_pending'), [registrations]);
+
     const statCards = useMemo(() => [
         { label: 'Registrations', value: totalRegistrations, icon: UserPlus, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', shadow: 'shadow-[0_0_30px_rgba(251,191,36,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]' },
+        { label: 'Payments', value: `${paidRegistrations.length}/${totalRegistrations}`, icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', shadow: 'shadow-[0_0_30px_rgba(16,185,129,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]' },
         { label: 'Roster Approved', value: approvedPlayers.length, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', shadow: 'shadow-[0_0_30px_rgba(96,165,250,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]' },
         { label: 'Matches Played', value: `${statData.playedMatches}/${statData.totalMatches}`, icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', shadow: 'shadow-[0_0_30px_rgba(168,85,247,0.15)]', drop: 'drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]' },
-    ], [totalRegistrations, approvedPlayers.length, statData]);
+    ], [totalRegistrations, approvedPlayers.length, statData, paidRegistrations.length]);
 
     const rosterGroups = useMemo(() => {
         const groupKeys = [...new Set(players.map(p => p.group))].filter(Boolean).sort();
@@ -666,38 +678,122 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                 </h3>
                             </div>
 
+                            {/* Filters & Search */}
+                            <div className="flex flex-col md:flex-row gap-4 mb-6 relative z-10">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search by name, team, or ref..." 
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full bg-slate-950/50 border border-white/10 text-white rounded-2xl pl-11 pr-4 py-3 focus:border-purple-500/50 outline-none text-sm font-bold shadow-inner"
+                                    />
+                                </div>
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0 shrink-0">
+                                    {['all', 'payment_pending', 'paid', 'approved'].map(status => (
+                                        <button
+                                            key={status}
+                                            onClick={() => setStatusFilter(status)}
+                                            className={`px-4 py-3 rounded-2xl text-[10px] font-outfit font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                                                statusFilter === status 
+                                                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
+                                                    : 'bg-slate-950/50 text-slate-500 border border-white/5 hover:border-white/10 hover:text-slate-300'
+                                            }`}
+                                        >
+                                            {status.replace('_', ' ')}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-h-[500px] overflow-y-auto pr-4 no-scrollbar relative z-10 p-1">
-                                {registrations.length === 0 ? (
+                                {registrations.filter(r => {
+                                    const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+                                    const q = searchQuery.toLowerCase();
+                                    const matchQuery = !q || 
+                                        (r.name && r.name.toLowerCase().includes(q)) || 
+                                        (r.teamName && r.teamName.toLowerCase().includes(q)) ||
+                                        (r.baseTeam && r.baseTeam.toLowerCase().includes(q)) ||
+                                        (r.tran_id && r.tran_id.toLowerCase().includes(q));
+                                    return matchStatus && matchQuery;
+                                }).length === 0 ? (
                                     <div className="lg:col-span-2 py-16 text-center border-2 border-dashed border-white/5 rounded-3xl text-slate-500 font-outfit font-black uppercase tracking-widest text-sm bg-slate-950/30 backdrop-blur-sm">
                                         <UserPlus className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                                        No registrations found
+                                        No matching registrations found
                                     </div>
                                 ) : (
-                                    registrations.map(reg => (
-                                        <div key={reg.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-3xl bg-slate-950/50 border border-white/5 hover:border-purple-500/30 transition-all group shadow-sm gap-4">
-                                            <div className="flex items-center gap-5">
-                                                <div className="p-1.5 rounded-2xl bg-slate-900 border border-white/5 shadow-inner shrink-0">
-                                                    <PlayerAvatar name={reg.name} logo={reg.baseTeam || reg.logo} className="w-12 h-12 text-sm" />
+                                    registrations.filter(r => {
+                                        const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+                                        const q = searchQuery.toLowerCase();
+                                        const matchQuery = !q || 
+                                            (r.name && r.name.toLowerCase().includes(q)) || 
+                                            (r.teamName && r.teamName.toLowerCase().includes(q)) ||
+                                            (r.baseTeam && r.baseTeam.toLowerCase().includes(q)) ||
+                                            (r.tran_id && r.tran_id.toLowerCase().includes(q));
+                                        return matchStatus && matchQuery;
+                                    }).map(reg => {
+                                        const statusConfig = {
+                                            payment_pending: { label: 'Awaiting Payment', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: Clock },
+                                            paid: { label: 'Paid', color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', icon: DollarSign },
+                                            approved: { label: 'Approved', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: CheckCircle2 },
+                                        };
+                                        const sc = statusConfig[reg.status] || statusConfig.payment_pending;
+                                        const StatusIcon = sc.icon;
+                                        const isBakong = reg.paymentMethod === 'bakong';
+
+                                        return (
+                                            <div key={reg.id} className="flex flex-col p-5 rounded-3xl bg-slate-950/50 border border-white/5 hover:border-purple-500/30 transition-all group shadow-sm gap-4">
+                                                {/* Player Info Row */}
+                                                <div className="flex items-center gap-4">
+                                                    <div className="p-1.5 rounded-2xl bg-slate-900 border border-white/5 shadow-inner shrink-0">
+                                                        <PlayerAvatar name={reg.name} logo={reg.baseTeam || reg.logo} className="w-12 h-12 text-sm" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-outfit font-black text-white tracking-widest text-base truncate">{reg.name}</p>
+                                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{reg.teamName || reg.baseTeam}</p>
+                                                            {reg.paymentMethod && (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                                                                    {isBakong ? <QrCode className="w-2.5 h-2.5" /> : <CreditCard className="w-2.5 h-2.5" />}
+                                                                    {isBakong ? 'KHQR' : 'PayWay'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-outfit font-black text-white tracking-widest text-lg">{reg.name}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{reg.baseTeam}</p>
+
+                                                {/* Status + Actions Row */}
+                                                <div className="flex items-center justify-between gap-3 pt-1 border-t border-white/[0.03]">
+                                                    {/* Status Badge */}
+                                                    <span className={`inline-flex items-center gap-1.5 text-[9px] font-outfit font-black px-3 py-1.5 rounded-lg ${sc.bg} ${sc.border} border ${sc.color} uppercase tracking-[0.15em] shadow-sm`}>
+                                                        <StatusIcon className="w-3 h-3" />
+                                                        {sc.label}
+                                                    </span>
+
+                                                    {/* Action Buttons */}
+                                                    <div className="flex items-center gap-2">
+                                                        {/* Confirm Payment (only for payment_pending) */}
+                                                        {reg.status === 'payment_pending' && (
+                                                            <button onClick={() => handleConfirmPayment(reg.id)} className="p-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 transition-all border border-cyan-500/20 shadow-sm" title="Confirm Payment">
+                                                                <DollarSign className="w-4 h-4 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
+                                                            </button>
+                                                        )}
+                                                        {/* Approve (for paid entries) */}
+                                                        {reg.status === 'paid' && (
+                                                            <button onClick={() => handleApproveReg(reg.id)} className="p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-all border border-emerald-500/20 shadow-sm" title="Approve Player">
+                                                                <CheckCircle2 className="w-4 h-4 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                                            </button>
+                                                        )}
+                                                        {/* Delete */}
+                                                        <button onClick={() => handleDeleteReg(reg.id)} className="p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-all border border-rose-500/20 shadow-sm" title="Delete">
+                                                            <Trash2 className="w-4 h-4 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-end gap-3 shrink-0">
-                                                {reg.status !== 'approved' ? (
-                                                    <button onClick={() => handleApproveReg(reg.id)} className="p-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-all border border-emerald-500/20 shadow-sm" title="Approve">
-                                                        <CheckCircle2 className="w-5 h-5 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                                    </button>
-                                                ) : (
-                                                    <span className="text-[10px] font-outfit font-black text-emerald-400 px-3 py-1.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20 uppercase tracking-[0.2em] shadow-sm">Approved</span>
-                                                )}
-                                                <button onClick={() => handleDeleteReg(reg.id)} className="p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-all border border-rose-500/20 shadow-sm" title="Delete">
-                                                    <Trash2 className="w-5 h-5 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                         </div>

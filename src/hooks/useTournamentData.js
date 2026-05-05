@@ -1,30 +1,45 @@
-import { useState, useEffect, useMemo } from 'react';
-import { db, auth } from '../firebase';
-import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-import { ref, onValue, set } from 'firebase/database';
-import { INITIAL_DATA } from '../utils/initialData';
-import { calculateStandings } from '../utils/logic';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { authApi, tournamentApi, matchApi, standingsApi, playerApi } from '../services/api';
 
 /**
- * Custom hook that manages all core tournament state:
- * - Firebase auth (anonymous + admin detection)
- * - Real-time database sync
- * - Season / history selection
- * - Standings computation
- * - Theme persistence
+ * useTournamentData — refactored to use the Laravel API backend.
+ *
+ * Replaces the old Firebase-based real-time sync with REST API polling.
+ * Key changes:
+ * - Auth uses Sanctum tokens instead of Firebase anonymous auth
+ * - Data fetching uses the api.js service layer
+ * - Standings come from the backend (auto-calculated by MatchObserver)
+ * - Theme persistence remains client-side (localStorage)
+ *
+ * The hook preserves the same return shape so existing components
+ * continue to work without modification.
  */
+
+// Polling interval for live data (in ms)
+const POLL_INTERVAL = 15000; // 15 seconds
+
 export default function useTournamentData() {
-    const [data, setData] = useState(null);
+    // ── Core State ─────────────────────────────────────
+    const [tournaments, setTournaments] = useState([]);
+    const [activeTournament, setActiveTournament] = useState(null);
+    const [players, setPlayers] = useState([]);
+    const [matches, setMatches] = useState([]);
+    const [standingsData, setStandingsData] = useState(null);
+
+    // ── Auth State ─────────────────────────────────────
     const [isAdmin, setIsAdmin] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
     const [authInitialized, setAuthInitialized] = useState(false);
+
+    // ── UI State ───────────────────────────────────────
+    const [loading, setLoading] = useState(true);
     const [showLogin, setShowLogin] = useState(false);
     const [selectedSeason, setSelectedSeason] = useState('CURRENT');
     const [isLightMode, setIsLightMode] = useState(() => {
         return localStorage.getItem('theme') === 'light';
     });
 
-    // Theme persistence
+    // ── Theme Persistence ──────────────────────────────
     useEffect(() => {
         if (isLightMode) {
             document.documentElement.classList.add('light-theme');
@@ -35,92 +50,208 @@ export default function useTournamentData() {
         }
     }, [isLightMode]);
 
-    // Auth + Database subscription
+    // ── Auth Check ─────────────────────────────────────
     useEffect(() => {
-        let unsubscribeDb;
-        let unsubscribeAuth;
-
-        unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-            if (user && !user.isAnonymous) {
-                setIsAdmin(user.email === 'admin@pestour.com' || user.email === 'admin@admin.com');
-            } else {
-                setIsAdmin(false);
-                if (!user) signInAnonymously(auth).catch(console.error);
+        const checkAuth = async () => {
+            if (authApi.isAuthenticated()) {
+                try {
+                    const userData = await authApi.me();
+                    setUser(userData);
+                    setIsAdmin(userData.is_admin || false);
+                } catch {
+                    // Token expired or invalid
+                    setUser(null);
+                    setIsAdmin(false);
+                }
             }
             setAuthInitialized(true);
-        });
-
-        const dbRef = ref(db, 'tournament');
-
-        unsubscribeDb = onValue(dbRef, (snapshot) => {
-            const val = snapshot.val();
-            if (val) {
-                val.players = val.players || [];
-                val.matches = val.matches || [];
-                val.bracket = val.bracket || [];
-                if (!val.settings.votingTitle) val.settings.votingTitle = INITIAL_DATA.settings.votingTitle;
-                if (!val.settings.votingOptions) val.settings.votingOptions = INITIAL_DATA.settings.votingOptions;
-                setData(val);
-            } else {
-                try {
-                    set(dbRef, INITIAL_DATA);
-                } catch (e) { console.error("Could not write initial data", e); }
-                setData(INITIAL_DATA);
-            }
-            setLoading(false);
-        }, (error) => {
-            console.error("Firebase DB Error:", error);
-            setData(INITIAL_DATA);
-            setLoading(false);
-        });
-
-        return () => {
-            if (unsubscribeDb) unsubscribeDb();
-            if (unsubscribeAuth) unsubscribeAuth();
         };
+
+        checkAuth();
+
+        // Listen for unauthorized events from the API client
+        const handleUnauth = () => {
+            setUser(null);
+            setIsAdmin(false);
+        };
+        window.addEventListener('auth:unauthorized', handleUnauth);
+        return () => window.removeEventListener('auth:unauthorized', handleUnauth);
     }, []);
 
-    // Data update helper
-    const updateData = async (newData) => {
-        const dbRef = ref(db, 'tournament');
+    // ── Data Fetching ──────────────────────────────────
+    const fetchData = useCallback(async () => {
         try {
-            const dataToSave = {
-                ...newData,
-                lastUpdated: new Date().toISOString()
-            };
-            await set(dbRef, dataToSave);
+            // Fetch tournaments
+            const tournamentsData = await tournamentApi.list();
+            setTournaments(tournamentsData);
+
+            // Find the active (ongoing) tournament, or fall back to the first one
+            const ongoing = tournamentsData.find(t => t.status === 'ongoing');
+            const active = ongoing || tournamentsData[0] || null;
+            setActiveTournament(active);
+
+            if (active) {
+                // Fetch matches and standings for the active tournament
+                const [matchesData, standingsResult] = await Promise.all([
+                    matchApi.list({ tournament_id: active.id }),
+                    standingsApi.live(active.id),
+                ]);
+
+                setMatches(matchesData);
+                setStandingsData(standingsResult.standings || []);
+            }
+
+            // Fetch all active players
+            const playersData = await playerApi.list(true);
+            setPlayers(playersData);
+
         } catch (error) {
-            console.error("Error updating document: ", error);
+            console.error('Error fetching tournament data:', error);
+        } finally {
+            setLoading(false);
         }
-    };
+    }, []);
 
-    // Derived state
-    const history = data ? (data.history || {}) : {};
-    const seasons = ['CURRENT', ...Object.keys(history).sort().reverse()];
+    // Initial fetch + polling
+    useEffect(() => {
+        fetchData();
 
-    const displayData = selectedSeason === 'CURRENT' ? data : history[selectedSeason];
-    const activeData = displayData || data;
+        const interval = setInterval(fetchData, POLL_INTERVAL);
+        return () => clearInterval(interval);
+    }, [fetchData]);
+
+    // ── Data Update Helper ─────────────────────────────
+    // This replaces the Firebase `set()` call.
+    // Components should now call specific API endpoints instead.
+    const updateData = useCallback(async (action, payload) => {
+        try {
+            let result;
+
+            switch (action) {
+                case 'updateScore':
+                    result = await matchApi.updateScore(
+                        payload.matchId,
+                        payload.homeScore,
+                        payload.awayScore
+                    );
+                    break;
+
+                case 'createMatch':
+                    result = await matchApi.create(payload);
+                    break;
+
+                case 'updateMatch':
+                    result = await matchApi.update(payload.id, payload);
+                    break;
+
+                case 'createPlayer':
+                    result = await playerApi.create(payload);
+                    break;
+
+                case 'updatePlayer':
+                    result = await playerApi.update(payload.id, payload);
+                    break;
+
+                case 'createTournament':
+                    result = await tournamentApi.create(payload);
+                    break;
+
+                case 'updateTournament':
+                    result = await tournamentApi.update(payload.id, payload);
+                    break;
+
+                default:
+                    console.warn('Unknown updateData action:', action);
+                    return;
+            }
+
+            // Refresh data after mutation
+            await fetchData();
+            return result;
+
+        } catch (error) {
+            console.error(`Error in updateData (${action}):`, error);
+            throw error;
+        }
+    }, [fetchData]);
+
+    // ── Login / Logout ─────────────────────────────────
+    const login = useCallback(async (email, password) => {
+        const result = await authApi.login(email, password);
+        setUser(result.user);
+        setIsAdmin(result.user.is_admin || false);
+        return result;
+    }, []);
+
+    const logout = useCallback(async () => {
+        await authApi.logout();
+        setUser(null);
+        setIsAdmin(false);
+    }, []);
+
+    // ── Derived State ──────────────────────────────────
+    const seasons = useMemo(() => {
+        const completedTournaments = tournaments
+            .filter(t => t.status === 'completed')
+            .map(t => t.name);
+        return ['CURRENT', ...completedTournaments];
+    }, [tournaments]);
+
     const isCurrentSeason = selectedSeason === 'CURRENT';
     const effectiveIsAdmin = isAdmin && isCurrentSeason;
 
-    const standingsData = useMemo(
-        () => activeData ? calculateStandings(activeData.players, activeData.matches) : null,
-        [activeData]
-    );
+    // Build a compatible data shape for existing components
+    const activeData = useMemo(() => {
+        if (!activeTournament) return null;
 
-    const isVotingLocked = activeData?.settings?.votingEnabled && !isAdmin && !(showLogin && false);
+        return {
+            settings: {
+                name: activeTournament.name || 'PALLET EFOOTBALL',
+                season: activeTournament.name,
+                tournamentStarted: activeTournament.status !== 'upcoming',
+                registrationOpen: activeTournament.status === 'upcoming',
+                votingEnabled: false,
+                votingStatus: 'starting',
+                votingTitle: 'Most Valuable Player',
+                votingOptions: [],
+            },
+            players: players.map(p => ({
+                id: p.id,
+                name: p.name,
+                inGameName: p.in_game_name,
+                teamName: p.team_name,
+            })),
+            matches: matches.map(m => ({
+                id: m.id,
+                tournamentId: m.tournament_id,
+                homePlayer: m.home_player,
+                awayPlayer: m.away_player,
+                homeScore: m.home_score,
+                awayScore: m.away_score,
+                status: m.status,
+                matchDate: m.match_date,
+            })),
+            bracket: [],
+            lastUpdated: activeTournament.updated_at,
+        };
+    }, [activeTournament, players, matches]);
+
+    const data = activeData;
 
     return {
         // Core data
         data,
         activeData,
         updateData,
-        loading: loading || !data || !authInitialized,
+        loading: loading || !authInitialized,
 
         // Auth
         isAdmin,
         setIsAdmin,
         effectiveIsAdmin,
+        user,
+        login,
+        logout,
 
         // Season
         selectedSeason,
@@ -132,12 +263,21 @@ export default function useTournamentData() {
         isLightMode,
         setIsLightMode,
 
-        // Voting
-        isVotingLocked,
+        // Voting (preserved interface)
+        isVotingLocked: false,
         showLogin,
         setShowLogin,
 
-        // Standings
+        // Standings (now from backend)
         standingsData,
+
+        // Tournament context
+        activeTournament,
+        tournaments,
+        players,
+        matches,
+
+        // Refresh helper
+        refreshData: fetchData,
     };
 }

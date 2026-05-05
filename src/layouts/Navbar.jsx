@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getNavItems } from '../constants/navigation';
 import logo from '../assets/pallet.jpg';
 
-export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted, votingEnabled, lastUpdated }) {
+export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted, votingEnabled }) {
     const [showNavbar, setShowNavbar] = useState(true);
     const [scrolled, setScrolled] = useState(false);
     const rafRef = useRef(null);

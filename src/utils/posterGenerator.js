@@ -311,7 +311,7 @@ export const renderClassicPoster = (ctx, W, H, logo, type, data, config) => {
 
 
 export const renderNeonPoster = (ctx, W, H, logo, type, data, config) => {
-    const { posterTitle, posterSubtitle, posterFooter, posterAccent } = config;
+    const { posterTitle, posterSubtitle, posterFooter } = config;
 
     // ========== PREMIUM DARK NAVY BACKGROUND ==========
     const bg = ctx.createLinearGradient(0, 0, W * 0.4, H);

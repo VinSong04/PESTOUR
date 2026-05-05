@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getSeriesResult, processBracket } from './logic';
+import { getSeriesResult } from './logic';
 
 describe('Logic Utils', () => {
     describe('getSeriesResult', () => {

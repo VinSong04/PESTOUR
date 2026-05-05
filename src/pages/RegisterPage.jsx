@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { ref, push, serverTimestamp, get, update } from 'firebase/database';
-import { UserPlus, Sparkles, CheckCircle2, ShieldAlert, Trophy, Star, DollarSign } from 'lucide-react';
+import { UserPlus, Sparkles, ShieldAlert, Trophy, Star, QrCode, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 import Swal from 'sweetalert2';
@@ -9,14 +9,22 @@ import { staggerContainer as containerVariants, springItem as itemVariants } fro
 import { swalDarkTheme } from '../utils/swalTheme';
 import useRegistrations from '../hooks/useRegistrations';
 import { processPaywayPayment, getPaymentParams } from '../services/payment_service/payment_handler';
+import { generateTournamentPayment } from '../services/payment_service/bakong_khqr_handler';
+import BakongPaymentModal from '../components/payment/BakongPaymentModal';
 
-export default function RegisterView({ isAdmin, isOpen = true }) {
+export default function RegisterView({ isOpen = true }) {
     const registrations = useRegistrations();
 
     const [name, setName] = useState('');
     const [teamName, setTeamName] = useState('');
     const [baseTeam, setBaseTeam] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState('bakong'); // 'bakong' | 'payway'
+
+    // Bakong KHQR modal state
+    const [showBakongModal, setShowBakongModal] = useState(false);
+    const [bakongPaymentData, setBakongPaymentData] = useState(null);
+    const [pendingPlayerName, setPendingPlayerName] = useState('');
 
     // Handle incoming redirect from PayWay (Webhook simulation)
     useEffect(() => {
@@ -60,7 +68,7 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
             };
             verifyPayment();
         }
-    }, [db]);
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -108,34 +116,68 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                 baseTeam: baseTeam.trim(),
                 timestamp: serverTimestamp(),
                 tran_id: tran_id,
-                status: 'payment_pending'
+                status: 'payment_pending',
+                paymentMethod: paymentMethod,
             });
 
-            // 2. Alert the user that they are being redirected
-            Swal.fire({
-                ...swalDarkTheme,
-                title: 'Registration Initiated!',
-                text: 'Redirecting to ABA PayWay securely...',
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
+            if (paymentMethod === 'bakong') {
+                // --- Bakong KHQR Flow ---
+                const paymentData = generateTournamentPayment({ name: name.trim() }, tran_id);
+                setBakongPaymentData(paymentData);
+                setPendingPlayerName(name.trim());
+                setShowBakongModal(true);
 
-            // 3. Initiate the payment flow wrapper
-            setTimeout(async () => {
-                await processPaywayPayment({ name: name.trim() }, tran_id);
-                // processPaywayPayment automatically creates and submits a form to redirect
-            }, 2000);
+                setName('');
+                setTeamName('');
+                setBaseTeam('');
+            } else {
+                // --- ABA PayWay Flow (existing) ---
+                Swal.fire({
+                    ...swalDarkTheme,
+                    title: 'Registration Initiated!',
+                    text: 'Redirecting to ABA PayWay securely...',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
 
-            setName('');
-            setTeamName('');
-            setBaseTeam('');
+                setTimeout(async () => {
+                    await processPaywayPayment({ name: name.trim() }, tran_id);
+                }, 2000);
+
+                setName('');
+                setTeamName('');
+                setBaseTeam('');
+            }
         } catch (error) {
             Swal.fire({ ...swalDarkTheme, title: 'Error', text: 'Registration failed. Please try again.', icon: 'error' });
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    // Bakong payment callbacks
+    const handleBakongSuccess = async () => {
+        // Payment has been verified by the Admin (or via integration in the future)!
+        setShowBakongModal(false);
+        Swal.fire({
+            ...swalDarkTheme,
+            title: 'Payment Successful! 🎉',
+            text: 'Your registration is confirmed. Welcome to PES TOUR!',
+            icon: 'success',
+        });
+    };
+
+    const handleBakongExpired = () => {
+        Swal.fire({
+            ...swalDarkTheme,
+            title: 'QR Code Expired',
+            text: 'The QR code has expired. Please try registering again.',
+            icon: 'warning',
+        });
+    };
+
+
 
     return (
         <motion.div
@@ -231,6 +273,66 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                         className="w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]" />
                                 </div>
 
+                                {/* Payment Method Selector */}
+                                <div className="space-y-2.5">
+                                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
+                                        Payment Method
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {/* Bakong KHQR Option */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentMethod('bakong')}
+                                            className={`relative p-4 rounded-xl border transition-all duration-300 text-left group ${
+                                                paymentMethod === 'bakong'
+                                                    ? 'bg-cyan-500/[0.06] border-cyan-500/25 shadow-[0_0_20px_rgba(6,182,212,0.06)]'
+                                                    : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1]'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2.5 mb-2">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                                                    paymentMethod === 'bakong'
+                                                        ? 'bg-cyan-500/15 border border-cyan-500/20'
+                                                        : 'bg-white/[0.04] border border-white/[0.06]'
+                                                }`}>
+                                                    <QrCode className={`w-4 h-4 ${paymentMethod === 'bakong' ? 'text-cyan-400' : 'text-slate-500'}`} />
+                                                </div>
+                                                {paymentMethod === 'bakong' && (
+                                                    <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.5)] ml-auto" />
+                                                )}
+                                            </div>
+                                            <p className={`text-xs font-bold ${paymentMethod === 'bakong' ? 'text-white' : 'text-slate-400'}`}>Bakong KHQR</p>
+                                            <p className="text-[9px] font-medium text-slate-600 mt-0.5">Scan QR with any bank app</p>
+                                        </button>
+
+                                        {/* ABA PayWay Option */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentMethod('payway')}
+                                            className={`relative p-4 rounded-xl border transition-all duration-300 text-left group ${
+                                                paymentMethod === 'payway'
+                                                    ? 'bg-blue-500/[0.06] border-blue-500/25 shadow-[0_0_20px_rgba(59,130,246,0.06)]'
+                                                    : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1]'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2.5 mb-2">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                                                    paymentMethod === 'payway'
+                                                        ? 'bg-blue-500/15 border border-blue-500/20'
+                                                        : 'bg-white/[0.04] border border-white/[0.06]'
+                                                }`}>
+                                                    <CreditCard className={`w-4 h-4 ${paymentMethod === 'payway' ? 'text-blue-400' : 'text-slate-500'}`} />
+                                                </div>
+                                                {paymentMethod === 'payway' && (
+                                                    <div className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_6px_rgba(59,130,246,0.5)] ml-auto" />
+                                                )}
+                                            </div>
+                                            <p className={`text-xs font-bold ${paymentMethod === 'payway' ? 'text-white' : 'text-slate-400'}`}>ABA PayWay</p>
+                                            <p className="text-[9px] font-medium text-slate-600 mt-0.5">Redirect to ABA checkout</p>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 {/* Submit */}
                                 <motion.button
                                     whileHover={!isSubmitting ? { scale: 1.01 } : {}}
@@ -238,11 +340,18 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                                     type="submit" disabled={isSubmitting}
                                     className={`w-full py-5 px-8 rounded-2xl font-outfit font-bold tracking-wider uppercase transition-all text-[15px] relative overflow-hidden ${isSubmitting
                                         ? 'bg-white/[0.03] text-slate-600 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_30px_rgba(34,211,238,0.15)] hover:shadow-[0_0_50px_rgba(34,211,238,0.25)]'
+                                        : paymentMethod === 'bakong'
+                                            ? 'bg-gradient-to-r from-cyan-500 to-teal-600 text-white shadow-[0_0_30px_rgba(6,182,212,0.15)] hover:shadow-[0_0_50px_rgba(6,182,212,0.25)]'
+                                            : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-[0_0_30px_rgba(59,130,246,0.15)] hover:shadow-[0_0_50px_rgba(59,130,246,0.25)]'
                                         }`}>
                                     <span className="relative z-10 flex items-center justify-center gap-3">
-                                        <UserPlus className="w-5 h-5" />
-                                        {isSubmitting ? 'Redirecting...' : 'Pay $2.00 & Register'}
+                                        {paymentMethod === 'bakong' ? <QrCode className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+                                        {isSubmitting
+                                            ? 'Processing...'
+                                            : paymentMethod === 'bakong'
+                                                ? 'Pay $2.00 via KHQR'
+                                                : 'Pay $2.00 via ABA'
+                                        }
                                     </span>
                                     {!isSubmitting && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] animate-[shimmer_3s_infinite]"></div>}
                                 </motion.button>
@@ -264,6 +373,19 @@ export default function RegisterView({ isAdmin, isOpen = true }) {
                     </div>
                 </motion.div>
             </div>
+
+            {/* Bakong KHQR Payment Modal — uses real-time Firebase listener internally */}
+            <BakongPaymentModal
+                isOpen={showBakongModal}
+                onClose={() => setShowBakongModal(false)}
+                onPaymentSuccess={handleBakongSuccess}
+                onPaymentExpired={handleBakongExpired}
+                qrString={bakongPaymentData?.khqrString || ''}
+                amount={bakongPaymentData?.amount || '2.00'}
+                currency={bakongPaymentData?.currency || 'USD'}
+                transactionRef={bakongPaymentData?.transactionRef || ''}
+                playerName={pendingPlayerName}
+            />
         </motion.div>
     );
 }

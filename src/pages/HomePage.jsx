@@ -72,10 +72,22 @@ export default function HomeView({ data, setCurrentPage, isAdmin }) {
                     </motion.h1>
                     <motion.p
                         variants={itemVariants}
-                        className="text-slate-400 text-lg sm:text-xl font-medium mb-14 tracking-wide w-full max-w-xl px-4"
+                        className="text-slate-400 text-lg sm:text-xl font-medium mb-8 tracking-wide w-full max-w-xl px-4"
                     >
                         {data.settings.tagline}
                     </motion.p>
+
+                    {/* Player count badge — social proof */}
+                    <motion.div
+                        variants={itemVariants}
+                        className="mb-8 inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-amber-500/20 bg-amber-500/[0.06] backdrop-blur-sm"
+                        aria-label="Join 200+ players competing this season"
+                    >
+                        <span className="text-lg">🏆</span>
+                        <span className="text-sm font-semibold text-amber-300/90 tracking-wide">
+                            Join <strong className="text-amber-400">200+</strong> players competing this season
+                        </span>
+                    </motion.div>
 
                     {/* CTAs */}
                     <motion.div

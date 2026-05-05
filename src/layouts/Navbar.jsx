@@ -111,12 +111,14 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                                         <button
                                             key={item.id}
                                             onClick={() => handleNav(item.id)}
+                                            aria-label={`Navigate to ${item.label}`}
+                                            aria-current={isActive ? 'page' : undefined}
                                             className={`relative flex items-center justify-center p-2 rounded-lg transition-all flex-shrink-0 ${isActive
                                                 ? 'text-cyan-400 bg-black/5 dark:bg-white/[0.08]'
                                                 : 'text-slate-500'
                                                 }`}
                                         >
-                                            <item.icon className="w-4 h-4" />
+                                            <item.icon className="w-4 h-4" aria-hidden="true" />
                                         </button>
                                     );
                                 })}
@@ -144,25 +146,26 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => setIsLightMode(prev => !prev)}
+                                aria-label={isLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
                                 className={`p-1.5 sm:p-2 rounded-xl border transition-all ${isLightMode
                                     ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
                                     : 'text-slate-500 border-white/[0.06] bg-white/[0.03] hover:text-white hover:bg-white/[0.06]'
                                     }`}
                             >
-                                {isLightMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                                {isLightMode ? <Moon className="w-4 h-4" aria-hidden="true" /> : <Sun className="w-4 h-4" aria-hidden="true" />}
                             </motion.button>
 
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => handleNav('admin')}
+                                aria-label="Open admin panel"
                                 className={`p-1.5 sm:p-2 rounded-xl border transition-all ${currentPage === 'admin'
                                     ? 'text-rose-400 bg-rose-500/10 border-rose-500/20'
                                     : 'text-slate-500 border-white/[0.06] bg-white/[0.03] hover:text-rose-400 hover:bg-rose-500/10'
                                     }`}
-                                title="Admin Panel"
                             >
-                                <Lock className="w-4 h-4" />
+                                <Lock className="w-4 h-4" aria-hidden="true" />
                             </motion.button>
                         </div>
                     </div>

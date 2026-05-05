@@ -8,3 +8,18 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <App />
     </React.StrictMode>,
 )
+
+// Register Service Worker for PWA / offline support
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker
+            .register('/sw.js', { scope: '/' })
+            .then((reg) => {
+                // SW registered — no console output in production (esbuild drops console.*)
+                void reg;
+            })
+            .catch(() => {
+                // SW registration failed silently
+            });
+    });
+}

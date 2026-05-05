@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Accessibility: Focus ring ───────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #EF9F27;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ── Accessibility: Skip to content link ────────────────────────────── */
+.skip-link {
+  position: fixed;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 0.6rem 1.4rem;
+  background: #EF9F27;
+  color: #060a13;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none;
+  border-radius: 0 0 10px 10px;
+  transition: top 0.15s ease;
+  white-space: nowrap;
+}
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
 @layer base {
   :root {
     --bg-primary: #060a13;

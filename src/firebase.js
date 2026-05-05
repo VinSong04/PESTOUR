@@ -2,19 +2,19 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 
-// Your web app's Firebase configuration
-// We use import.meta.env to get these values safely in Vite
+// Firebase configuration
+// Note: These are safe to be public — Firebase security comes from
+// Firebase Security Rules, not from hiding the client config.
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID
+    apiKey: "AIzaSyD4E1mAaY4HkId_h41YQz_kijN4R_h3In8",
+    authDomain: "pestour-965ff.firebaseapp.com",
+    databaseURL: "https://pestour-965ff-default-rtdb.firebaseio.com",
+    projectId: "pestour-965ff",
+    storageBucket: "pestour-965ff.firebasestorage.app",
+    messagingSenderId: "518176676119",
+    appId: "1:518176676119:web:a21a447983ba8deb297f52"
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getDatabase(app);
-

@@ -71,19 +71,6 @@ export default function App() {
         );
     }
 
-    if (!activeData) {
-        return (
-            <div className="min-h-screen bg-[#060a13] flex items-center justify-center flex-col gap-5 text-center px-4">
-                <div className="w-16 h-16 border border-rose-500/30 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mb-2">
-                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                </div>
-                <h1 className="text-2xl font-outfit font-black text-white tracking-widest uppercase">Cannot Connect to Backend</h1>
-                <p className="text-sm text-slate-400 max-w-md">The Laravel API is currently unreachable or the database is empty. Please ensure the backend server is running on localhost:8000 and the database is seeded.</p>
-                <div className="mt-8 text-[10px] font-semibold text-slate-600 tracking-[0.2em] uppercase">Run <span className="text-cyan-400">./setup.sh</span> and <span className="text-cyan-400">php artisan serve</span></div>
-            </div>
-        );
-    }
-
     const navProps = {
         currentPage,
         setCurrentPage,

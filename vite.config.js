@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/PESTOUR/',
+  base: '/',
   // Global esbuild options — applied to both dev transforms and prod minification
   esbuild: {
     drop: ['console', 'debugger'],  // Strip console.log and debugger in production

@@ -55,5 +55,8 @@
     "bugs": {
         "url": "https://github.com/VinSong04/PESTOUR/issues"
     },
-    "homepage": "https://github.com/VinSong04/PESTOUR#readme"
+    "homepage": "https://github.com/VinSong04/PESTOUR#readme",
+    "engines": {
+        "node": "20.x"
+    }
 }

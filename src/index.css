@@ -130,6 +130,12 @@
     background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
     background-size: 24px 24px;
   }
+
+  /* Country select dropdown scrollbar */
+  .custom-select-scroll::-webkit-scrollbar { width: 5px; }
+  .custom-select-scroll::-webkit-scrollbar-track { background: transparent; }
+  .custom-select-scroll::-webkit-scrollbar-thumb { background: rgba(34, 211, 238, 0.12); border-radius: 99px; }
+  .custom-select-scroll::-webkit-scrollbar-thumb:hover { background: rgba(34, 211, 238, 0.25); }
 }
 
 @keyframes shimmer {

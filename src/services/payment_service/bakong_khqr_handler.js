@@ -10,8 +10,8 @@
  * KHQR Configuration
  * Replace these with your actual Bakong account details.
  */
-const BAKONG_ACCOUNT_ID = import.meta.env.VITE_BAKONG_ACCOUNT_ID || "your_account@wing";
-const MERCHANT_NAME = import.meta.env.VITE_BAKONG_MERCHANT_NAME || "PES TOUR";
+const BAKONG_ACCOUNT_ID = import.meta.env.VITE_BAKONG_ACCOUNT_ID || "chhorn_vinsong@bkrt";
+const MERCHANT_NAME = import.meta.env.VITE_BAKONG_MERCHANT_NAME || "Pallet Cafe";
 const MERCHANT_CITY = import.meta.env.VITE_BAKONG_MERCHANT_CITY || "Phnom Penh";
 
 // Currency codes
@@ -51,6 +51,7 @@ function tlv(tag, value) {
     const length = value.length.toString().padStart(2, '0');
     return `${tag}${length}${value}`;
 }
+
 
 /**
  * Generates a KHQR-compliant EMVCo QR string for Bakong payments.

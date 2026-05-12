@@ -1,4 +1,56 @@
-export const renderClassicPoster = (ctx, W, H, logo, type, data, config) => {
+import { getFlagUrl } from '../constants/countries';
+
+const preloadFlags = async (data) => {
+    if (!data || !data.players) return;
+    const promises = data.players.map(async (p) => {
+        if (!p.logo || p._flagImg) return;
+        const url = getFlagUrl(p.logo);
+        if (url) {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            await new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+                img.src = url;
+            });
+            if (img.complete && img.naturalWidth > 0) {
+                p._flagImg = img;
+            }
+        }
+    });
+    await Promise.all(promises);
+};
+const drawCircleImage = (ctx, img, x, y, radius) => {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x + radius, y + radius, radius, 0, Math.PI * 2);
+    ctx.clip();
+    
+    const imgRatio = img.width / img.height;
+    let drawW, drawH, drawX, drawY;
+    if (imgRatio > 1) { 
+        drawH = radius * 2;
+        drawW = drawH * imgRatio;
+        drawX = x + radius - drawW / 2;
+        drawY = y;
+    } else {
+        drawW = radius * 2;
+        drawH = drawW / imgRatio;
+        drawX = x;
+        drawY = y + radius - drawH / 2;
+    }
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+    ctx.restore();
+    
+    ctx.beginPath();
+    ctx.arc(x + radius, y + radius, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+};
+
+export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) => {
+    await preloadFlags(data);
     const { posterTitle, posterSubtitle, posterFooter, posterAccent } = config;
 
     // === BACKGROUND GRADIENT (CPL-style maroon/red) ===
@@ -140,11 +192,19 @@ export const renderClassicPoster = (ctx, W, H, logo, type, data, config) => {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 28px Arial, sans-serif';
                 ctx.textAlign = 'right';
-                ctx.fillText(p1Name.toUpperCase(), W / 2 - 90, y + 85);
-                if (p1?.country) {
+                const p1Text = p1Name.toUpperCase();
+                ctx.fillText(p1Text, W / 2 - 90, y + 85);
+                const p1W = ctx.measureText(p1Text).width;
+                if (p1?._flagImg) {
+                    drawCircleImage(ctx, p1._flagImg, (W / 2 - 90) - p1W - 105, y + 29, 45);
+                } else if (p1?.country) {
                     ctx.font = '18px Arial, sans-serif';
                     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                    ctx.fillText(p1.country, W / 2 - 90, y + 115);
+                    ctx.fillText(p1.country, (W / 2 - 90) - p1W - 10, y + 85);
+                } else if (p1?.logo) {
+                    ctx.font = '18px Arial, sans-serif';
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.fillText(p1.logo, (W / 2 - 90) - p1W - 10, y + 85);
                 }
 
                 roundRect(W / 2 - 65, y + 50, 130, 70, 12);
@@ -160,11 +220,20 @@ export const renderClassicPoster = (ctx, W, H, logo, type, data, config) => {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 28px Arial, sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillText(p2Name.toUpperCase(), W / 2 + 90, y + 85);
-                if (p2?.country) {
+                const p2Text = p2Name.toUpperCase();
+                ctx.fillText(p2Text, W / 2 + 90, y + 85);
+                const p2W = ctx.measureText(p2Text).width;
+                if (p2?._flagImg) {
+                    drawCircleImage(ctx, p2._flagImg, W / 2 + 90 + p2W + 15, y + 29, 45);
+                } else if (p2?.country) {
                     ctx.font = '18px Arial, sans-serif';
                     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                    ctx.fillText(p2.country, W / 2 + 90, y + 115);
+                    ctx.fillText(p2.country, W / 2 + 90 + p2W + 10, y + 85);
+                } else if (p2?.logo) {
+                    ctx.font = '18px Arial, sans-serif';
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(p2.logo, W / 2 + 90 + p2W + 10, y + 85);
                 }
             });
         }
@@ -200,7 +269,16 @@ export const renderClassicPoster = (ctx, W, H, logo, type, data, config) => {
                 ctx.fillStyle = winner === 'p1' ? '#fbbf24' : '#ffffff';
                 ctx.font = `bold 28px Arial, sans-serif`;
                 ctx.textAlign = 'right';
-                ctx.fillText(p1Name.toUpperCase(), W / 2 - 90, y + 85);
+                const p1Text = p1Name.toUpperCase();
+                ctx.fillText(p1Text, W / 2 - 90, y + 85);
+                const p1W = ctx.measureText(p1Text).width;
+                if (p1?._flagImg) {
+                    drawCircleImage(ctx, p1._flagImg, (W / 2 - 90) - p1W - 105, y + 29, 45);
+                } else if (p1?.logo) {
+                    ctx.font = '18px Arial, sans-serif';
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.fillText(p1.logo, (W / 2 - 90) - p1W - 10, y + 85);
+                }
 
                 roundRect(W / 2 - 70, y + 45, 140, 75, 12);
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -216,7 +294,16 @@ export const renderClassicPoster = (ctx, W, H, logo, type, data, config) => {
                 ctx.fillStyle = winner === 'p2' ? '#fbbf24' : '#ffffff';
                 ctx.font = 'bold 28px Arial, sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillText(p2Name.toUpperCase(), W / 2 + 90, y + 85);
+                const p2Text = p2Name.toUpperCase();
+                ctx.fillText(p2Text, W / 2 + 90, y + 85);
+                const p2W = ctx.measureText(p2Text).width;
+                if (p2?._flagImg) {
+                    drawCircleImage(ctx, p2._flagImg, W / 2 + 90 + p2W + 15, y + 29, 45);
+                } else if (p2?.logo) {
+                    ctx.font = '18px Arial, sans-serif';
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.fillText(p2.logo, W / 2 + 90 + p2W + 10, y + 85);
+                }
             });
         }
     } else if (type === 'standings') {
@@ -281,6 +368,9 @@ export const renderClassicPoster = (ctx, W, H, logo, type, data, config) => {
                 ctx.font = 'bold 20px Arial, sans-serif';
                 ctx.textAlign = 'left';
                 ctx.fillText(`${pi + 1}. ${p.name}`, 80, gy + 28);
+                if (p._flagImg) {
+                    drawCircleImage(ctx, p._flagImg, 80 + ctx.measureText(`${pi + 1}. ${p.name}`).width + 15, gy + 2, 18);
+                }
                 ctx.font = '18px Arial, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(played, 620, gy + 28);
@@ -310,7 +400,8 @@ export const renderClassicPoster = (ctx, W, H, logo, type, data, config) => {
 };
 
 
-export const renderNeonPoster = (ctx, W, H, logo, type, data, config) => {
+export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
+    await preloadFlags(data);
     const { posterTitle, posterSubtitle, posterFooter } = config;
 
     // ========== PREMIUM DARK NAVY BACKGROUND ==========
@@ -598,11 +689,15 @@ export const renderNeonPoster = (ctx, W, H, logo, type, data, config) => {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 30px Arial, sans-serif';
                 ctx.textAlign = 'right';
-                ctx.fillText(p1Name.toUpperCase(), W / 2 - 55, y + 90);
-                if (p1?.logo) {
+                const p1Text = p1Name.toUpperCase();
+                ctx.fillText(p1Text, W / 2 - 55, y + 90);
+                const p1W = ctx.measureText(p1Text).width;
+                if (p1?._flagImg) {
+                    drawCircleImage(ctx, p1._flagImg, (W / 2 - 55) - p1W - 105, y + 33, 45);
+                } else if (p1?.logo) {
                     ctx.fillStyle = 'rgba(0,212,255,0.4)';
                     ctx.font = '14px Arial, sans-serif';
-                    ctx.fillText(p1.logo, W / 2 - 55, y + 115);
+                    ctx.fillText(p1.logo, (W / 2 - 55) - p1W - 10, y + 90);
                 }
 
                 drawVsBadge(W / 2, y + 85);
@@ -610,11 +705,15 @@ export const renderNeonPoster = (ctx, W, H, logo, type, data, config) => {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 30px Arial, sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillText(p2Name.toUpperCase(), W / 2 + 55, y + 90);
-                if (p2?.logo) {
+                const p2Text = p2Name.toUpperCase();
+                ctx.fillText(p2Text, W / 2 + 55, y + 90);
+                const p2W = ctx.measureText(p2Text).width;
+                if (p2?._flagImg) {
+                    drawCircleImage(ctx, p2._flagImg, W / 2 + 55 + p2W + 15, y + 33, 45);
+                } else if (p2?.logo) {
                     ctx.fillStyle = 'rgba(251,191,36,0.4)';
                     ctx.font = '14px Arial, sans-serif';
-                    ctx.fillText(p2.logo, W / 2 + 55, y + 115);
+                    ctx.fillText(p2.logo, W / 2 + 55 + p2W + 10, y + 90);
                 }
             });
         }
@@ -685,8 +784,17 @@ export const renderNeonPoster = (ctx, W, H, logo, type, data, config) => {
                     ctx.shadowColor = '#00d4ff';
                     ctx.shadowBlur = 10;
                 }
-                ctx.fillText(p1Name.toUpperCase(), W / 2 - 100, y + 88);
+                const p1Text = p1Name.toUpperCase();
+                ctx.fillText(p1Text, W / 2 - 100, y + 88);
+                const p1W = ctx.measureText(p1Text).width;
                 if (winner === 'p1') ctx.restore();
+                if (p1?._flagImg) {
+                    drawCircleImage(ctx, p1._flagImg, (W / 2 - 100) - p1W - 105, y + 31, 45);
+                } else if (p1?.logo) {
+                    ctx.fillStyle = 'rgba(0,212,255,0.4)';
+                    ctx.font = '14px Arial, sans-serif';
+                    ctx.fillText(p1.logo, (W / 2 - 100) - p1W - 10, y + 88);
+                }
 
                 roundRect(W / 2 - 80, y + 55, 160, 70, 14);
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -718,8 +826,17 @@ export const renderNeonPoster = (ctx, W, H, logo, type, data, config) => {
                     ctx.shadowColor = '#fbbf24';
                     ctx.shadowBlur = 10;
                 }
-                ctx.fillText(p2Name.toUpperCase(), W / 2 + 100, y + 88);
+                const p2Text = p2Name.toUpperCase();
+                ctx.fillText(p2Text, W / 2 + 100, y + 88);
+                const p2W = ctx.measureText(p2Text).width;
                 if (winner === 'p2') ctx.restore();
+                if (p2?._flagImg) {
+                    drawCircleImage(ctx, p2._flagImg, W / 2 + 100 + p2W + 15, y + 31, 45);
+                } else if (p2?.logo) {
+                    ctx.fillStyle = 'rgba(251,191,36,0.4)';
+                    ctx.font = '14px Arial, sans-serif';
+                    ctx.fillText(p2.logo, W / 2 + 100 + p2W + 10, y + 88);
+                }
             });
         }
     } else if (type === 'standings') {
@@ -810,6 +927,9 @@ export const renderNeonPoster = (ctx, W, H, logo, type, data, config) => {
                 ctx.fillStyle = pi < 2 ? '#ffffff' : 'rgba(255,255,255,0.7)';
                 ctx.font = 'bold 20px Arial, sans-serif';
                 ctx.fillText(p.name || '—', 100, gy + 30);
+                if (p._flagImg) {
+                    drawCircleImage(ctx, p._flagImg, 100 + ctx.measureText(p.name || '—').width + 15, gy + 4, 18);
+                }
 
                 ctx.font = '17px Arial, sans-serif';
                 ctx.textAlign = 'center';

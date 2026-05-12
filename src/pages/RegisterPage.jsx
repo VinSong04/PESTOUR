@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { db } from '../firebase';
 import { ref, push, serverTimestamp, get, update } from 'firebase/database';
-import { UserPlus, Sparkles, ShieldAlert, Trophy, Star, QrCode, CreditCard } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { UserPlus, Sparkles, ShieldAlert, Trophy, Star, QrCode, CreditCard, ChevronDown, Search, X, Globe } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import Swal from 'sweetalert2';
 import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
@@ -11,7 +11,141 @@ import useRegistrations from '../hooks/useRegistrations';
 import { processPaywayPayment, getPaymentParams } from '../services/payment_service/payment_handler';
 import { generateTournamentPayment } from '../services/payment_service/bakong_khqr_handler';
 import BakongPaymentModal from '../components/payment/BakongPaymentModal';
+import { COUNTRIES, COUNTRY_CODES, getFlagUrl } from '../constants/countries';
 
+/* ─── Searchable Country Select ─────────────────────────────────────── */
+function CountrySelect({ value, onChange }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const dropdownRef = useRef(null);
+    const searchRef = useRef(null);
+
+    const filtered = useMemo(() => {
+        if (!search.trim()) return COUNTRIES;
+        const q = search.toLowerCase();
+        return COUNTRIES.filter(c => c.toLowerCase().includes(q));
+    }, [search]);
+
+    // Close on outside click
+    useEffect(() => {
+        const handler = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setIsOpen(false);
+                setSearch('');
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    // Focus search input when opened
+    useEffect(() => {
+        if (isOpen && searchRef.current) {
+            setTimeout(() => searchRef.current?.focus(), 50);
+        }
+    }, [isOpen]);
+
+    const selectedFlag = value ? getFlagUrl(value) : null;
+
+    return (
+        <div ref={dropdownRef} className="relative">
+            {/* Trigger Button */}
+            <button
+                type="button"
+                onClick={() => { setIsOpen(!isOpen); setSearch(''); }}
+                className={`w-full flex items-center gap-3 bg-white/[0.03] border text-left px-5 py-4 rounded-xl outline-none transition-all font-semibold text-[15px] ${isOpen
+                    ? 'border-cyan-500/30 bg-white/[0.04] shadow-[0_0_20px_rgba(6,182,212,0.06)]'
+                    : 'border-white/[0.06] hover:border-white/[0.1]'
+                    }`}
+            >
+                {value ? (
+                    <>
+                        <img src={selectedFlag} alt="" className="w-7 h-5 rounded-[3px] object-cover shadow-sm border border-white/10 flex-shrink-0" />
+                        <span className="text-white truncate flex-1">{value}</span>
+                    </>
+                ) : (
+                    <>
+                        <Globe className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                        <span className="text-slate-700 flex-1">Select a country...</span>
+                    </>
+                )}
+                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown */}
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                        className="absolute z-50 w-full mt-2 rounded-xl border border-white/[0.08] bg-[#0c1424]/95 backdrop-blur-2xl shadow-2xl shadow-black/40 overflow-hidden"
+                    >
+                        {/* Search Bar */}
+                        <div className="p-3 border-b border-white/[0.06]">
+                            <div className="relative">
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                                <input
+                                    ref={searchRef}
+                                    type="text"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Search country..."
+                                    className="w-full pl-10 pr-9 py-3 bg-white/[0.04] border border-white/[0.06] rounded-lg text-sm text-white placeholder:text-slate-700 outline-none focus:border-cyan-500/25 transition-colors"
+                                />
+                                {search && (
+                                    <button type="button" onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400 transition-colors">
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Options List */}
+                        <div className="max-h-64 overflow-y-auto overscroll-contain custom-select-scroll">
+                            {filtered.length === 0 ? (
+                                <div className="px-5 py-8 text-center text-slate-600 text-sm font-medium">
+                                    No country found
+                                </div>
+                            ) : (
+                                filtered.map((country) => {
+                                    const flagUrl = getFlagUrl(country);
+                                    const isSelected = value === country;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={country}
+                                            onClick={() => { onChange(country); setIsOpen(false); setSearch(''); }}
+                                            className={`w-full flex items-center gap-3 px-5 py-3 text-left transition-all duration-150 ${isSelected
+                                                ? 'bg-cyan-500/[0.08] border-l-2 border-cyan-400'
+                                                : 'border-l-2 border-transparent hover:bg-white/[0.04]'
+                                                }`}
+                                        >
+                                            {flagUrl ? (
+                                                <img src={flagUrl} alt="" className="w-7 h-5 rounded-[3px] object-cover shadow-sm border border-white/10 flex-shrink-0" />
+                                            ) : (
+                                                <div className="w-7 h-5 rounded-[3px] bg-white/[0.06] flex-shrink-0" />
+                                            )}
+                                            <span className={`text-sm font-medium truncate ${isSelected ? 'text-cyan-300' : 'text-slate-300'}`}>
+                                                {country}
+                                            </span>
+                                            {isSelected && (
+                                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.5)] flex-shrink-0" />
+                                            )}
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+/* ─── Register Page ─────────────────────────────────────────────────── */
 export default function RegisterView({ isOpen = true }) {
     const registrations = useRegistrations();
 
@@ -29,7 +163,7 @@ export default function RegisterView({ isOpen = true }) {
     // Handle incoming redirect from PayWay (Webhook simulation)
     useEffect(() => {
         const { tran_id, status } = getPaymentParams();
-        
+
         if (tran_id && status === 'success') {
             const verifyPayment = async () => {
                 try {
@@ -46,7 +180,7 @@ export default function RegisterView({ isOpen = true }) {
                         if (userKey) {
                             const userRef = ref(db, `registrations/${userKey}`);
                             await update(userRef, { status: 'paid' });
-                            
+
                             Swal.fire({
                                 ...swalDarkTheme,
                                 title: 'Payment Successful!',
@@ -82,7 +216,7 @@ export default function RegisterView({ isOpen = true }) {
             return;
         }
         if (!baseTeam.trim()) {
-            Swal.fire({ ...swalDarkTheme, title: 'Notice', text: 'Base Team is required.', icon: 'info' });
+            Swal.fire({ ...swalDarkTheme, title: 'Notice', text: 'Base Team (Country) is required.', icon: 'info' });
             return;
         }
 
@@ -96,7 +230,7 @@ export default function RegisterView({ isOpen = true }) {
         }
 
         const teamExists = registrations.some(
-            reg => reg.baseTeam?.toLowerCase() === teamName.trim().toLowerCase()
+            reg => reg.teamName?.toLowerCase() === teamName.trim().toLowerCase()
         );
 
         if (teamExists) {
@@ -108,7 +242,7 @@ export default function RegisterView({ isOpen = true }) {
         try {
             const tran_id = "PES_" + Date.now();
             const registrationsRef = ref(db, 'registrations');
-            
+
             // 1. Create DB entry in payment_pending state
             await push(registrationsRef, {
                 name: name.trim(),
@@ -177,7 +311,9 @@ export default function RegisterView({ isOpen = true }) {
         });
     };
 
-
+    // Input field shared classes
+    const inputCls = "w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]";
+    const labelCls = "text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5";
 
     return (
         <motion.div
@@ -245,37 +381,36 @@ export default function RegisterView({ isOpen = true }) {
                             <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
                                 {/* Player Name */}
                                 <div className="space-y-2.5">
-                                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
+                                    <label className={labelCls}>
                                         Player Name <span className="text-rose-400">*</span>
                                     </label>
                                     <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-                                        placeholder="e.g. K-Vinn"
-                                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]" />
+                                        placeholder="e.g. Robert Lewandowski"
+                                        className={inputCls} />
                                 </div>
 
                                 {/* Dream Team Name */}
                                 <div className="space-y-2.5">
-                                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
+                                    <label className={labelCls}>
                                         Dream Team Name <span className="text-rose-400">*</span>
                                     </label>
                                     <input type="text" value={teamName} onChange={(e) => setTeamName(e.target.value)}
-                                        placeholder="e.g. FC Legends, Galaxy XI"
-                                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]" />
+                                        placeholder="e.g. RL9 FC"
+                                        className={inputCls} />
                                 </div>
 
-                                {/* Base Team Input */}
+                                {/* Country Select Dropdown */}
                                 <div className="space-y-2.5">
-                                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
-                                        Base Team (Club / Country) <span className="text-rose-400">*</span>
+                                    <label className={labelCls}>
+                                        <Globe className="w-3.5 h-3.5 text-cyan-500/50" />
+                                        Base Team (Country) <span className="text-rose-400">*</span>
                                     </label>
-                                    <input type="text" value={baseTeam} onChange={(e) => setBaseTeam(e.target.value)}
-                                        placeholder="e.g. Manchester United, Brazil"
-                                        className="w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]" />
+                                    <CountrySelect value={baseTeam} onChange={setBaseTeam} />
                                 </div>
 
                                 {/* Payment Method Selector */}
                                 <div className="space-y-2.5">
-                                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5">
+                                    <label className={labelCls}>
                                         Payment Method
                                     </label>
                                     <div className="grid grid-cols-2 gap-3">
@@ -283,18 +418,16 @@ export default function RegisterView({ isOpen = true }) {
                                         <button
                                             type="button"
                                             onClick={() => setPaymentMethod('bakong')}
-                                            className={`relative p-4 rounded-xl border transition-all duration-300 text-left group ${
-                                                paymentMethod === 'bakong'
-                                                    ? 'bg-cyan-500/[0.06] border-cyan-500/25 shadow-[0_0_20px_rgba(6,182,212,0.06)]'
-                                                    : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1]'
-                                            }`}
+                                            className={`relative p-4 rounded-xl border transition-all duration-300 text-left group ${paymentMethod === 'bakong'
+                                                ? 'bg-cyan-500/[0.06] border-cyan-500/25 shadow-[0_0_20px_rgba(6,182,212,0.06)]'
+                                                : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1]'
+                                                }`}
                                         >
                                             <div className="flex items-center gap-2.5 mb-2">
-                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                                                    paymentMethod === 'bakong'
-                                                        ? 'bg-cyan-500/15 border border-cyan-500/20'
-                                                        : 'bg-white/[0.04] border border-white/[0.06]'
-                                                }`}>
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${paymentMethod === 'bakong'
+                                                    ? 'bg-cyan-500/15 border border-cyan-500/20'
+                                                    : 'bg-white/[0.04] border border-white/[0.06]'
+                                                    }`}>
                                                     <QrCode className={`w-4 h-4 ${paymentMethod === 'bakong' ? 'text-cyan-400' : 'text-slate-500'}`} />
                                                 </div>
                                                 {paymentMethod === 'bakong' && (
@@ -309,18 +442,16 @@ export default function RegisterView({ isOpen = true }) {
                                         <button
                                             type="button"
                                             onClick={() => setPaymentMethod('payway')}
-                                            className={`relative p-4 rounded-xl border transition-all duration-300 text-left group ${
-                                                paymentMethod === 'payway'
-                                                    ? 'bg-blue-500/[0.06] border-blue-500/25 shadow-[0_0_20px_rgba(59,130,246,0.06)]'
-                                                    : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1]'
-                                            }`}
+                                            className={`relative p-4 rounded-xl border transition-all duration-300 text-left group ${paymentMethod === 'payway'
+                                                ? 'bg-blue-500/[0.06] border-blue-500/25 shadow-[0_0_20px_rgba(59,130,246,0.06)]'
+                                                : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1]'
+                                                }`}
                                         >
                                             <div className="flex items-center gap-2.5 mb-2">
-                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                                                    paymentMethod === 'payway'
-                                                        ? 'bg-blue-500/15 border border-blue-500/20'
-                                                        : 'bg-white/[0.04] border border-white/[0.06]'
-                                                }`}>
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${paymentMethod === 'payway'
+                                                    ? 'bg-blue-500/15 border border-blue-500/20'
+                                                    : 'bg-white/[0.04] border border-white/[0.06]'
+                                                    }`}>
                                                     <CreditCard className={`w-4 h-4 ${paymentMethod === 'payway' ? 'text-blue-400' : 'text-slate-500'}`} />
                                                 </div>
                                                 {paymentMethod === 'payway' && (

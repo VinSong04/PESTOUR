@@ -236,7 +236,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
         logoImg.crossOrigin = 'anonymous';
         logoImg.src = new URL('../assets/pallet.jpg', import.meta.url).href;
 
-        const drawPoster = (logo) => {
+        const drawPoster = async (logo) => {
             const W = 1080, H = 1440;
             const canvas = document.createElement('canvas');
             canvas.width = W;
@@ -245,9 +245,9 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             const config = { posterTitle, posterSubtitle, posterFooter, posterAccent };
 
             if (posterTheme === 'neon') {
-                renderNeonPoster(ctx, W, H, logo, type, data, config);
+                await renderNeonPoster(ctx, W, H, logo, type, data, config);
             } else {
-                renderClassicPoster(ctx, W, H, logo, type, data, config);
+                await renderClassicPoster(ctx, W, H, logo, type, data, config);
             }
 
             clearInterval(progressInterval);

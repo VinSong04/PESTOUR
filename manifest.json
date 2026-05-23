@@ -1,0 +1,27 @@
+{
+  "name": "PES TOUR",
+  "short_name": "PES TOUR",
+  "description": "The ultimate eFootball PES tournament platform. Compete in group stages, knockouts, and claim the championship.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060a13",
+  "theme_color": "#060a13",
+  "orientation": "portrait-primary",
+  "lang": "en",
+  "scope": "/",
+  "categories": ["games", "sports"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

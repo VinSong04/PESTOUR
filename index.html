@@ -5,25 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#060a13" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>PES TOUR | Legends Start Here</title>
-    <meta name="description" content="Join the ultimate eFootball PES Tour tournament. Compete in group stages, knockouts, and claim the championship." />
+    <meta name="apple-mobile-web-app-title" content="PES TOUR" />
+    <meta name="generator" content="PES TOUR" />
 
-    <!-- Preconnect to critical origins -->
+    <title>PES TOUR | Legends Start Here</title>
+    <meta name="description" content="Join the ultimate eFootball PES Tour tournament. Compete in group stages, knockouts, and claim the championship. Southeast Asia's premier PES tournament platform." />
+    <meta name="keywords" content="PES Tour, eFootball, PES Tournament, Southeast Asia, PES competition, football esports" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://epallet.vercel.app/" />
+
+    <!-- ── Open Graph / Facebook ──────────────────────────────────────── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://epallet.vercel.app/" />
+    <meta property="og:site_name" content="PES TOUR" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="PES TOUR — Legends Start Here" />
+    <meta property="og:description" content="The ultimate eFootball PES tournament platform. Compete in group stages, knockouts, and claim the championship. Join 200+ players in Southeast Asia." />
+    <meta property="og:image" content="https://epallet.vercel.app/og-banner.png" />
+    <meta property="og:image:secure_url" content="https://epallet.vercel.app/og-banner.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="PES TOUR — Legends Start Here. eFootball tournament platform." />
+
+    <!-- ── Twitter / X Card ──────────────────────────────────────────── -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@pestour" />
+    <meta name="twitter:creator" content="@pestour" />
+    <meta name="twitter:title" content="PES TOUR — Legends Start Here" />
+    <meta name="twitter:description" content="The ultimate eFootball PES tournament platform. Compete in group stages, knockouts, and claim the championship." />
+    <meta name="twitter:image" content="https://epallet.vercel.app/og-banner.png" />
+    <meta name="twitter:image:alt" content="PES TOUR — Legends Start Here" />
+
+    <!-- ── PWA Manifest & Icons ───────────────────────────────────────── -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+
+    <!-- ── Preconnect to critical origins ────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://firebaseio.com" />
     <link rel="preconnect" href="https://flagcdn.com" />
     <link rel="dns-prefetch" href="https://apis.google.com" />
 
-    <!-- Async Google Fonts (non-render-blocking) -->
+    <!-- ── Async Google Fonts (non-render-blocking) ───────────────────── -->
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'" />
     <noscript>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" />
     </noscript>
 
-    <!-- Critical inline CSS for initial loading state -->
+    <!-- ── Structured Data: SportsEvent ─────────────────────────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SportsEvent",
+      "name": "PES TOUR — eFootball Tournament",
+      "description": "The ultimate competitive eFootball PES tournament platform for Southeast Asia. Features group stage, knockout rounds, and championship bracket.",
+      "url": "https://epallet.vercel.app/",
+      "sport": "eFootball",
+      "organizer": {
+        "@type": "Organization",
+        "name": "PES TOUR",
+        "url": "https://epallet.vercel.app/"
+      },
+      "location": {
+        "@type": "VirtualLocation",
+        "url": "https://epallet.vercel.app/"
+      },
+      "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+      "eventStatus": "https://schema.org/EventScheduled",
+      "image": "https://epallet.vercel.app/og-banner.png",
+      "inLanguage": "en"
+    }
+    </script>
+
+    <!-- ── Structured Data: WebSite (Sitelinks Searchbox) ───────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "PES TOUR",
+      "url": "https://epallet.vercel.app/",
+      "description": "The ultimate eFootball PES tournament platform for Southeast Asia.",
+      "inLanguage": "en",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://epallet.vercel.app/?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- ── Critical inline CSS for initial loading state ─────────────── -->
     <style>
       body { margin: 0; background: #060a13; }
       #root:empty {
@@ -54,12 +137,12 @@
       }
       @keyframes _spin { to { transform: rotate(360deg) } }
     </style>
-    <script type="module" crossorigin src="/PESTOUR/assets/index-B1FRKgJE.js"></script>
-    <link rel="modulepreload" crossorigin href="/PESTOUR/assets/vendor-ui-B6YLs-9y.js">
-    <link rel="modulepreload" crossorigin href="/PESTOUR/assets/vendor-motion-k2ZI7ixO.js">
-    <link rel="modulepreload" crossorigin href="/PESTOUR/assets/vendor-react-wbEbs6VJ.js">
-    <link rel="modulepreload" crossorigin href="/PESTOUR/assets/vendor-firebase-zO8damCM.js">
-    <link rel="stylesheet" crossorigin href="/PESTOUR/assets/index-Ck94spAl.css">
+    <script type="module" crossorigin src="/assets/index-DeL-eNKI.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-ui-ClM-I9No.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-motion-DNr0Lltw.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-D96J79NB.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-firebase-Bt-_LjeY.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-wjni18Oi.css">
   </head>
   <body>
     <div id="root"></div>

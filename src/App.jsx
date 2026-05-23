@@ -96,7 +96,7 @@ export default function App() {
                 ) : (
                     <>
                         {currentPage === 'home' && <HomePage data={activeData} setCurrentPage={setCurrentPage} isAdmin={effectiveIsAdmin} />}
-                        {currentPage === 'register' && <RegisterPage isAdmin={effectiveIsAdmin} isOpen={activeData.settings.registrationOpen} />}
+                        {currentPage === 'register' && <RegisterPage isAdmin={effectiveIsAdmin} data={activeData} />}
                         {currentPage === 'standings' && (activeData.settings.tournamentStarted || isAdmin) && <StandingsPage standingsData={standingsData} bracketData={activeData.bracket} />}
                         {currentPage === 'matches' && (activeData.settings.tournamentStarted || isAdmin) && <MatchesPage data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />}
                         {currentPage === 'voting' && <VotingPage data={activeData} />}

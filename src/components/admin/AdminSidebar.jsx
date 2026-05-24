@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ShieldCheck, BarChart3, Settings, Users, Trophy, ThumbsUp, Flame, UserPlus, Gamepad2, X, Menu } from 'lucide-react';
+import { ShieldCheck, BarChart3, Settings, Users, Trophy, ThumbsUp, Flame, UserPlus, Gamepad2, X, Menu, Image } from 'lucide-react';
 
 export const ADMIN_TABS = [
     { id: 'overview', label: 'Overview', icon: BarChart3, color: 'blue' },
@@ -8,6 +8,7 @@ export const ADMIN_TABS = [
     { id: 'matches', label: 'Matches', icon: Gamepad2, color: 'purple' },
     { id: 'roster', label: 'Registrations', icon: UserPlus, color: 'amber' },
     { id: 'season', label: 'Season', icon: Trophy, color: 'blue' },
+    { id: 'poster', label: 'Poster', icon: Image, color: 'pink' },
     { id: 'voting', label: 'Voting', icon: ThumbsUp, color: 'indigo' },
     { id: 'danger', label: 'Danger Zone', icon: Flame, color: 'rose' },
 ];
@@ -20,6 +21,7 @@ const colorMap = {
     amber: { active: 'bg-amber-500/15 text-amber-400 border-amber-500/30', icon: 'text-amber-400', dot: 'bg-amber-400' },
     indigo: { active: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30', icon: 'text-indigo-400', dot: 'bg-indigo-400' },
     rose: { active: 'bg-rose-500/15 text-rose-400 border-rose-500/30', icon: 'text-rose-400', dot: 'bg-rose-400' },
+    pink: { active: 'bg-pink-500/15 text-pink-400 border-pink-500/30', icon: 'text-pink-400', dot: 'bg-pink-400' },
 };
 
 export default function AdminSidebar({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, seasonLabel }) {

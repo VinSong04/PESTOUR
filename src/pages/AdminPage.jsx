@@ -16,6 +16,7 @@ import AdminPlayersTab from '../components/admin/AdminPlayersTab';
 import AdminMatchesTab from '../components/admin/AdminMatchesTab';
 import AdminRegistrationsTab from '../components/admin/AdminRegistrationsTab';
 import AdminSeasonTab from '../components/admin/AdminSeasonTab';
+import AdminPosterTab from '../components/admin/AdminPosterTab';
 import AdminVotingTab from '../components/admin/AdminVotingTab';
 import AdminDangerTab from '../components/admin/AdminDangerTab';
 
@@ -186,6 +187,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                     {activeTab === 'matches' && <AdminMatchesTab key="matches" data={data} updateData={updateData} />}
                     {activeTab === 'roster' && <AdminRegistrationsTab key="roster" registrations={registrations} onApprove={handleApproveReg} onConfirmPayment={handleConfirmPayment} onDelete={handleDeleteReg} />}
                     {activeTab === 'season' && <AdminSeasonTab key="season" approvedPlayers={approvedPlayers} currentPlayers={data.players} onDrawGroups={handleDrawGroups} updateData={updateData} data={data} />}
+                    {activeTab === 'poster' && <AdminPosterTab key="poster" data={data} settings={data.settings} />}
                     {activeTab === 'voting' && <AdminVotingTab key="voting" settings={settings} setSettings={setSettings} onSave={handleSaveSettings} isSaved={isSavedSettings} onResetVotes={handleResetVotes} />}
                     {activeTab === 'danger' && <AdminDangerTab key="danger" onReset={handleReset} />}
                 </AnimatePresence>

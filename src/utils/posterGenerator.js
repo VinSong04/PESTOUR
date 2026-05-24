@@ -46,12 +46,21 @@ const drawCircleImage = (ctx, img, x, y, radius) => {
     ctx.arc(x + radius, y + radius, radius, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 1;
-    ctx.stroke();
 };
+const truncateText = (ctx, text, maxWidth) => {
+    if (!text) return '';
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    let temp = text;
+    while (temp.length > 0 && ctx.measureText(temp + '...').width > maxWidth) {
+        temp = temp.slice(0, -1);
+    }
+    return temp + '...';
+};
+
 
 export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) => {
     await preloadFlags(data);
-    const { posterTitle, posterSubtitle, posterFooter, posterAccent } = config;
+    const { posterTitle, posterSubtitle, posterFooter, posterAccent, posterDate, posterMatchTime = 'WEEKEND PLAYED' } = config;
 
     // === BACKGROUND GRADIENT (CPL-style maroon/red) ===
     const bg = ctx.createLinearGradient(0, 0, W, H);
@@ -113,53 +122,86 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
     // === HEADER (Logo + Title) ===
     if (logo) {
         ctx.save();
-        roundRect(40, 30, 100, 100, 20);
+        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 4;
+        roundRect(40, 30, 100, 100, 12);
         ctx.clip();
         ctx.drawImage(logo, 40, 30, 100, 100);
         ctx.restore();
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-        ctx.lineWidth = 2;
-        roundRect(40, 30, 100, 100, 20);
+
+        // Premium gold/white border
+        ctx.strokeStyle = '#fbbf24'; // Gold color
+        ctx.lineWidth = 3.5;
+        roundRect(40, 30, 100, 100, 12);
+        ctx.stroke();
+        
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        roundRect(38, 28, 104, 104, 14);
         ctx.stroke();
     }
 
+    const formattedDate = posterDate
+        ? new Date(posterDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+        : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    ctx.save();
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 42px Arial, sans-serif';
+    ctx.font = 'bold 44px Arial, sans-serif';
     ctx.textAlign = 'left';
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 10;
-    ctx.fillText(posterTitle, 160, 80);
+    ctx.shadowBlur = 8;
+    ctx.fillText(posterTitle.toUpperCase(), 160, 68);
+    
     ctx.font = 'bold 20px Arial, sans-serif';
     ctx.fillStyle = '#fbbf24';
-    ctx.fillText(posterSubtitle, 160, 110);
-    ctx.shadowBlur = 0;
+    ctx.fillText(posterSubtitle.toUpperCase(), 160, 105);
+    ctx.restore();
 
+    ctx.save();
     ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 6;
+    
     ctx.font = 'bold 18px Arial, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillStyle = '#fbbf24';
     const typeLabel = type === 'schedule' ? 'FIXTURE LIVE' : type === 'results' ? 'MATCH RESULTS' : 'LEADERBOARD';
-    ctx.fillText(typeLabel, W - 50, 55);
-    ctx.font = 'bold 14px Arial, sans-serif';
-    ctx.fillText(new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), W - 50, 80);
+    ctx.fillText(typeLabel, W - 50, 62);
+    
+    ctx.font = 'bold 13px Arial, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText(formattedDate.toUpperCase(), W - 50, 95);
+    ctx.restore();
 
-    ctx.fillStyle = posterAccent;
-    ctx.fillRect(40, 150, W - 80, 4);
+    // Elegant gradient divider line
+    const dividerGrad = ctx.createLinearGradient(40, 0, W - 40, 0);
+    dividerGrad.addColorStop(0, 'rgba(251,191,36,0.15)');
+    dividerGrad.addColorStop(0.5, '#fbbf24');
+    dividerGrad.addColorStop(1, 'rgba(251,191,36,0.15)');
+    ctx.fillStyle = dividerGrad;
+    ctx.fillRect(40, 150, W - 80, 3);
 
     let sectionTitle = '';
     if (type === 'schedule') sectionTitle = '⚽  UPCOMING MATCHES';
     else if (type === 'results') sectionTitle = '🏆  LATEST RESULTS';
     else sectionTitle = '📊  GROUP STANDINGS';
 
-    drawSkewedBanner(40, 180, 500, 55, posterAccent);
+    drawSkewedBanner(40, 180, 480, 55, posterAccent);
+    ctx.save();
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    ctx.font = 'bold 26px Arial, sans-serif';
-    ctx.fillText(sectionTitle, 70, 217);
+    ctx.font = 'bold 24px Arial, sans-serif';
+    ctx.fillText(sectionTitle, 75, 209);
+    ctx.restore();
 
     let startY = 280;
 
     if (type === 'schedule') {
-        const upNext = data.matches.filter(m => !m.played).slice(0, 6);
+        const upNext = data.matches.filter(m => !m.played);
         if (upNext.length === 0) {
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
@@ -174,6 +216,7 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
                 const p2Name = p2?.name || m.p2Id;
                 const group = m.groupId ? `GROUP ${m.groupId}` : 'KNOCKOUT';
 
+                // Card bg
                 roundRect(50, y, W - 100, 150, 16);
                 ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.25)';
                 ctx.fill();
@@ -181,6 +224,7 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
                 ctx.lineWidth = 1;
                 ctx.stroke();
 
+                // Group badge
                 ctx.globalAlpha = 0.8;
                 drawSkewedBanner(50, y, 200, 30, posterAccent);
                 ctx.globalAlpha = 1.0;
@@ -189,56 +233,65 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
                 ctx.textAlign = 'left';
                 ctx.fillText(group, 75, y + 22);
 
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 28px Arial, sans-serif';
-                ctx.textAlign = 'right';
-                const p1Text = p1Name.toUpperCase();
-                ctx.fillText(p1Text, W / 2 - 90, y + 85);
-                const p1W = ctx.measureText(p1Text).width;
-                if (p1?._flagImg) {
-                    drawCircleImage(ctx, p1._flagImg, (W / 2 - 90) - p1W - 105, y + 29, 45);
-                } else if (p1?.country) {
-                    ctx.font = '18px Arial, sans-serif';
-                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                    ctx.fillText(p1.country, (W / 2 - 90) - p1W - 10, y + 85);
-                } else if (p1?.logo) {
-                    ctx.font = '18px Arial, sans-serif';
-                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                    ctx.fillText(p1.logo, (W / 2 - 90) - p1W - 10, y + 85);
-                }
+                // Fixed layout zones
+                const flagR = 32;
+                const cardCY = y + 90;
+                const badgeW = 130;
+                const badgeL = W / 2 - badgeW / 2;   // left edge of center badge
+                const badgeR = W / 2 + badgeW / 2;   // right edge of center badge
+                const nameGap = 25;                   // gap between name and badge
+                const leftFlagCX = 100;               // P1 flag center X
+                const rightFlagCX = W - 100;          // P2 flag center X
+                const p1NameRight = badgeL - nameGap; // P1 name right edge
+                const p2NameLeft = badgeR + nameGap;  // P2 name left edge
+                const p1NameMaxW = p1NameRight - (leftFlagCX + flagR + 12);
+                const p2NameMaxW = (rightFlagCX - flagR - 12) - p2NameLeft;
 
-                roundRect(W / 2 - 65, y + 50, 130, 70, 12);
+                // P1 flag (fixed left)
+                if (p1?._flagImg) {
+                    drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
+                }
+                // P1 name (right-aligned before center badge)
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 24px Arial, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
+
+                // Center time badge
+                ctx.save();
+                roundRect(badgeL, y + 55, badgeW, 65, 12);
                 ctx.globalAlpha = 0.9;
                 ctx.fillStyle = posterAccent;
                 ctx.fill();
-                ctx.globalAlpha = 1.0;
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 36px Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('18:00', W / 2, y + 98);
+                ctx.restore();
 
+                ctx.save();
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 28px Arial, sans-serif';
+                let fontSize = 32;
+                ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                while (ctx.measureText(posterMatchTime).width > badgeW - 12 && fontSize > 12) {
+                    fontSize -= 2;
+                    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                }
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(posterMatchTime, W / 2, y + 87.5);
+                ctx.restore();
+
+                // P2 name (left-aligned after center badge)
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 24px Arial, sans-serif';
                 ctx.textAlign = 'left';
-                const p2Text = p2Name.toUpperCase();
-                ctx.fillText(p2Text, W / 2 + 90, y + 85);
-                const p2W = ctx.measureText(p2Text).width;
+                ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
+
+                // P2 flag (fixed right)
                 if (p2?._flagImg) {
-                    drawCircleImage(ctx, p2._flagImg, W / 2 + 90 + p2W + 15, y + 29, 45);
-                } else if (p2?.country) {
-                    ctx.font = '18px Arial, sans-serif';
-                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                    ctx.fillText(p2.country, W / 2 + 90 + p2W + 10, y + 85);
-                } else if (p2?.logo) {
-                    ctx.font = '18px Arial, sans-serif';
-                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                    ctx.textAlign = 'left';
-                    ctx.fillText(p2.logo, W / 2 + 90 + p2W + 10, y + 85);
+                    drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
                 }
             });
         }
     } else if (type === 'results') {
-        const recent = data.matches.filter(m => m.played).slice(-6);
+        const recent = data.matches.filter(m => m.played);
         if (recent.length === 0) {
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
@@ -266,43 +319,51 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
 
                 const winner = s1 > s2 ? 'p1' : s2 > s1 ? 'p2' : 'draw';
 
-                ctx.fillStyle = winner === 'p1' ? '#fbbf24' : '#ffffff';
-                ctx.font = `bold 28px Arial, sans-serif`;
-                ctx.textAlign = 'right';
-                const p1Text = p1Name.toUpperCase();
-                ctx.fillText(p1Text, W / 2 - 90, y + 85);
-                const p1W = ctx.measureText(p1Text).width;
-                if (p1?._flagImg) {
-                    drawCircleImage(ctx, p1._flagImg, (W / 2 - 90) - p1W - 105, y + 29, 45);
-                } else if (p1?.logo) {
-                    ctx.font = '18px Arial, sans-serif';
-                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                    ctx.fillText(p1.logo, (W / 2 - 90) - p1W - 10, y + 85);
-                }
+                // Fixed layout zones
+                const flagR = 32;
+                const cardCY = y + 90;
+                const badgeW = 140;
+                const badgeL = W / 2 - badgeW / 2;   // left edge of center badge
+                const badgeR = W / 2 + badgeW / 2;   // right edge of center badge
+                const nameGap = 25;                   // gap between name and badge
+                const leftFlagCX = 100;               // P1 flag center X
+                const rightFlagCX = W - 100;          // P2 flag center X
+                const p1NameRight = badgeL - nameGap; // P1 name right edge
+                const p2NameLeft = badgeR + nameGap;  // P2 name left edge
+                const p1NameMaxW = p1NameRight - (leftFlagCX + flagR + 12);
+                const p2NameMaxW = (rightFlagCX - flagR - 12) - p2NameLeft;
 
-                roundRect(W / 2 - 70, y + 45, 140, 75, 12);
+                // P1 flag
+                if (p1?._flagImg) {
+                    drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
+                }
+                // P1 name
+                ctx.fillStyle = winner === 'p1' ? '#fbbf24' : '#ffffff';
+                ctx.font = 'bold 24px Arial, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
+
+                // Score badge
+                roundRect(badgeL, y + 52, badgeW, 66, 12);
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
                 ctx.fill();
                 ctx.strokeStyle = posterAccent;
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 40px Arial, sans-serif';
+                ctx.font = 'bold 38px Arial, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(`${s1} - ${s2}`, W / 2, y + 95);
+                ctx.fillText(`${s1} - ${s2}`, W / 2, y + 98);
 
+                // P2 name
                 ctx.fillStyle = winner === 'p2' ? '#fbbf24' : '#ffffff';
-                ctx.font = 'bold 28px Arial, sans-serif';
+                ctx.font = 'bold 24px Arial, sans-serif';
                 ctx.textAlign = 'left';
-                const p2Text = p2Name.toUpperCase();
-                ctx.fillText(p2Text, W / 2 + 90, y + 85);
-                const p2W = ctx.measureText(p2Text).width;
+                ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
+
+                // P2 flag
                 if (p2?._flagImg) {
-                    drawCircleImage(ctx, p2._flagImg, W / 2 + 90 + p2W + 15, y + 29, 45);
-                } else if (p2?.logo) {
-                    ctx.font = '18px Arial, sans-serif';
-                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                    ctx.fillText(p2.logo, W / 2 + 90 + p2W + 10, y + 85);
+                    drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
                 }
             });
         }
@@ -340,15 +401,20 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
             ctx.fillRect(50, gy, W - 100, 35);
             ctx.fillStyle = 'rgba(255,255,255,0.6)';
             ctx.font = 'bold 14px Arial, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('PLAYER', 80, gy + 24);
+            
             ctx.textAlign = 'center';
-            ctx.fillText('P', 620, gy + 24);
-            ctx.fillText('W', 690, gy + 24);
-            ctx.fillText('D', 760, gy + 24);
-            ctx.fillText('L', 830, gy + 24);
-            ctx.fillText('GD', 900, gy + 24);
-            ctx.fillText('PTS', 990, gy + 24);
+            ctx.fillText('#', 75, gy + 24);
+            
+            ctx.textAlign = 'left';
+            ctx.fillText('PLAYER', 110, gy + 24);
+            
+            ctx.textAlign = 'center';
+            ctx.fillText('MP', 580, gy + 24);
+            ctx.fillText('W-L', 665, gy + 24);
+            ctx.fillText('GF', 745, gy + 24);
+            ctx.fillText('GA', 825, gy + 24);
+            ctx.fillText('GD', 905, gy + 24);
+            ctx.fillText('PTS', 985, gy + 24);
 
             gy += 40;
             players.forEach((p, pi) => {
@@ -364,24 +430,38 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
                     ctx.fillRect(50, gy, 4, 40);
                 }
 
+                // Rank
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(pi + 1, 75, gy + 27);
+
+                // Flag
+                const flagRadius = 14;
+                if (p._flagImg) {
+                    drawCircleImage(ctx, p._flagImg, 110, gy + 20 - flagRadius, flagRadius);
+                }
+
+                // Player name
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 20px Arial, sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillText(`${pi + 1}. ${p.name}`, 80, gy + 28);
-                if (p._flagImg) {
-                    drawCircleImage(ctx, p._flagImg, 80 + ctx.measureText(`${pi + 1}. ${p.name}`).width + 15, gy + 2, 18);
-                }
+                ctx.fillText(p.name || '—', 150, gy + 27);
+
+                // Stats columns
                 ctx.font = '18px Arial, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(played, 620, gy + 28);
-                ctx.fillText(p.w || 0, 690, gy + 28);
-                ctx.fillText(p.d || 0, 760, gy + 28);
-                ctx.fillText(p.l || 0, 830, gy + 28);
-                ctx.fillStyle = gd >= 0 ? '#4ade80' : '#f87171';
-                ctx.fillText(gd >= 0 ? `+${gd}` : gd, 900, gy + 28);
+                ctx.fillText(played, 580, gy + 27);
+                ctx.fillText(`${p.w || 0}-${p.l || 0}`, 665, gy + 27);
+                ctx.fillText(p.gf || 0, 745, gy + 27);
+                ctx.fillText(p.ga || 0, 825, gy + 27);
+                
+                ctx.fillStyle = gd > 0 ? '#4ade80' : gd < 0 ? '#f87171' : '#ffffff';
+                ctx.fillText(gd > 0 ? `+${gd}` : gd, 905, gy + 27);
+                
                 ctx.fillStyle = '#fbbf24';
                 ctx.font = 'bold 22px Arial, sans-serif';
-                ctx.fillText(pts, 990, gy + 28);
+                ctx.fillText(pts, 985, gy + 27);
 
                 gy += 42;
             });
@@ -402,7 +482,7 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
 
 export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
     await preloadFlags(data);
-    const { posterTitle, posterSubtitle, posterFooter } = config;
+    const { posterTitle, posterSubtitle, posterFooter, posterDate, posterMatchTime = 'WEEKEND PLAYED' } = config;
 
     // ========== PREMIUM DARK NAVY BACKGROUND ==========
     const bg = ctx.createLinearGradient(0, 0, W * 0.4, H);
@@ -497,22 +577,35 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
         ctx.restore();
     };
 
-    const drawVsBadge = (cx, cy) => {
+    const drawVsBadge = (cx, cy, text = 'VS') => {
         ctx.save();
+        const isVS = text === 'VS';
+        const badgeW = isVS ? 76 : Math.max(90, ctx.measureText(text).width + 24);
+        
         ctx.shadowColor = '#00d4ff';
         ctx.shadowBlur = 25;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 38, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,212,255,0.12)';
-        ctx.fill();
+        if (isVS) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, 38, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,212,255,0.12)';
+            ctx.fill();
+        } else {
+            roundRect(cx - badgeW / 2, cy - 25, badgeW, 50, 12);
+            ctx.fillStyle = 'rgba(0,212,255,0.12)';
+            ctx.fill();
+        }
         ctx.shadowBlur = 0;
 
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - 32);
-        ctx.lineTo(cx + 32, cy);
-        ctx.lineTo(cx, cy + 32);
-        ctx.lineTo(cx - 32, cy);
-        ctx.closePath();
+        if (isVS) {
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 32);
+            ctx.lineTo(cx + 32, cy);
+            ctx.lineTo(cx, cy + 32);
+            ctx.lineTo(cx - 32, cy);
+            ctx.closePath();
+        } else {
+            roundRect(cx - badgeW / 2, cy - 25, badgeW, 50, 12);
+        }
         const dGrad = ctx.createLinearGradient(cx, cy - 32, cx, cy + 32);
         dGrad.addColorStop(0, 'rgba(0,212,255,0.3)');
         dGrad.addColorStop(1, 'rgba(0,140,200,0.15)');
@@ -522,13 +615,23 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        ctx.font = 'bold 26px Arial, sans-serif';
+        let fontSize = 26;
+        if (!isVS) {
+            fontSize = 18;
+            ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+            while (ctx.measureText(text).width > badgeW - 16 && fontSize > 10) {
+                fontSize -= 1;
+                ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+            }
+        } else {
+            ctx.font = 'bold 26px Arial, sans-serif';
+        }
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.shadowColor = '#fbbf24';
         ctx.shadowBlur = 15;
         ctx.fillStyle = '#fbbf24';
-        ctx.fillText('VS', cx, cy + 1);
+        ctx.fillText(text, cx, cy + 1);
         ctx.shadowBlur = 0;
         ctx.textBaseline = 'alphabetic';
         ctx.restore();
@@ -542,15 +645,18 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
     if (logo) {
         ctx.save();
         ctx.shadowColor = '#00d4ff';
-        ctx.shadowBlur = 20;
-        roundRect(60, 40, 110, 110, 22);
+        ctx.shadowBlur = 15;
+        roundRect(60, 40, 110, 110, 14);
         ctx.clip();
         ctx.drawImage(logo, 60, 40, 110, 110);
         ctx.restore();
-        ctx.strokeStyle = 'rgba(0,212,255,0.4)';
-        ctx.lineWidth = 2;
-        roundRect(60, 40, 110, 110, 22);
+        
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0,212,255,0.6)';
+        ctx.lineWidth = 3;
+        roundRect(60, 40, 110, 110, 14);
         ctx.stroke();
+        ctx.restore();
     }
 
     ctx.save();
@@ -591,7 +697,10 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.font = 'bold 13px Arial, sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), W - 60, 110);
+    const formattedDate = posterDate
+        ? new Date(posterDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+        : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    ctx.fillText(formattedDate, W - 60, 110);
 
     const divY = 190;
     ctx.save();
@@ -633,7 +742,7 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
     let startY = 290;
 
     if (type === 'schedule') {
-        const upNext = data.matches.filter(m => !m.played).slice(0, 6);
+        const upNext = data.matches.filter(m => !m.played);
         if (upNext.length === 0) {
             ctx.fillStyle = 'rgba(255,255,255,0.4)';
             ctx.textAlign = 'center';
@@ -686,39 +795,46 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
                 ctx.textAlign = 'right';
                 ctx.fillText(`MATCH ${i + 1}`, W - 80, y + 30);
 
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 30px Arial, sans-serif';
-                ctx.textAlign = 'right';
-                const p1Text = p1Name.toUpperCase();
-                ctx.fillText(p1Text, W / 2 - 55, y + 90);
-                const p1W = ctx.measureText(p1Text).width;
+                // Fixed layout zones
+                const flagR = 32;
+                const cardCY = y + 90;
+                const badgeW = 90;
+                const badgeL = W / 2 - badgeW / 2;   // left edge of VS badge zone
+                const badgeR = W / 2 + badgeW / 2;   // right edge of VS badge zone
+                const nameGap = 25;                   // gap between name and VS badge
+                const leftFlagCX = 100;               // P1 flag center X
+                const rightFlagCX = W - 100;          // P2 flag center X
+                const p1NameRight = badgeL - nameGap; // P1 name right edge
+                const p2NameLeft = badgeR + nameGap;  // P2 name left edge
+                const p1NameMaxW = p1NameRight - (leftFlagCX + flagR + 12);
+                const p2NameMaxW = (rightFlagCX - flagR - 12) - p2NameLeft;
+
+                // P1 flag (fixed left)
                 if (p1?._flagImg) {
-                    drawCircleImage(ctx, p1._flagImg, (W / 2 - 55) - p1W - 105, y + 33, 45);
-                } else if (p1?.logo) {
-                    ctx.fillStyle = 'rgba(0,212,255,0.4)';
-                    ctx.font = '14px Arial, sans-serif';
-                    ctx.fillText(p1.logo, (W / 2 - 55) - p1W - 10, y + 90);
+                    drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
                 }
-
-                drawVsBadge(W / 2, y + 85);
-
+                // P1 name
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 30px Arial, sans-serif';
+                ctx.font = 'bold 24px Arial, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
+
+                drawVsBadge(W / 2, y + 85, posterMatchTime);
+
+                // P2 name
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 24px Arial, sans-serif';
                 ctx.textAlign = 'left';
-                const p2Text = p2Name.toUpperCase();
-                ctx.fillText(p2Text, W / 2 + 55, y + 90);
-                const p2W = ctx.measureText(p2Text).width;
+                ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
+
+                // P2 flag (fixed right)
                 if (p2?._flagImg) {
-                    drawCircleImage(ctx, p2._flagImg, W / 2 + 55 + p2W + 15, y + 33, 45);
-                } else if (p2?.logo) {
-                    ctx.fillStyle = 'rgba(251,191,36,0.4)';
-                    ctx.font = '14px Arial, sans-serif';
-                    ctx.fillText(p2.logo, W / 2 + 55 + p2W + 10, y + 90);
+                    drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
                 }
             });
         }
     } else if (type === 'results') {
-        const recent = data.matches.filter(m => m.played).slice(-6);
+        const recent = data.matches.filter(m => m.played);
         if (recent.length === 0) {
             ctx.fillStyle = 'rgba(255,255,255,0.4)';
             ctx.textAlign = 'center';
@@ -776,33 +892,40 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
                 ctx.textAlign = 'right';
                 ctx.fillText('FULL TIME', W - 80, y + 30);
 
-                ctx.fillStyle = winner === 'p1' ? '#00d4ff' : 'rgba(255,255,255,0.85)';
-                ctx.font = `bold 28px Arial, sans-serif`;
-                ctx.textAlign = 'right';
-                if (winner === 'p1') {
-                    ctx.save();
-                    ctx.shadowColor = '#00d4ff';
-                    ctx.shadowBlur = 10;
-                }
-                const p1Text = p1Name.toUpperCase();
-                ctx.fillText(p1Text, W / 2 - 100, y + 88);
-                const p1W = ctx.measureText(p1Text).width;
-                if (winner === 'p1') ctx.restore();
-                if (p1?._flagImg) {
-                    drawCircleImage(ctx, p1._flagImg, (W / 2 - 100) - p1W - 105, y + 31, 45);
-                } else if (p1?.logo) {
-                    ctx.fillStyle = 'rgba(0,212,255,0.4)';
-                    ctx.font = '14px Arial, sans-serif';
-                    ctx.fillText(p1.logo, (W / 2 - 100) - p1W - 10, y + 88);
-                }
+                // Fixed layout zones
+                const flagR = 32;
+                const cardCY = y + 90;
+                const badgeW = 160;
+                const badgeL = W / 2 - badgeW / 2;   // left edge of score badge
+                const badgeR = W / 2 + badgeW / 2;   // right edge of score badge
+                const nameGap = 25;                   // gap between name and score badge
+                const leftFlagCX = 100;               // P1 flag center X
+                const rightFlagCX = W - 100;          // P2 flag center X
+                const p1NameRight = badgeL - nameGap; // P1 name right edge
+                const p2NameLeft = badgeR + nameGap;  // P2 name left edge
+                const p1NameMaxW = p1NameRight - (leftFlagCX + flagR + 12);
+                const p2NameMaxW = (rightFlagCX - flagR - 12) - p2NameLeft;
 
-                roundRect(W / 2 - 80, y + 55, 160, 70, 14);
+                // P1 flag (fixed left)
+                if (p1?._flagImg) {
+                    drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
+                }
+                // P1 name
+                ctx.fillStyle = winner === 'p1' ? '#00d4ff' : 'rgba(255,255,255,0.85)';
+                ctx.font = 'bold 24px Arial, sans-serif';
+                ctx.textAlign = 'right';
+                if (winner === 'p1') { ctx.save(); ctx.shadowColor = '#00d4ff'; ctx.shadowBlur = 10; }
+                ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
+                if (winner === 'p1') ctx.restore();
+
+                // Score badge
+                roundRect(badgeL, y + 55, badgeW, 70, 14);
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
                 ctx.fill();
                 ctx.save();
                 ctx.shadowColor = winner === 'draw' ? '#ffffff' : (winner === 'p1' ? '#00d4ff' : '#fbbf24');
                 ctx.shadowBlur = 12;
-                roundRect(W / 2 - 80, y + 55, 160, 70, 14);
+                roundRect(badgeL, y + 55, badgeW, 70, 14);
                 ctx.strokeStyle = winner === 'draw' ? 'rgba(255,255,255,0.3)' : (winner === 'p1' ? 'rgba(0,212,255,0.5)' : 'rgba(251,191,36,0.5)');
                 ctx.lineWidth = 2;
                 ctx.stroke();
@@ -818,24 +941,17 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
                 ctx.fillStyle = '#ffffff';
                 ctx.fillText(`${s2}`, W / 2 + 30, y + 102);
 
+                // P2 name
                 ctx.fillStyle = winner === 'p2' ? '#fbbf24' : 'rgba(255,255,255,0.85)';
-                ctx.font = `bold 28px Arial, sans-serif`;
+                ctx.font = 'bold 24px Arial, sans-serif';
                 ctx.textAlign = 'left';
-                if (winner === 'p2') {
-                    ctx.save();
-                    ctx.shadowColor = '#fbbf24';
-                    ctx.shadowBlur = 10;
-                }
-                const p2Text = p2Name.toUpperCase();
-                ctx.fillText(p2Text, W / 2 + 100, y + 88);
-                const p2W = ctx.measureText(p2Text).width;
+                if (winner === 'p2') { ctx.save(); ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 10; }
+                ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
                 if (winner === 'p2') ctx.restore();
+
+                // P2 flag (fixed right)
                 if (p2?._flagImg) {
-                    drawCircleImage(ctx, p2._flagImg, W / 2 + 100 + p2W + 15, y + 31, 45);
-                } else if (p2?.logo) {
-                    ctx.fillStyle = 'rgba(251,191,36,0.4)';
-                    ctx.font = '14px Arial, sans-serif';
-                    ctx.fillText(p2.logo, W / 2 + 100 + p2W + 10, y + 88);
+                    drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
                 }
             });
         }
@@ -887,16 +1003,20 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
             ctx.fill();
             ctx.fillStyle = 'rgba(255,255,255,0.35)';
             ctx.font = 'bold 12px Arial, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('#', 70, gy + 22);
-            ctx.fillText('PLAYER', 100, gy + 22);
+            
             ctx.textAlign = 'center';
-            ctx.fillText('P', 600, gy + 22);
-            ctx.fillText('W', 670, gy + 22);
-            ctx.fillText('D', 740, gy + 22);
-            ctx.fillText('L', 810, gy + 22);
-            ctx.fillText('GD', 885, gy + 22);
-            ctx.fillText('PTS', 975, gy + 22);
+            ctx.fillText('#', 75, gy + 20);
+            
+            ctx.textAlign = 'left';
+            ctx.fillText('PLAYER', 110, gy + 20);
+            
+            ctx.textAlign = 'center';
+            ctx.fillText('MP', 580, gy + 20);
+            ctx.fillText('W-L', 665, gy + 20);
+            ctx.fillText('GF', 745, gy + 20);
+            ctx.fillText('GA', 825, gy + 20);
+            ctx.fillText('GD', 905, gy + 20);
+            ctx.fillText('PTS', 985, gy + 20);
 
             gy += 36;
             grpPlayers.forEach((p, pi) => {
@@ -919,40 +1039,47 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
                     ctx.restore();
                 }
 
+                // Rank
                 ctx.fillStyle = pi < 2 ? gColor : 'rgba(255,255,255,0.4)';
                 ctx.font = pi < 2 ? 'bold 18px Arial, sans-serif' : '16px Arial, sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText(`${pi + 1}`, 70, gy + 30);
+                ctx.textAlign = 'center';
+                ctx.fillText(`${pi + 1}`, 75, gy + 28);
 
-                ctx.fillStyle = pi < 2 ? '#ffffff' : 'rgba(255,255,255,0.7)';
-                ctx.font = 'bold 20px Arial, sans-serif';
-                ctx.fillText(p.name || '—', 100, gy + 30);
+                // Flag
+                const flagRadius = 14;
                 if (p._flagImg) {
-                    drawCircleImage(ctx, p._flagImg, 100 + ctx.measureText(p.name || '—').width + 15, gy + 4, 18);
+                    drawCircleImage(ctx, p._flagImg, 110, gy + rowH / 2 - flagRadius, flagRadius);
                 }
 
+                // Player name
+                ctx.fillStyle = pi < 2 ? '#ffffff' : 'rgba(255,255,255,0.7)';
+                ctx.font = 'bold 20px Arial, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(p.name || '—', 150, gy + 28);
+
+                // Stats columns
                 ctx.font = '17px Arial, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillStyle = 'rgba(255,255,255,0.6)';
-                ctx.fillText(played, 600, gy + 30);
-                ctx.fillText(p.w || 0, 670, gy + 30);
-                ctx.fillText(p.d || 0, 740, gy + 30);
-                ctx.fillText(p.l || 0, 810, gy + 30);
+                ctx.fillText(played, 580, gy + 28);
+                ctx.fillText(`${p.w || 0}-${p.l || 0}`, 665, gy + 28);
+                ctx.fillText(p.gf || 0, 745, gy + 28);
+                ctx.fillText(p.ga || 0, 825, gy + 28);
 
                 ctx.fillStyle = gd > 0 ? '#4ade80' : gd < 0 ? '#f87171' : 'rgba(255,255,255,0.4)';
                 ctx.font = 'bold 17px Arial, sans-serif';
-                ctx.fillText(gd > 0 ? `+${gd}` : `${gd}`, 885, gy + 30);
+                ctx.fillText(gd > 0 ? `+${gd}` : `${gd}`, 905, gy + 28);
 
                 ctx.save();
                 ctx.shadowColor = '#fbbf24';
                 ctx.shadowBlur = pi < 2 ? 8 : 0;
                 ctx.fillStyle = '#fbbf24';
                 ctx.font = 'bold 22px Arial, sans-serif';
-                ctx.fillText(pts, 975, gy + 31);
+                ctx.fillText(pts, 985, gy + 29);
                 ctx.shadowBlur = 0;
                 ctx.restore();
 
-                gy += rowH + 2;
+                gy += rowH - 2;
             });
             gy += 28;
         });

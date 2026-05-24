@@ -12,7 +12,7 @@ const GROUP_CFG = {
     D: { label: 'Group D', color: '#facc15', bg: 'rgba(250,204,21,0.08)', border: 'rgba(250,204,21,0.25)', glow: 'rgba(250,204,21,0.4)' },
 };
 const GROUP_KEYS = ['A', 'B', 'C', 'D'];
-const MAX_PER_GROUP = 4;
+const MAX_PER_GROUP = 5;
 
 export default function AdminSeasonTab({ approvedPlayers, currentPlayers, onDrawGroups, updateData, data }) {
     const canvasRef = useRef(null);
@@ -145,7 +145,7 @@ export default function AdminSeasonTab({ approvedPlayers, currentPlayers, onDraw
             const gp = newPlayers.filter(p => p.group === gLetter);
             for (let i = 0; i < gp.length; i++)
                 for (let j = i + 1; j < gp.length; j++)
-                    newMatches.push(createEmptyMatch(`M-${gLetter}${i+1}-${j+1}`, gLetter, gp[i].id, gp[j].id));
+                    newMatches.push(createEmptyMatch(`M-${gLetter}${i + 1}-${j + 1}`, gLetter, gp[i].id, gp[j].id));
         });
         updateData({ ...data, players: newPlayers, matches: newMatches, bracket: [] });
     };

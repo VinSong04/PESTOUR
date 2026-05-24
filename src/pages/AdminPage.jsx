@@ -77,20 +77,45 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
             message: `Randomly assign ${approvedPlayers.length} players into groups and reset matches?`,
             onConfirm: () => {
                 const shuffled = [...approvedPlayers].sort(() => Math.random() - 0.5);
-                let numGroups = Math.max(1, Math.ceil(approvedPlayers.length / 4));
-                const groups = Array.from({ length: numGroups }, (_, i) => String.fromCharCode(65 + i));
+                const groups = ['A', 'B', 'C', 'D'];
                 const newPlayers = [];
                 shuffled.forEach((p, i) => {
-                    const g = groups[i % numGroups];
+                    const g = groups[i % 4];
                     const c = newPlayers.filter(x => x.group === g).length + 1;
                     newPlayers.push({ group: g, id: `${g}${c}`, name: p.name, logo: p.baseTeam || p.logo || '' });
                 });
                 const newMatches = [];
                 groups.forEach(g => {
                     const gp = newPlayers.filter(p => p.group === g);
-                    for (let i = 0; i < gp.length; i++)
-                        for (let j = i + 1; j < gp.length; j++)
-                            newMatches.push(createEmptyMatch(`M-${g}${i+1}-${j+1}`, g, gp[i].id, gp[j].id));
+                    const list = [...gp];
+                    if (list.length % 2 !== 0) {
+                        list.push({ id: 'BYE', isBye: true });
+                    }
+                    const n = list.length;
+                    let matchCounter = 1;
+
+                    for (let r = 0; r < n - 1; r++) {
+                        const roundNumber = r + 1;
+                        const week = Math.ceil(roundNumber / 2);
+                        const dayText = roundNumber % 2 === 1 ? 'DAY 1 (SAT)' : 'DAY 2 (SUN)';
+                        const scheduleLabel = `WEEK ${week} • ${dayText}`;
+
+                        for (let i = 0; i < n / 2; i++) {
+                            const p1 = list[i];
+                            const p2 = list[n - 1 - i];
+                            if (p1.id !== 'BYE' && p2.id !== 'BYE') {
+                                const match = createEmptyMatch(
+                                    `M-${g}${matchCounter++}`,
+                                    g,
+                                    p1.id,
+                                    p2.id
+                                );
+                                match.schedule = scheduleLabel;
+                                newMatches.push(match);
+                            }
+                        }
+                        list.splice(1, 0, list.pop());
+                    }
                 });
                 updateData({ ...data, players: newPlayers, matches: newMatches, bracket: [] });
                 setModalConfig(null);

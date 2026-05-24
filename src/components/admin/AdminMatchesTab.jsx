@@ -140,7 +140,7 @@ export default function AdminMatchesTab({ data, updateData }) {
                                 /* Edit Mode */
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">{m.id} • Group {m.groupId}</span>
+                                        <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">{m.id} • Group {m.groupId}{m.schedule ? ` • ${m.schedule}` : ''}</span>
                                         <div className="flex gap-2">
                                             <button onClick={() => saveMatch(m.id)} className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 border border-emerald-500/20">
                                                 <Save className="w-3.5 h-3.5" />
@@ -177,6 +177,9 @@ export default function AdminMatchesTab({ data, updateData }) {
                                 /* View Mode */
                                 <div className="flex items-center gap-3">
                                     <span className="text-[9px] font-bold text-slate-600 w-12 shrink-0 tracking-wider uppercase">{m.id}</span>
+                                    {m.schedule && (
+                                        <span className="text-[9px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/10 uppercase tracking-wider shrink-0">{m.schedule}</span>
+                                    )}
                                     <div className="flex-1 flex items-center gap-2 min-w-0">
                                         <PlayerAvatar name={p1Name} logo={getPlayerLogo(m.p1Id, players)} className="w-7 h-7 text-[8px] rounded-lg" />
                                         <span className="text-sm font-bold text-white truncate">{p1Name}</span>

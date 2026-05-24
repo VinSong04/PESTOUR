@@ -195,7 +195,7 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                                 </div>
                                             ) : (
                                                 <span className={`text-[10px] font-semibold tracking-wider uppercase ${match.played ? 'text-slate-500' : 'text-cyan-400/80'}`}>
-                                                    {label}
+                                                    {label}{match.schedule ? ` • ${match.schedule}` : ''}
                                                 </span>
                                             )}
                                             <span className="w-0.5 h-0.5 rounded-full bg-slate-700"></span>

@@ -268,14 +268,15 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
                 ctx.save();
                 ctx.fillStyle = '#ffffff';
                 let fontSize = 32;
+                const matchTimeText = m.schedule || posterMatchTime;
                 ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-                while (ctx.measureText(posterMatchTime).width > badgeW - 12 && fontSize > 12) {
+                while (ctx.measureText(matchTimeText).width > badgeW - 12 && fontSize > 12) {
                     fontSize -= 2;
                     ctx.font = `bold ${fontSize}px Arial, sans-serif`;
                 }
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(posterMatchTime, W / 2, y + 87.5);
+                ctx.fillText(matchTimeText, W / 2, y + 87.5);
                 ctx.restore();
 
                 // P2 name (left-aligned after center badge)
@@ -819,7 +820,7 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
                 ctx.textAlign = 'right';
                 ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
 
-                drawVsBadge(W / 2, y + 85, posterMatchTime);
+                drawVsBadge(W / 2, y + 85, m.schedule || posterMatchTime);
 
                 // P2 name
                 ctx.fillStyle = '#ffffff';

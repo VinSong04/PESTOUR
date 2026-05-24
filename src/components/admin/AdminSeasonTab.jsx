@@ -140,14 +140,43 @@ export default function AdminSeasonTab({ approvedPlayers, currentPlayers, onDraw
         const newPlayers = [];
         const newMatches = [];
         Object.entries(groups).forEach(([gLetter, gPlayers]) => {
-            gPlayers.forEach((p, i) => {
+            const gp = gPlayers.map((p, i) => {
                 const newId = `${gLetter}${i + 1}`;
-                newPlayers.push({ group: gLetter, id: newId, name: p.name, logo: p.baseTeam || p.logo || '' });
+                const playerObj = { group: gLetter, id: newId, name: p.name, logo: p.baseTeam || p.logo || '' };
+                newPlayers.push(playerObj);
+                return playerObj;
             });
-            const gp = newPlayers.filter(p => p.group === gLetter);
-            for (let i = 0; i < gp.length; i++)
-                for (let j = i + 1; j < gp.length; j++)
-                    newMatches.push(createEmptyMatch(`M-${gLetter}${i + 1}-${j + 1}`, gLetter, gp[i].id, gp[j].id));
+
+            // Berger Round-Robin Scheduling
+            const list = [...gp];
+            if (list.length % 2 !== 0) {
+                list.push({ id: 'BYE', isBye: true });
+            }
+            const n = list.length;
+            let matchCounter = 1;
+
+            for (let r = 0; r < n - 1; r++) {
+                const roundNumber = r + 1;
+                const week = Math.ceil(roundNumber / 2);
+                const dayText = roundNumber % 2 === 1 ? 'DAY 1 (SAT)' : 'DAY 2 (SUN)';
+                const scheduleLabel = `WEEK ${week} • ${dayText}`;
+
+                for (let i = 0; i < n / 2; i++) {
+                    const p1 = list[i];
+                    const p2 = list[n - 1 - i];
+                    if (p1.id !== 'BYE' && p2.id !== 'BYE') {
+                        const match = createEmptyMatch(
+                            `M-${gLetter}${matchCounter++}`,
+                            gLetter,
+                            p1.id,
+                            p2.id
+                        );
+                        match.schedule = scheduleLabel;
+                        newMatches.push(match);
+                    }
+                }
+                list.splice(1, 0, list.pop());
+            }
         });
         updateData({ ...data, players: newPlayers, matches: newMatches, bracket: [] });
     };

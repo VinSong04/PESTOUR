@@ -75,6 +75,11 @@ export default function AdminSeasonTab({ approvedPlayers, currentPlayers, onDraw
     // Draw one ball
     const handleDraw = useCallback(() => {
         if (drawing || complete) return;
+
+        // Pick random available group first
+        const available = GROUP_KEYS.filter(k => groups[k].length < MAX_PER_GROUP);
+        if (available.length === 0) return;
+
         const remaining = ballsRef.current.filter(b => !b.removed);
         if (remaining.length === 0) return;
 
@@ -83,9 +88,6 @@ export default function AdminSeasonTab({ approvedPlayers, currentPlayers, onDraw
         pick.selected = true;
         setDrawing(true);
 
-        // Pick random available group
-        const available = GROUP_KEYS.filter(k => groups[k].length < MAX_PER_GROUP);
-        if (available.length === 0) return;
         const targetGroup = available[Math.floor(Math.random() * available.length)];
 
         // Phase 1: Glow for 1.2s

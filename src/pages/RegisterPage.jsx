@@ -299,7 +299,7 @@ export default function RegisterView({ isAdmin, data }) {
                     <h1 className="text-4xl sm:text-5xl font-outfit font-black tracking-tighter mb-3 uppercase text-white leading-tight">
                         Dream Team Mode
                     </h1>
-                    
+
                     {isOpen && !settings.tournamentStarted && (
                         <div className="mb-8">
                             <CountdownTimer deadline={settings.registrationDeadline} />
@@ -400,8 +400,8 @@ export default function RegisterView({ isAdmin, data }) {
                                             onDragOver={handleDragOver}
                                             onDragLeave={handleDragLeave}
                                             className={`relative flex flex-col items-center justify-center p-10 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300 ${isDragging
-                                                    ? 'border-cyan-400/50 bg-cyan-500/[0.06] shadow-[0_0_30px_rgba(6,182,212,0.08)]'
-                                                    : 'border-white/[0.08] bg-white/[0.01] hover:border-white/[0.15] hover:bg-white/[0.02]'
+                                                ? 'border-cyan-400/50 bg-cyan-500/[0.06] shadow-[0_0_30px_rgba(6,182,212,0.08)]'
+                                                : 'border-white/[0.08] bg-white/[0.01] hover:border-white/[0.15] hover:bg-white/[0.02]'
                                                 }`}
                                         >
                                             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${isDragging ? 'bg-cyan-500/15 border border-cyan-500/20' : 'bg-white/[0.04] border border-white/[0.06]'

@@ -185,7 +185,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                     {activeTab === 'players' && <AdminPlayersTab key="players" players={players} setPlayers={setPlayers} onSave={handleSavePlayers} isSaved={isSavedPlayers} />}
                     {activeTab === 'matches' && <AdminMatchesTab key="matches" data={data} updateData={updateData} />}
                     {activeTab === 'roster' && <AdminRegistrationsTab key="roster" registrations={registrations} onApprove={handleApproveReg} onConfirmPayment={handleConfirmPayment} onDelete={handleDeleteReg} />}
-                    {activeTab === 'season' && <AdminSeasonTab key="season" approvedCount={approvedPlayers.length} onDrawGroups={handleDrawGroups} />}
+                    {activeTab === 'season' && <AdminSeasonTab key="season" approvedPlayers={approvedPlayers} currentPlayers={data.players} onDrawGroups={handleDrawGroups} updateData={updateData} data={data} />}
                     {activeTab === 'voting' && <AdminVotingTab key="voting" settings={settings} setSettings={setSettings} onSave={handleSaveSettings} isSaved={isSavedSettings} onResetVotes={handleResetVotes} />}
                     {activeTab === 'danger' && <AdminDangerTab key="danger" onReset={handleReset} />}
                 </AnimatePresence>

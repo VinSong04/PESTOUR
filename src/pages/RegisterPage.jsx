@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { db } from '../firebase';
-import { ref, push, serverTimestamp, get, update } from 'firebase/database';
-import { UserPlus, Sparkles, ShieldAlert, Trophy, Star, QrCode, CreditCard, ChevronDown, Search, X, Globe, Upload, ImageIcon, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ref, push, serverTimestamp } from 'firebase/database';
+import { UserPlus, Sparkles, ShieldAlert, Star, QrCode, ChevronDown, Search, X, Globe, Upload, ImageIcon, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CountdownTimer from '../components/ui/CountdownTimer';
 
@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
 import { swalDarkTheme } from '../utils/swalTheme';
 import useRegistrations from '../hooks/useRegistrations';
-import { COUNTRIES, COUNTRY_CODES, getFlagUrl } from '../constants/countries';
+import { COUNTRIES, getFlagUrl } from '../constants/countries';
 import paymentQrImage from '../assets/payment_aba.jpg';
 
 /* ─── Searchable Country Select ─────────────────────────────────────── */
@@ -145,7 +145,7 @@ function CountrySelect({ value, onChange }) {
 }
 
 /* ─── Register Page ─────────────────────────────────────────────────── */
-export default function RegisterView({ isAdmin, data }) {
+export default function RegisterView({ data }) {
     const settings = data?.settings || {};
     const isOpen = settings.registrationOpen;
     const registrations = useRegistrations();

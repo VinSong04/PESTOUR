@@ -1,4 +1,6 @@
 import { getFlagUrl } from '../constants/countries';
+import { assignSchedules } from './logic';
+
 
 const preloadFlags = async (data) => {
     if (!data || !data.players) return;
@@ -57,10 +59,97 @@ const truncateText = (ctx, text, maxWidth) => {
     return temp + '...';
 };
 
+export const groupMatchesByWeekAndDay = (matches) => {
+    // Shallow copy matches so we do not mutate read-only state
+    const matchesCopy = matches.map(m => ({ ...m }));
+
+    const needsSchedule = matchesCopy.some(m => !m.schedule);
+    if (needsSchedule) {
+        const groups = {};
+        matchesCopy.forEach(m => {
+            const gid = m.groupId || 'A';
+            if (!groups[gid]) groups[gid] = [];
+            groups[gid].push(m);
+        });
+
+        Object.entries(groups).forEach(([, gMatches]) => {
+            const playerIds = [...new Set(gMatches.flatMap(m => [m.p1Id, m.p2Id]))].filter(Boolean);
+            const playersList = playerIds.map(id => ({ id }));
+            assignSchedules(gMatches, playersList);
+        });
+    }
+
+    // Each match gets a parsed week and day
+    const parsedMatches = matchesCopy.map((m) => {
+        let weekNum = null;
+        let dayNum = null;
+        let daySuffix = ""; // e.g. "(SAT)" or "(SUN)"
+        
+        if (m.schedule) {
+            const wMatch = m.schedule.match(/WEEK\s*(\d+)/i);
+            const dMatch = m.schedule.match(/DAY\s*(\d+)/i);
+            if (wMatch) weekNum = parseInt(wMatch[1], 10);
+            if (dMatch) dayNum = parseInt(dMatch[1], 10);
+            
+            // Extract suffix if present, e.g. (SAT) or (SUN)
+            const suffixMatch = m.schedule.match(/\(([^)]+)\)/);
+            if (suffixMatch) daySuffix = ` (${suffixMatch[1].toUpperCase()})`;
+        }
+        
+        if (weekNum === null) {
+            weekNum = 1;
+        }
+        if (dayNum === null) {
+            dayNum = 1;
+        }
+        if (!daySuffix) {
+            daySuffix = dayNum === 1 ? " (SAT)" : " (SUN)";
+        }
+        
+        return {
+            match: m,
+            week: weekNum,
+            day: dayNum,
+            dayLabel: `DAY ${dayNum}${daySuffix}`
+        };
+    });
+
+    // Group structure: Object of weeks
+    const weeksMap = {};
+    parsedMatches.forEach(item => {
+        if (!weeksMap[item.week]) {
+            weeksMap[item.week] = {};
+        }
+        if (!weeksMap[item.week][item.day]) {
+            weeksMap[item.week][item.day] = {
+                dayLabel: item.dayLabel,
+                matches: []
+            };
+        }
+        weeksMap[item.week][item.day].matches.push(item.match);
+    });
+
+    const weeks = Object.keys(weeksMap).map(Number).sort((a, b) => a - b).map(wKey => {
+        const daysMap = weeksMap[wKey];
+        const days = Object.keys(daysMap).map(Number).sort((a, b) => a - b).map(dKey => {
+            return {
+                day: dKey,
+                dayLabel: daysMap[dKey].dayLabel,
+                matches: daysMap[dKey].matches
+            };
+        });
+        return {
+            week: wKey,
+            days
+        };
+    });
+
+    return weeks;
+};
 
 export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) => {
     await preloadFlags(data);
-    const { posterTitle, posterSubtitle, posterFooter, posterAccent, posterDate, posterMatchTime = 'WEEKEND PLAYED' } = config;
+    const { posterTitle, posterSubtitle, posterFooter, posterAccent = '#e63946', posterDate, posterMatchTime = 'WEEKEND PLAYED', selectedWeek = 1, selectedDay = 1 } = config;
 
     // === BACKGROUND GRADIENT (CPL-style maroon/red) ===
     const bg = ctx.createLinearGradient(0, 0, W, H);
@@ -198,18 +287,48 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
     ctx.fillText(sectionTitle, 75, 209);
     ctx.restore();
 
-    let startY = 280;
+    let startY = 380;
 
-    if (type === 'schedule') {
-        const upNext = data.matches.filter(m => !m.played);
-        if (upNext.length === 0) {
+    if (type === 'schedule' || type === 'results') {
+        const matchesForType = data.matches.filter(m => type === 'schedule' ? !m.played : m.played);
+        const matchesToDraw = matchesForType.filter(m => {
+            if (!m.schedule) return false;
+            const wMatch = m.schedule.match(/WEEK\s*(\d+)/i);
+            const dMatch = m.schedule.match(/DAY\s*(\d+)/i);
+            if (wMatch && dMatch) {
+                const w = parseInt(wMatch[1], 10);
+                const d = parseInt(dMatch[1], 10);
+                return w === selectedWeek && d === selectedDay;
+            }
+            return false;
+        });
+
+        // Sort: Group A first, then B (Day 1) or C first, then D (Day 2); then by time.
+        matchesToDraw.sort((a, b) => {
+            const groupA = a.groupId || '';
+            const groupB = b.groupId || '';
+            if (groupA !== groupB) {
+                return groupA.localeCompare(groupB);
+            }
+            const getScheduleTime = (m) => {
+                if (!m.schedule) return '';
+                const timeMatch = m.schedule.match(/(\d{2}:\d{2})/);
+                return timeMatch ? timeMatch[1] : '';
+            };
+            return getScheduleTime(a).localeCompare(getScheduleTime(b));
+        });
+
+        if (matchesToDraw.length === 0) {
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.font = 'bold 32px Arial, sans-serif';
-            ctx.fillText('No upcoming matches', W / 2, startY + 100);
+            ctx.fillText(type === 'schedule' ? 'No upcoming matches' : 'No results yet', W / 2, H / 2);
         } else {
-            upNext.forEach((m, i) => {
-                const y = startY + i * 170;
+            let y = startY;
+            const cardH = 200;
+            const gap = 55;
+
+            matchesToDraw.forEach((m) => {
                 const p1 = data.players.find(p => p.id === m.p1Id);
                 const p2 = data.players.find(p => p.id === m.p2Id);
                 const p1Name = p1?.name || m.p1Id;
@@ -217,155 +336,125 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
                 const group = m.groupId ? `GROUP ${m.groupId}` : 'KNOCKOUT';
 
                 // Card bg
-                roundRect(50, y, W - 100, 150, 16);
-                ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.25)';
+                roundRect(50, y, W - 100, cardH, 20);
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
                 ctx.fill();
                 ctx.strokeStyle = 'rgba(255,255,255,0.08)';
                 ctx.lineWidth = 1;
                 ctx.stroke();
 
                 // Group badge
-                ctx.globalAlpha = 0.8;
-                drawSkewedBanner(50, y, 200, 30, posterAccent);
+                ctx.globalAlpha = 0.85;
+                drawSkewedBanner(50, y, 220, 36, posterAccent);
                 ctx.globalAlpha = 1.0;
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 14px Arial, sans-serif';
+                ctx.font = 'bold 15px Arial, sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillText(group, 75, y + 22);
+                ctx.fillText(group, 75, y + 25);
 
                 // Fixed layout zones
-                const flagR = 32;
-                const cardCY = y + 90;
-                const badgeW = 130;
-                const badgeL = W / 2 - badgeW / 2;   // left edge of center badge
-                const badgeR = W / 2 + badgeW / 2;   // right edge of center badge
-                const nameGap = 25;                   // gap between name and badge
-                const leftFlagCX = 100;               // P1 flag center X
-                const rightFlagCX = W - 100;          // P2 flag center X
-                const p1NameRight = badgeL - nameGap; // P1 name right edge
-                const p2NameLeft = badgeR + nameGap;  // P2 name left edge
+                const flagR = 40;
+                const cardCY = y + cardH / 2 + 10;
+                const badgeW = 160;
+                const badgeL = W / 2 - badgeW / 2;
+                const badgeR = W / 2 + badgeW / 2;
+                const nameGap = 25;
+                const leftFlagCX = 110;
+                const rightFlagCX = W - 110;
+                const p1NameRight = badgeL - nameGap;
+                const p2NameLeft = badgeR + nameGap;
                 const p1NameMaxW = p1NameRight - (leftFlagCX + flagR + 12);
                 const p2NameMaxW = (rightFlagCX - flagR - 12) - p2NameLeft;
 
-                // P1 flag (fixed left)
-                if (p1?._flagImg) {
-                    drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
-                }
-                // P1 name (right-aligned before center badge)
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 24px Arial, sans-serif';
-                ctx.textAlign = 'right';
-                ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
+                const timeMatch = m.schedule ? m.schedule.match(/(\d{2}:\d{2})/) : null;
+                const matchTimeText = timeMatch ? timeMatch[1] : (m.schedule || posterMatchTime);
 
-                // Center time badge
-                ctx.save();
-                roundRect(badgeL, y + 55, badgeW, 65, 12);
-                ctx.globalAlpha = 0.9;
-                ctx.fillStyle = posterAccent;
-                ctx.fill();
-                ctx.restore();
+                if (type === 'schedule') {
+                    // P1 flag
+                    if (p1?._flagImg) {
+                        drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
+                    }
+                    // P1 name
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 26px Arial, sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
 
-                ctx.save();
-                ctx.fillStyle = '#ffffff';
-                let fontSize = 32;
-                const matchTimeText = m.schedule || posterMatchTime;
-                ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-                while (ctx.measureText(matchTimeText).width > badgeW - 12 && fontSize > 12) {
-                    fontSize -= 2;
+                    // Center time badge
+                    ctx.save();
+                    roundRect(badgeL, y + cardH / 2 - 25, badgeW, 65, 14);
+                    ctx.globalAlpha = 0.95;
+                    ctx.fillStyle = posterAccent;
+                    ctx.fill();
+                    ctx.restore();
+
+                    ctx.save();
+                    ctx.fillStyle = '#ffffff';
+                    let fontSize = 34;
                     ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                    while (ctx.measureText(matchTimeText).width > badgeW - 12 && fontSize > 12) {
+                        fontSize -= 2;
+                        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+                    }
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(matchTimeText, W / 2, y + cardH / 2 + 7.5);
+                    ctx.restore();
+
+                    // P2 name
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 26px Arial, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
+
+                    // P2 flag
+                    if (p2?._flagImg) {
+                        drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
+                    }
+                } else {
+                    // Results
+                    let s1 = 0, s2 = 0;
+                    [m.g1, m.g2, m.g3].forEach(g => {
+                        if (g && g.p1 > g.p2) s1++;
+                        if (g && g.p2 > g.p1) s2++;
+                    });
+                    const winner = s1 > s2 ? 'p1' : s2 > s1 ? 'p2' : 'draw';
+
+                    // P1 flag
+                    if (p1?._flagImg) {
+                        drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
+                    }
+                    // P1 name
+                    ctx.fillStyle = winner === 'p1' ? '#fbbf24' : '#ffffff';
+                    ctx.font = 'bold 26px Arial, sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
+
+                    // Score badge
+                    roundRect(badgeL, y + cardH / 2 - 25, badgeW, 65, 14);
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fill();
+                    ctx.strokeStyle = posterAccent;
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 38px Arial, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${s1} - ${s2}`, W / 2, y + cardH / 2 + 18);
+
+                    // P2 name
+                    ctx.fillStyle = winner === 'p2' ? '#fbbf24' : '#ffffff';
+                    ctx.font = 'bold 26px Arial, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
+
+                    // P2 flag
+                    if (p2?._flagImg) {
+                        drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
+                    }
                 }
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(matchTimeText, W / 2, y + 87.5);
-                ctx.restore();
 
-                // P2 name (left-aligned after center badge)
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 24px Arial, sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
-
-                // P2 flag (fixed right)
-                if (p2?._flagImg) {
-                    drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
-                }
-            });
-        }
-    } else if (type === 'results') {
-        const recent = data.matches.filter(m => m.played);
-        if (recent.length === 0) {
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.font = 'bold 32px Arial, sans-serif';
-            ctx.fillText('No results yet', W / 2, startY + 100);
-        } else {
-            recent.forEach((m, i) => {
-                const y = startY + i * 170;
-                const p1 = data.players.find(p => p.id === m.p1Id);
-                const p2 = data.players.find(p => p.id === m.p2Id);
-                const p1Name = p1?.name || m.p1Id;
-                const p2Name = p2?.name || m.p2Id;
-                let s1 = 0, s2 = 0;
-                [m.g1, m.g2, m.g3].forEach(g => {
-                    if (g && g.p1 > g.p2) s1++;
-                    if (g && g.p2 > g.p1) s2++;
-                });
-
-                roundRect(50, y, W - 100, 150, 16);
-                ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.25)';
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-
-                const winner = s1 > s2 ? 'p1' : s2 > s1 ? 'p2' : 'draw';
-
-                // Fixed layout zones
-                const flagR = 32;
-                const cardCY = y + 90;
-                const badgeW = 140;
-                const badgeL = W / 2 - badgeW / 2;   // left edge of center badge
-                const badgeR = W / 2 + badgeW / 2;   // right edge of center badge
-                const nameGap = 25;                   // gap between name and badge
-                const leftFlagCX = 100;               // P1 flag center X
-                const rightFlagCX = W - 100;          // P2 flag center X
-                const p1NameRight = badgeL - nameGap; // P1 name right edge
-                const p2NameLeft = badgeR + nameGap;  // P2 name left edge
-                const p1NameMaxW = p1NameRight - (leftFlagCX + flagR + 12);
-                const p2NameMaxW = (rightFlagCX - flagR - 12) - p2NameLeft;
-
-                // P1 flag
-                if (p1?._flagImg) {
-                    drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
-                }
-                // P1 name
-                ctx.fillStyle = winner === 'p1' ? '#fbbf24' : '#ffffff';
-                ctx.font = 'bold 24px Arial, sans-serif';
-                ctx.textAlign = 'right';
-                ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
-
-                // Score badge
-                roundRect(badgeL, y + 52, badgeW, 66, 12);
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fill();
-                ctx.strokeStyle = posterAccent;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 38px Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${s1} - ${s2}`, W / 2, y + 98);
-
-                // P2 name
-                ctx.fillStyle = winner === 'p2' ? '#fbbf24' : '#ffffff';
-                ctx.font = 'bold 24px Arial, sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
-
-                // P2 flag
-                if (p2?._flagImg) {
-                    drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
-                }
+                y += cardH + gap;
             });
         }
     } else if (type === 'standings') {
@@ -483,7 +572,7 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
 
 export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
     await preloadFlags(data);
-    const { posterTitle, posterSubtitle, posterFooter, posterDate, posterMatchTime = 'WEEKEND PLAYED' } = config;
+    const { posterTitle, posterSubtitle, posterFooter, posterDate, posterMatchTime = 'WEEKEND PLAYED', selectedWeek = 1, selectedDay = 1 } = config;
 
     // ========== PREMIUM DARK NAVY BACKGROUND ==========
     const bg = ctx.createLinearGradient(0, 0, W * 0.4, H);
@@ -740,220 +829,241 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
     drawNeonLine(55, secY + 42, 55 + textW, secY + 42, '#00d4ff', 2);
     ctx.restore();
 
-    let startY = 290;
+    let startY = 380;
 
-    if (type === 'schedule') {
-        const upNext = data.matches.filter(m => !m.played);
-        if (upNext.length === 0) {
+    if (type === 'schedule' || type === 'results') {
+        const matchesForType = data.matches.filter(m => type === 'schedule' ? !m.played : m.played);
+        const matchesToDraw = matchesForType.filter(m => {
+            if (!m.schedule) return false;
+            const wMatch = m.schedule.match(/WEEK\s*(\d+)/i);
+            const dMatch = m.schedule.match(/DAY\s*(\d+)/i);
+            if (wMatch && dMatch) {
+                const w = parseInt(wMatch[1], 10);
+                const d = parseInt(dMatch[1], 10);
+                return w === selectedWeek && d === selectedDay;
+            }
+            return false;
+        });
+
+        // Sort: Group A first, then B (Day 1) or C first, then D (Day 2); then by time.
+        matchesToDraw.sort((a, b) => {
+            const groupA = a.groupId || '';
+            const groupB = b.groupId || '';
+            if (groupA !== groupB) {
+                return groupA.localeCompare(groupB);
+            }
+            const getScheduleTime = (m) => {
+                if (!m.schedule) return '';
+                const timeMatch = m.schedule.match(/(\d{2}:\d{2})/);
+                return timeMatch ? timeMatch[1] : '';
+            };
+            return getScheduleTime(a).localeCompare(getScheduleTime(b));
+        });
+
+        if (matchesToDraw.length === 0) {
             ctx.fillStyle = 'rgba(255,255,255,0.4)';
             ctx.textAlign = 'center';
             ctx.font = 'bold 30px Arial, sans-serif';
-            ctx.fillText('No upcoming matches', W / 2, startY + 120);
+            ctx.fillText(type === 'schedule' ? 'No upcoming matches' : 'No results yet', W / 2, H / 2);
         } else {
-            upNext.forEach((m, i) => {
-                const cardH = 155;
-                const y = startY + i * (cardH + 18);
+            let y = startY;
+            const cardH = 200;
+            const gap = 55;
+
+            matchesToDraw.forEach((m, matchIdx) => {
                 const p1 = data.players.find(p => p.id === m.p1Id);
                 const p2 = data.players.find(p => p.id === m.p2Id);
                 const p1Name = p1?.name || m.p1Id;
                 const p2Name = p2?.name || m.p2Id;
                 const group = m.groupId ? `GROUP ${m.groupId}` : 'KNOCKOUT';
 
-                drawGlassCard(50, y, W - 100, cardH, 18, 'rgba(0,212,255,0.12)');
+                const timeMatch = m.schedule ? m.schedule.match(/(\d{2}:\d{2})/) : null;
+                const matchTimeText = timeMatch ? timeMatch[1] : (m.schedule || posterMatchTime);
 
-                ctx.save();
-                ctx.shadowColor = '#00d4ff';
-                ctx.shadowBlur = 8;
-                roundRect(50, y, 4, cardH, 2);
-                ctx.fillStyle = '#00d4ff';
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.restore();
+                // Draw card
+                if (type === 'schedule') {
+                    drawGlassCard(50, y, W - 100, cardH, 20, 'rgba(0,212,255,0.12)');
 
-                ctx.save();
-                ctx.shadowColor = '#fbbf24';
-                ctx.shadowBlur = 8;
-                roundRect(W - 54, y, 4, cardH, 2);
-                ctx.fillStyle = '#fbbf24';
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.restore();
-
-                roundRect(70, y + 12, 140, 28, 14);
-                ctx.fillStyle = 'rgba(0,212,255,0.12)';
-                ctx.fill();
-                roundRect(70, y + 12, 140, 28, 14);
-                ctx.strokeStyle = 'rgba(0,212,255,0.3)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                ctx.fillStyle = '#00d4ff';
-                ctx.font = 'bold 13px Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(group, 140, y + 31);
-
-                ctx.fillStyle = 'rgba(255,255,255,0.15)';
-                ctx.font = 'bold 12px Arial, sans-serif';
-                ctx.textAlign = 'right';
-                ctx.fillText(`MATCH ${i + 1}`, W - 80, y + 30);
-
-                // Fixed layout zones
-                const flagR = 32;
-                const cardCY = y + 90;
-                const badgeW = 90;
-                const badgeL = W / 2 - badgeW / 2;   // left edge of VS badge zone
-                const badgeR = W / 2 + badgeW / 2;   // right edge of VS badge zone
-                const nameGap = 25;                   // gap between name and VS badge
-                const leftFlagCX = 100;               // P1 flag center X
-                const rightFlagCX = W - 100;          // P2 flag center X
-                const p1NameRight = badgeL - nameGap; // P1 name right edge
-                const p2NameLeft = badgeR + nameGap;  // P2 name left edge
-                const p1NameMaxW = p1NameRight - (leftFlagCX + flagR + 12);
-                const p2NameMaxW = (rightFlagCX - flagR - 12) - p2NameLeft;
-
-                // P1 flag (fixed left)
-                if (p1?._flagImg) {
-                    drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
-                }
-                // P1 name
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 24px Arial, sans-serif';
-                ctx.textAlign = 'right';
-                ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
-
-                drawVsBadge(W / 2, y + 85, m.schedule || posterMatchTime);
-
-                // P2 name
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 24px Arial, sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
-
-                // P2 flag (fixed right)
-                if (p2?._flagImg) {
-                    drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
-                }
-            });
-        }
-    } else if (type === 'results') {
-        const recent = data.matches.filter(m => m.played);
-        if (recent.length === 0) {
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.textAlign = 'center';
-            ctx.font = 'bold 30px Arial, sans-serif';
-            ctx.fillText('No results yet', W / 2, startY + 120);
-        } else {
-            recent.forEach((m, i) => {
-                const cardH = 155;
-                const y = startY + i * (cardH + 18);
-                const p1 = data.players.find(p => p.id === m.p1Id);
-                const p2 = data.players.find(p => p.id === m.p2Id);
-                const p1Name = p1?.name || m.p1Id;
-                const p2Name = p2?.name || m.p2Id;
-                let s1 = 0, s2 = 0;
-                [m.g1, m.g2, m.g3].forEach(g => {
-                    if (g && g.p1 > g.p2) s1++;
-                    if (g && g.p2 > g.p1) s2++;
-                });
-                const winner = s1 > s2 ? 'p1' : s2 > s1 ? 'p2' : 'draw';
-
-                const borderCol = winner === 'p1' ? 'rgba(0,212,255,0.2)' : winner === 'p2' ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.1)';
-                drawGlassCard(50, y, W - 100, cardH, 18, borderCol);
-
-                if (winner !== 'draw') {
                     ctx.save();
-                    const wColor = winner === 'p1' ? '#00d4ff' : '#fbbf24';
-                    ctx.shadowColor = wColor;
-                    ctx.shadowBlur = 12;
-                    if (winner === 'p1') {
-                        roundRect(50, y, 4, cardH, 2);
-                    } else {
-                        roundRect(W - 54, y, 4, cardH, 2);
-                    }
-                    ctx.fillStyle = wColor;
+                    ctx.shadowColor = '#00d4ff';
+                    ctx.shadowBlur = 8;
+                    roundRect(50, y, 4, cardH, 2);
+                    ctx.fillStyle = '#00d4ff';
                     ctx.fill();
                     ctx.shadowBlur = 0;
                     ctx.restore();
+
+                    ctx.save();
+                    ctx.shadowColor = '#fbbf24';
+                    ctx.shadowBlur = 8;
+                    roundRect(W - 54, y, 4, cardH, 2);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    ctx.restore();
+
+                    roundRect(70, y + 15, 150, 32, 16);
+                    ctx.fillStyle = 'rgba(0,212,255,0.12)';
+                    ctx.fill();
+                    roundRect(70, y + 15, 150, 32, 16);
+                    ctx.strokeStyle = 'rgba(0,212,255,0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.fillStyle = '#00d4ff';
+                    ctx.font = 'bold 14px Arial, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(group, 145, y + 36);
+
+                    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                    ctx.font = 'bold 13px Arial, sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`MATCH ${matchIdx + 1}`, W - 80, y + 36);
+
+                    // Fixed layout zones
+                    const flagR = 40;
+                    const cardCY = y + cardH / 2 + 10;
+                    const badgeW = 160;
+                    const badgeL = W / 2 - badgeW / 2;
+                    const badgeR = W / 2 + badgeW / 2;
+                    const nameGap = 25;
+                    const leftFlagCX = 110;
+                    const rightFlagCX = W - 110;
+                    const p1NameRight = badgeL - nameGap;
+                    const p2NameLeft = badgeR + nameGap;
+                    const p1NameMaxW = p1NameRight - (leftFlagCX + flagR + 12);
+                    const p2NameMaxW = (rightFlagCX - flagR - 12) - p2NameLeft;
+
+                    // P1 flag
+                    if (p1?._flagImg) {
+                        drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
+                    }
+                    // P1 name
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 26px Arial, sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
+
+                    drawVsBadge(W / 2, y + cardH / 2 + 5, matchTimeText);
+
+                    // P2 name
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 26px Arial, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
+
+                    // P2 flag
+                    if (p2?._flagImg) {
+                        drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
+                    }
+                } else {
+                    // Results
+                    let s1 = 0, s2 = 0;
+                    [m.g1, m.g2, m.g3].forEach(g => {
+                        if (g && g.p1 > g.p2) s1++;
+                        if (g && g.p2 > g.p1) s2++;
+                    });
+                    const winner = s1 > s2 ? 'p1' : s2 > s1 ? 'p2' : 'draw';
+
+                    const borderCol = winner === 'p1' ? 'rgba(0,212,255,0.2)' : winner === 'p2' ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.1)';
+                    drawGlassCard(50, y, W - 100, cardH, 20, borderCol);
+
+                    if (winner !== 'draw') {
+                        ctx.save();
+                        const wColor = winner === 'p1' ? '#00d4ff' : '#fbbf24';
+                        ctx.shadowColor = wColor;
+                        ctx.shadowBlur = 12;
+                        if (winner === 'p1') {
+                            roundRect(50, y, 4, cardH, 2);
+                        } else {
+                            roundRect(W - 54, y, 4, cardH, 2);
+                        }
+                        ctx.fillStyle = wColor;
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                        ctx.restore();
+                    }
+
+                    roundRect(70, y + 15, 150, 32, 16);
+                    ctx.fillStyle = 'rgba(74,222,128,0.1)';
+                    ctx.fill();
+                    roundRect(70, y + 15, 150, 32, 16);
+                    ctx.strokeStyle = 'rgba(74,222,128,0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.fillStyle = '#4ade80';
+                    ctx.font = 'bold 14px Arial, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(group, 145, y + 36);
+
+                    ctx.fillStyle = 'rgba(74,222,128,0.3)';
+                    ctx.font = 'bold 12px Arial, sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText('FULL TIME', W - 80, y + 36);
+
+                    // Fixed layout zones
+                    const flagR = 40;
+                    const cardCY = y + cardH / 2 + 10;
+                    const badgeW = 160;
+                    const badgeL = W / 2 - badgeW / 2;
+                    const badgeR = W / 2 + badgeW / 2;
+                    const nameGap = 25;
+                    const leftFlagCX = 110;
+                    const rightFlagCX = W - 110;
+                    const p1NameRight = badgeL - nameGap;
+                    const p2NameLeft = badgeR + nameGap;
+                    const p1NameMaxW = p1NameRight - (leftFlagCX + flagR + 12);
+                    const p2NameMaxW = (rightFlagCX - flagR - 12) - p2NameLeft;
+
+                    // P1 flag
+                    if (p1?._flagImg) {
+                        drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
+                    }
+                    // P1 name
+                    ctx.fillStyle = winner === 'p1' ? '#00d4ff' : 'rgba(255,255,255,0.85)';
+                    ctx.font = 'bold 26px Arial, sans-serif';
+                    ctx.textAlign = 'right';
+                    if (winner === 'p1') { ctx.save(); ctx.shadowColor = '#00d4ff'; ctx.shadowBlur = 10; }
+                    ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
+                    if (winner === 'p1') ctx.restore();
+
+                    // Score badge
+                    roundRect(badgeL, y + cardH / 2 - 25, badgeW, 70, 14);
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fill();
+                    ctx.save();
+                    ctx.shadowColor = winner === 'draw' ? '#ffffff' : (winner === 'p1' ? '#00d4ff' : '#fbbf24');
+                    ctx.shadowBlur = 12;
+                    roundRect(badgeL, y + cardH / 2 - 25, badgeW, 70, 14);
+                    ctx.strokeStyle = winner === 'draw' ? 'rgba(255,255,255,0.3)' : (winner === 'p1' ? 'rgba(0,212,255,0.5)' : 'rgba(251,191,36,0.5)');
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                    ctx.restore();
+
+                    ctx.font = 'bold 42px Arial, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(`${s1}`, W / 2 - 30, y + cardH / 2 + 22);
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.fillText('–', W / 2, y + cardH / 2 + 20);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(`${s2}`, W / 2 + 30, y + cardH / 2 + 22);
+
+                    // P2 name
+                    ctx.fillStyle = winner === 'p2' ? '#fbbf24' : 'rgba(255,255,255,0.85)';
+                    ctx.font = 'bold 26px Arial, sans-serif';
+                    ctx.textAlign = 'left';
+                    if (winner === 'p2') { ctx.save(); ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 10; }
+                    ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
+                    if (winner === 'p2') ctx.restore();
+
+                    // P2 flag
+                    if (p2?._flagImg) {
+                        drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
+                    }
                 }
 
-                const group = m.groupId ? `GROUP ${m.groupId}` : 'KNOCKOUT';
-                roundRect(70, y + 12, 140, 28, 14);
-                ctx.fillStyle = 'rgba(74,222,128,0.1)';
-                ctx.fill();
-                roundRect(70, y + 12, 140, 28, 14);
-                ctx.strokeStyle = 'rgba(74,222,128,0.3)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                ctx.fillStyle = '#4ade80';
-                ctx.font = 'bold 13px Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(group, 140, y + 31);
-
-                ctx.fillStyle = 'rgba(74,222,128,0.3)';
-                ctx.font = 'bold 11px Arial, sans-serif';
-                ctx.textAlign = 'right';
-                ctx.fillText('FULL TIME', W - 80, y + 30);
-
-                // Fixed layout zones
-                const flagR = 32;
-                const cardCY = y + 90;
-                const badgeW = 160;
-                const badgeL = W / 2 - badgeW / 2;   // left edge of score badge
-                const badgeR = W / 2 + badgeW / 2;   // right edge of score badge
-                const nameGap = 25;                   // gap between name and score badge
-                const leftFlagCX = 100;               // P1 flag center X
-                const rightFlagCX = W - 100;          // P2 flag center X
-                const p1NameRight = badgeL - nameGap; // P1 name right edge
-                const p2NameLeft = badgeR + nameGap;  // P2 name left edge
-                const p1NameMaxW = p1NameRight - (leftFlagCX + flagR + 12);
-                const p2NameMaxW = (rightFlagCX - flagR - 12) - p2NameLeft;
-
-                // P1 flag (fixed left)
-                if (p1?._flagImg) {
-                    drawCircleImage(ctx, p1._flagImg, leftFlagCX - flagR, cardCY - flagR, flagR);
-                }
-                // P1 name
-                ctx.fillStyle = winner === 'p1' ? '#00d4ff' : 'rgba(255,255,255,0.85)';
-                ctx.font = 'bold 24px Arial, sans-serif';
-                ctx.textAlign = 'right';
-                if (winner === 'p1') { ctx.save(); ctx.shadowColor = '#00d4ff'; ctx.shadowBlur = 10; }
-                ctx.fillText(truncateText(ctx, p1Name.toUpperCase(), p1NameMaxW), p1NameRight, cardCY + 8);
-                if (winner === 'p1') ctx.restore();
-
-                // Score badge
-                roundRect(badgeL, y + 55, badgeW, 70, 14);
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fill();
-                ctx.save();
-                ctx.shadowColor = winner === 'draw' ? '#ffffff' : (winner === 'p1' ? '#00d4ff' : '#fbbf24');
-                ctx.shadowBlur = 12;
-                roundRect(badgeL, y + 55, badgeW, 70, 14);
-                ctx.strokeStyle = winner === 'draw' ? 'rgba(255,255,255,0.3)' : (winner === 'p1' ? 'rgba(0,212,255,0.5)' : 'rgba(251,191,36,0.5)');
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.shadowBlur = 0;
-                ctx.restore();
-
-                ctx.font = 'bold 42px Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillStyle = '#ffffff';
-                ctx.fillText(`${s1}`, W / 2 - 30, y + 102);
-                ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                ctx.fillText('–', W / 2, y + 100);
-                ctx.fillStyle = '#ffffff';
-                ctx.fillText(`${s2}`, W / 2 + 30, y + 102);
-
-                // P2 name
-                ctx.fillStyle = winner === 'p2' ? '#fbbf24' : 'rgba(255,255,255,0.85)';
-                ctx.font = 'bold 24px Arial, sans-serif';
-                ctx.textAlign = 'left';
-                if (winner === 'p2') { ctx.save(); ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 10; }
-                ctx.fillText(truncateText(ctx, p2Name.toUpperCase(), p2NameMaxW), p2NameLeft, cardCY + 8);
-                if (winner === 'p2') ctx.restore();
-
-                // P2 flag (fixed right)
-                if (p2?._flagImg) {
-                    drawCircleImage(ctx, p2._flagImg, rightFlagCX - flagR, cardCY - flagR, flagR);
-                }
+                y += cardH + gap;
             });
         }
     } else if (type === 'standings') {

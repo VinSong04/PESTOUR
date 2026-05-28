@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { UserPlus, DollarSign, Users, Zap, Settings, Shuffle, Flame } from 'lucide-react';
+import { Users, Zap, Settings, Shuffle, Flame } from 'lucide-react';
 
 export default function AdminOverviewTab({ statCards, setActiveTab }) {
     const actions = [

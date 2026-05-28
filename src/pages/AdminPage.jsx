@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Lock, LogOut, UserPlus, DollarSign, Users, Zap } from 'lucide-react';
 import { INITIAL_DATA } from '../utils/initialData';
 import { createEmptyMatch } from '../utils/matchFactory';
+import { assignSchedules } from '../utils/logic';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+
 import { auth, db } from '../firebase';
 import { ref, remove, update } from 'firebase/database';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -93,13 +95,9 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                     }
                     const n = list.length;
                     let matchCounter = 1;
+                    const groupMatches = [];
 
                     for (let r = 0; r < n - 1; r++) {
-                        const roundNumber = r + 1;
-                        const week = Math.ceil(roundNumber / 2);
-                        const dayText = roundNumber % 2 === 1 ? 'DAY 1 (SAT)' : 'DAY 2 (SUN)';
-                        const scheduleLabel = `WEEK ${week} • ${dayText}`;
-
                         for (let i = 0; i < n / 2; i++) {
                             const p1 = list[i];
                             const p2 = list[n - 1 - i];
@@ -110,12 +108,15 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                                     p1.id,
                                     p2.id
                                 );
-                                match.schedule = scheduleLabel;
-                                newMatches.push(match);
+                                groupMatches.push(match);
                             }
                         }
                         list.splice(1, 0, list.pop());
                     }
+
+                    // Assign balanced schedules to matches
+                    assignSchedules(groupMatches, gp);
+                    newMatches.push(...groupMatches);
                 });
                 updateData({ ...data, players: newPlayers, matches: newMatches, bracket: [] });
                 setModalConfig(null);

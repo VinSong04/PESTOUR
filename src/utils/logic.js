@@ -152,3 +152,47 @@ export const processBracket = (bracket) => {
 
     return fullBracket;
 };
+
+export const assignSchedules = (matches, players) => {
+    if (!matches || matches.length === 0) return;
+
+    // Determine the group
+    let group = matches[0].groupId;
+    if (!group && matches[0].id) {
+        const matchResult = matches[0].id.match(/M-([A-D])/);
+        if (matchResult) group = matchResult[1];
+    }
+    if (!group && players && players.length > 0) {
+        group = players[0].group;
+    }
+    if (!group) group = 'A'; // fallback
+
+    let dayText = 'DAY 1 (SAT)';
+    let times = ['18:00', '19:00'];
+
+    if (group === 'A') {
+        dayText = 'DAY 1 (SAT)';
+        times = ['18:00', '19:00'];
+    } else if (group === 'B') {
+        dayText = 'DAY 1 (SAT)';
+        times = ['20:00', '21:00'];
+    } else if (group === 'C') {
+        dayText = 'DAY 2 (SUN)';
+        times = ['18:00', '19:00'];
+    } else if (group === 'D') {
+        dayText = 'DAY 2 (SUN)';
+        times = ['20:00', '21:00'];
+    }
+
+    // Now assign schedules to matches.
+    // The matches are ordered round by round.
+    // Since there are 2 matches per round:
+    // week = Math.floor(idx / 2) + 1
+    // matchInWeek = idx % 2
+    matches.forEach((m, idx) => {
+        const w = Math.floor(idx / 2) + 1;
+        const time = times[idx % 2];
+        m.schedule = `WEEK ${w} • ${dayText} @ ${time}`;
+    });
+};
+

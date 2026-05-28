@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getSeriesResult } from './logic';
+import { getSeriesResult, assignSchedules } from './logic';
 
 describe('Logic Utils', () => {
     describe('getSeriesResult', () => {
@@ -33,6 +33,58 @@ describe('Logic Utils', () => {
             expect(result.isFinished).toBe(true);
             expect(result.p1Pts).toBe(2); // 2-1 win gets 2 points
             expect(result.p2Pts).toBe(1); // 1-2 loss gets 1 point
+        });
+    });
+
+    describe('assignSchedules', () => {
+        it('assigns deterministic day and times based on group', () => {
+            // Group A
+            const playersA = [
+                { id: 'A1', group: 'A' }, { id: 'A2', group: 'A' }, { id: 'A3', group: 'A' }, { id: 'A4', group: 'A' }, { id: 'A5', group: 'A' }
+            ];
+            const matchesA = [];
+            let matchCounter = 1;
+            for (let i = 0; i < playersA.length; i++) {
+                for (let j = i + 1; j < playersA.length; j++) {
+                    matchesA.push({
+                        id: `M-A${matchCounter++}`,
+                        groupId: 'A',
+                        p1Id: playersA[i].id,
+                        p2Id: playersA[j].id
+                    });
+                }
+            }
+            assignSchedules(matchesA, playersA);
+            matchesA.forEach((m, idx) => {
+                expect(m.schedule).toBeDefined();
+                expect(m.schedule).toContain('DAY 1 (SAT)');
+                const expectedTime = idx % 2 === 0 ? '18:00' : '19:00';
+                expect(m.schedule).toContain(expectedTime);
+            });
+
+            // Group C
+            const playersC = [
+                { id: 'C1', group: 'C' }, { id: 'C2', group: 'C' }, { id: 'C3', group: 'C' }, { id: 'C4', group: 'C' }, { id: 'C5', group: 'C' }
+            ];
+            const matchesC = [];
+            matchCounter = 1;
+            for (let i = 0; i < playersC.length; i++) {
+                for (let j = i + 1; j < playersC.length; j++) {
+                    matchesC.push({
+                        id: `M-C${matchCounter++}`,
+                        groupId: 'C',
+                        p1Id: playersC[i].id,
+                        p2Id: playersC[j].id
+                    });
+                }
+            }
+            assignSchedules(matchesC, playersC);
+            matchesC.forEach((m, idx) => {
+                expect(m.schedule).toBeDefined();
+                expect(m.schedule).toContain('DAY 2 (SUN)');
+                const expectedTime = idx % 2 === 0 ? '18:00' : '19:00';
+                expect(m.schedule).toContain(expectedTime);
+            });
         });
     });
 });

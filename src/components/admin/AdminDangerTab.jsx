@@ -15,7 +15,7 @@ export default function AdminDangerTab({ onReset }) {
                     </h3>
                     <div className="bg-rose-500/5 border border-rose-500/15 rounded-xl p-5">
                         <p className="text-rose-200/80 text-sm leading-relaxed">
-                            Resetting the tournament will <strong className="text-rose-400">permanently wipe</strong> the active season's scores, matches, bracket, and roster.
+                            Resetting the tournament will <strong className="text-rose-400">permanently wipe</strong> the active season&apos;s scores, matches, bracket, and roster.
                             Archived seasons in history are kept safe.
                         </p>
                         <p className="text-rose-300 text-xs font-bold mt-3 uppercase tracking-widest">This action cannot be undone.</p>

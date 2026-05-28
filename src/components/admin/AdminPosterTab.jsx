@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Image, Download, RefreshCw, Palette } from 'lucide-react';
 import { renderClassicPoster, renderNeonPoster } from '../../utils/posterGenerator';
@@ -18,20 +18,30 @@ const THEMES = [
 const CANVAS_W = 1080;
 const CANVAS_H = 1920;
 
-export default function AdminPosterTab({ data, settings }) {
+export default function AdminPosterTab({ data }) {
     const canvasRef = useRef(null);
     const [posterType, setPosterType] = useState('schedule');
-    const [theme, setTheme] = useState('neon');
+    const [theme, setTheme] = useState('classic');
     const [generating, setGenerating] = useState(false);
     const [generated, setGenerated] = useState(false);
+    const [selectedWeek, setSelectedWeek] = useState(1);
+    const [selectedDay, setSelectedDay] = useState(1);
     const [config, setConfig] = useState({
-        posterTitle: settings?.tournamentName || 'PES TOUR',
-        posterSubtitle: settings?.season || 'Season 1',
+        posterTitle: 'PES TOUR',
+        posterSubtitle: 'WEEK 1 — DAY 1 (SAT)',
         posterFooter: '⚽ PES TOUR — Legends Start Here',
         posterAccent: '#e63946',
         posterDate: new Date().toISOString().split('T')[0],
-        posterMatchTime: 'WEEKEND PLAYED',
+        posterMatchTime: '18:00',
     });
+
+    useEffect(() => {
+        const daySuffix = selectedDay === 1 ? 'SAT' : 'SUN';
+        setConfig(c => ({
+            ...c,
+            posterSubtitle: `WEEK ${selectedWeek} — DAY ${selectedDay} (${daySuffix})`
+        }));
+    }, [selectedWeek, selectedDay]);
 
     const logoRef = useRef(null);
 
@@ -41,14 +51,9 @@ export default function AdminPosterTab({ data, settings }) {
         setGenerating(true);
         setGenerated(false);
 
-        // Compute dynamic height to fit all elements
         let dynamicH = 1920;
-        if (posterType === 'schedule') {
-            const count = data.matches.filter(m => !m.played).length;
-            dynamicH = Math.max(1200, 320 + count * 175);
-        } else if (posterType === 'results') {
-            const count = data.matches.filter(m => m.played).length;
-            dynamicH = Math.max(1200, 320 + count * 175);
+        if (posterType === 'schedule' || posterType === 'results') {
+            dynamicH = 1920;
         } else if (posterType === 'standings') {
             const groups = {};
             data.players.filter(p => p.group).forEach(p => {
@@ -87,18 +92,24 @@ export default function AdminPosterTab({ data, settings }) {
             }
         }
 
+        const fullConfig = {
+            ...config,
+            selectedWeek,
+            selectedDay
+        };
+
         try {
             if (theme === 'classic') {
-                await renderClassicPoster(ctx, CANVAS_W, dynamicH, logo, posterType, data, config);
+                await renderClassicPoster(ctx, CANVAS_W, dynamicH, logo, posterType, data, fullConfig);
             } else {
-                await renderNeonPoster(ctx, CANVAS_W, dynamicH, logo, posterType, data, config);
+                await renderNeonPoster(ctx, CANVAS_W, dynamicH, logo, posterType, data, fullConfig);
             }
             setGenerated(true);
         } catch (err) {
             console.error('Poster generation failed:', err);
         }
         setGenerating(false);
-    }, [posterType, theme, data, config]);
+    }, [posterType, theme, data, config, selectedWeek, selectedDay]);
 
     const handleDownload = () => {
         const canvas = canvasRef.current;
@@ -161,6 +172,23 @@ export default function AdminPosterTab({ data, settings }) {
 
                 {/* Config Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Week</label>
+                        <select value={selectedWeek} onChange={e => setSelectedWeek(Number(e.target.value))}
+                            className="w-full bg-slate-950/50 border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white font-bold outline-none focus:border-white/[0.15] transition-colors">
+                            {[1, 2, 3, 4, 5].map(w => (
+                                <option key={w} value={w}>Week {w}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Day</label>
+                        <select value={selectedDay} onChange={e => setSelectedDay(Number(e.target.value))}
+                            className="w-full bg-slate-950/50 border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white font-bold outline-none focus:border-white/[0.15] transition-colors">
+                            <option value={1}>Day 1 (SAT)</option>
+                            <option value={2}>Day 2 (SUN)</option>
+                        </select>
+                    </div>
                     <div>
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Title</label>
                         <input type="text" value={config.posterTitle}

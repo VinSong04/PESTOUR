@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { ShieldCheck, BarChart3, Settings, Users, Trophy, ThumbsUp, Flame, UserPlus, Gamepad2, X, Menu, Image } from 'lucide-react';
 
-export const ADMIN_TABS = [
+const ADMIN_TABS = [
     { id: 'overview', label: 'Overview', icon: BarChart3, color: 'blue' },
     { id: 'settings', label: 'Settings', icon: Settings, color: 'cyan' },
     { id: 'players', label: 'Players', icon: Users, color: 'emerald' },

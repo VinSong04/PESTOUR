@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Clock } from 'lucide-react';
 
 export default function CountdownTimer({ deadline, title = "Registration Ends In" }) {
-    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
-
-    function calculateTimeLeft() {
+    const calculateTimeLeft = useCallback(() => {
         const difference = +new Date(deadline) - +new Date();
         let timeLeft = {};
 
@@ -18,7 +16,9 @@ export default function CountdownTimer({ deadline, title = "Registration Ends In
         }
 
         return timeLeft;
-    }
+    }, [deadline]);
+
+    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -26,7 +26,7 @@ export default function CountdownTimer({ deadline, title = "Registration Ends In
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [deadline]);
+    }, [calculateTimeLeft]);
 
     const timerComponents = [];
 

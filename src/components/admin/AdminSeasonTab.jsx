@@ -2,8 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Sparkles, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { createEmptyMatch } from '../../utils/matchFactory';
+import { assignSchedules } from '../../utils/logic';
 import { createBall, stepPhysics, drawBalls } from './LotteryPhysics';
 import { getFlagUrl } from '../../constants/countries';
+
 
 const GROUP_CFG = {
     A: { label: 'Group A', color: '#22d3ee', bg: 'rgba(34,211,238,0.08)', border: 'rgba(34,211,238,0.25)', glow: 'rgba(34,211,238,0.4)' },
@@ -14,7 +16,7 @@ const GROUP_CFG = {
 const GROUP_KEYS = ['A', 'B', 'C', 'D'];
 const MAX_PER_GROUP = 5;
 
-export default function AdminSeasonTab({ approvedPlayers, currentPlayers, onDrawGroups, updateData, data }) {
+export default function AdminSeasonTab({ approvedPlayers, updateData, data }) {
     const canvasRef = useRef(null);
     const ballsRef = useRef([]);
     const animRef = useRef(null);
@@ -154,13 +156,9 @@ export default function AdminSeasonTab({ approvedPlayers, currentPlayers, onDraw
             }
             const n = list.length;
             let matchCounter = 1;
+            const groupMatches = [];
 
             for (let r = 0; r < n - 1; r++) {
-                const roundNumber = r + 1;
-                const week = Math.ceil(roundNumber / 2);
-                const dayText = roundNumber % 2 === 1 ? 'DAY 1 (SAT)' : 'DAY 2 (SUN)';
-                const scheduleLabel = `WEEK ${week} • ${dayText}`;
-
                 for (let i = 0; i < n / 2; i++) {
                     const p1 = list[i];
                     const p2 = list[n - 1 - i];
@@ -171,12 +169,15 @@ export default function AdminSeasonTab({ approvedPlayers, currentPlayers, onDraw
                             p1.id,
                             p2.id
                         );
-                        match.schedule = scheduleLabel;
-                        newMatches.push(match);
+                        groupMatches.push(match);
                     }
                 }
                 list.splice(1, 0, list.pop());
             }
+
+            // Assign balanced schedules to matches
+            assignSchedules(groupMatches, gp);
+            newMatches.push(...groupMatches);
         });
         updateData({ ...data, players: newPlayers, matches: newMatches, bracket: [] });
     };

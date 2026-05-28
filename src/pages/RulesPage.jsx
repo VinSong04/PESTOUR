@@ -1,4 +1,4 @@
-import { BookOpen, Gamepad2, BarChart3, ShieldCheck, ClipboardList, MonitorSmartphone, WifiOff, Users, Scale } from 'lucide-react';
+import { BookOpen, Gamepad2, BarChart3, ClipboardList, MonitorSmartphone, WifiOff, Users, Scale } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
 

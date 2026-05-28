@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Gamepad2, Search, CheckCircle2, Edit3, Save, X, Filter } from 'lucide-react';
+import { Gamepad2, Search, CheckCircle2, Edit3, Save, X } from 'lucide-react';
 import PlayerAvatar from '../ui/PlayerAvatar';
 
 function getPlayerName(id, players) {
@@ -14,7 +14,7 @@ function getPlayerLogo(id, players) {
 }
 
 export default function AdminMatchesTab({ data, updateData }) {
-    const { matches, players, bracket } = data;
+    const { matches, players } = data;
     const [searchQuery, setSearchQuery] = useState('');
     const [groupFilter, setGroupFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Search, CheckCircle2, Trash2, Edit3, Save, X, ChevronDown } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Users, Search, CheckCircle2, Trash2, Edit3, Save, X } from 'lucide-react';
 import PlayerAvatar from '../ui/PlayerAvatar';
 
 export default function AdminPlayersTab({ players, setPlayers, onSave, isSaved }) {

@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, CheckCircle2, ThumbsUp } from 'lucide-react';
+import { Settings, CheckCircle2 } from 'lucide-react';
 
 export default function AdminSettingsTab({ settings, setSettings, onSave, isSaved }) {
     const ToggleRow = ({ label, desc, checked, onChange, color = 'blue' }) => {

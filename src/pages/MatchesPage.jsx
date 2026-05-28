@@ -9,6 +9,7 @@ import { staggerContainer as containerVariants, springItemScale as cardVariants 
 export default function MatchesView({ data, updateData, isAdmin }) {
     const [groupFilter, setGroupFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('UPCOMING');
+    const [weekFilter, setWeekFilter] = useState('ALL');
     const [expandedGames, setExpandedGames] = useState({});
 
     const playerMap = useMemo(() => {
@@ -25,6 +26,19 @@ export default function MatchesView({ data, updateData, isAdmin }) {
         setExpandedGames(prev => ({ ...prev, [matchId]: !prev[matchId] }));
     }, []);
 
+    const availableWeeks = useMemo(() => {
+        const weeks = new Set();
+        data.matches.forEach(m => {
+            if (m.schedule) {
+                const matchWeek = m.schedule.match(/WEEK\s*(\d+)/i);
+                if (matchWeek) {
+                    weeks.add(matchWeek[1]);
+                }
+            }
+        });
+        return [...weeks].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+    }, [data.matches]);
+
     const bracketMatches = (data.bracket || []).filter(m => m.p1Id && m.p2Id);
     const allMatches = [...data.matches, ...bracketMatches];
 
@@ -33,7 +47,14 @@ export default function MatchesView({ data, updateData, isAdmin }) {
         : groupFilter === 'KNOCKOUT'
             ? bracketMatches
             : data.matches.filter(m => m.groupId === groupFilter)
-    ).filter(m => statusFilter === 'UPCOMING' ? !m.played : m.played);
+    ).filter(m => statusFilter === 'UPCOMING' ? !m.played : m.played)
+     .filter(m => {
+         if (weekFilter === 'ALL') return true;
+         if (m.id.startsWith('QF') || m.id.startsWith('SF') || m.id.startsWith('F')) return false;
+         const matchWeek = m.schedule ? m.schedule.match(/WEEK\s*(\d+)/i) : null;
+         const w = matchWeek ? matchWeek[1] : null;
+         return w === weekFilter;
+     });
 
     const handleScoreChange = (matchId, game, player, value) => {
         if (!isAdmin) return;
@@ -106,7 +127,10 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                         {['ALL', ...[...new Set(data.matches.map(m => m.groupId))].filter(Boolean).sort(), 'KNOCKOUT'].map(g => (
                             <button
                                 key={g}
-                                onClick={() => setGroupFilter(g)}
+                                onClick={() => {
+                                    setGroupFilter(g);
+                                    if (g === 'KNOCKOUT') setWeekFilter('ALL');
+                                }}
                                 className={`flex-1 sm:flex-none px-4 py-2 text-[11px] font-semibold tracking-wider uppercase rounded-lg transition-all whitespace-nowrap ${groupFilter === g ? 'bg-white/[0.06] text-white border border-white/[0.06]' : 'text-slate-500 hover:text-white border border-transparent'}`}
                             >
                                 {g === 'ALL' ? 'ALL' : g === 'KNOCKOUT' ? 'KO' : `G${g}`}
@@ -115,6 +139,46 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                     </div>
                 </div>
             </motion.div>
+
+            {/* Week Filter Bar */}
+            {groupFilter !== 'KNOCKOUT' && availableWeeks.length > 0 && (
+                <motion.div
+                    variants={cardVariants}
+                    className="glass-card p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4 relative overflow-hidden group"
+                >
+                    <div className="absolute -inset-px bg-gradient-to-r from-cyan-500/10 via-transparent to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+                    
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] sm:pl-1">
+                        Filter by Week:
+                    </span>
+                    
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <button
+                            onClick={() => setWeekFilter('ALL')}
+                            className={`px-4 py-2 text-xs font-bold tracking-wide uppercase rounded-xl transition-all duration-300 ${
+                                weekFilter === 'ALL'
+                                    ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]'
+                                    : 'text-slate-400 hover:text-white bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05]'
+                            }`}
+                        >
+                            All Weeks
+                        </button>
+                        {availableWeeks.map(w => (
+                            <button
+                                key={w}
+                                onClick={() => setWeekFilter(w)}
+                                className={`px-4 py-2 text-xs font-bold tracking-wide uppercase rounded-xl transition-all duration-300 ${
+                                    weekFilter === w
+                                        ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]'
+                                        : 'text-slate-400 hover:text-white bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05]'
+                                }`}
+                            >
+                                Week {w}
+                            </button>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
 
             {/* Viewer Banner */}
             {!isAdmin && (

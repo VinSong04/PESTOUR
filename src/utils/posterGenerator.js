@@ -1,5 +1,5 @@
 import { getFlagUrl } from '../constants/countries';
-import { assignSchedules } from './logic';
+import { assignSchedules, calculateStandings } from './logic';
 
 
 const preloadFlags = async (data) => {
@@ -458,26 +458,12 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
             });
         }
     } else if (type === 'standings') {
-        const groups = {};
-        data.players.filter(p => p.group).forEach(p => {
-            if (!groups[p.group]) groups[p.group] = [];
-            groups[p.group].push(p);
-        });
-
-        const sortFn = (a, b) => {
-            const ptsA = (a.w || 0) * 3 + (a.d || 0);
-            const ptsB = (b.w || 0) * 3 + (b.d || 0);
-            if (ptsB !== ptsA) return ptsB - ptsA;
-            const gdA = (a.gf || 0) - (a.ga || 0);
-            const gdB = (b.gf || 0) - (b.ga || 0);
-            return gdB - gdA;
-        };
-
+        const { groups } = calculateStandings(data.players || [], data.matches || []);
         const groupKeys = Object.keys(groups).sort();
         let gy = startY;
 
         groupKeys.forEach((gKey, gi) => {
-            const players = groups[gKey].sort(sortFn);
+            const players = groups[gKey];
             const groupColor = [posterAccent, '#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2'][gi % 6];
 
             drawSkewedBanner(50, gy, 250, 40, groupColor);
@@ -508,9 +494,9 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
 
             gy += 40;
             players.forEach((p, pi) => {
-                const pts = (p.w || 0) * 3 + (p.d || 0);
-                const gd = (p.gf || 0) - (p.ga || 0);
-                const played = (p.w || 0) + (p.d || 0) + (p.l || 0);
+                const pts = p.pts || 0;
+                const gd = p.gd || 0;
+                const played = p.played || 0;
 
                 ctx.fillStyle = pi % 2 === 0 ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.15)';
                 ctx.fillRect(50, gy, W - 100, 40);
@@ -1067,27 +1053,13 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
             });
         }
     } else if (type === 'standings') {
-        const groups = {};
-        data.players.filter(p => p.group).forEach(p => {
-            if (!groups[p.group]) groups[p.group] = [];
-            groups[p.group].push(p);
-        });
-
-        const sortFn = (a, b) => {
-            const ptsA = (a.w || 0) * 3 + (a.d || 0);
-            const ptsB = (b.w || 0) * 3 + (b.d || 0);
-            if (ptsB !== ptsA) return ptsB - ptsA;
-            const gdA = (a.gf || 0) - (a.ga || 0);
-            const gdB = (b.gf || 0) - (b.ga || 0);
-            return gdB - gdA;
-        };
-
+        const { groups } = calculateStandings(data.players || [], data.matches || []);
         const groupKeys = Object.keys(groups).sort();
         const groupColors = ['#00d4ff', '#fbbf24', '#c084fc', '#4ade80', '#f97316', '#f472b6'];
         let gy = startY;
 
         groupKeys.forEach((gKey, gi) => {
-            const grpPlayers = groups[gKey].sort(sortFn);
+            const grpPlayers = groups[gKey];
             const gColor = groupColors[gi % groupColors.length];
 
             ctx.save();
@@ -1131,9 +1103,9 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
 
             gy += 36;
             grpPlayers.forEach((p, pi) => {
-                const pts = (p.w || 0) * 3 + (p.d || 0);
-                const gd = (p.gf || 0) - (p.ga || 0);
-                const played = (p.w || 0) + (p.d || 0) + (p.l || 0);
+                const pts = p.pts || 0;
+                const gd = p.gd || 0;
+                const played = p.played || 0;
                 const rowH = 44;
 
                 roundRect(50, gy, W - 100, rowH, pi === grpPlayers.length - 1 ? 10 : 0);

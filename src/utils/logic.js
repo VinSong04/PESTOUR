@@ -196,3 +196,55 @@ export const assignSchedules = (matches, players) => {
     });
 };
 
+/**
+ * Generate knockout bracket seedings from group standings.
+ * Cross-group seeding:
+ *   QF-1: A1 vs D2     QF-3: C1 vs B2
+ *   QF-2: B1 vs C2     QF-4: D1 vs A2
+ * This ensures group winners from the same half don't meet until the Final.
+ *
+ * @param {object} standingsData - Result of calculateStandings()
+ * @returns {Array} Array of 4 QF bracket match objects
+ */
+export const generateKnockoutSeedings = (standingsData) => {
+    const { groups } = standingsData;
+    const groupKeys = ['A', 'B', 'C', 'D'];
+
+    // Validate that all 4 groups exist and have at least 2 players
+    for (const key of groupKeys) {
+        if (!groups[key] || groups[key].length < 2) {
+            throw new Error(`Group ${key} does not have enough players for knockout seeding.`);
+        }
+    }
+
+    // Extract 1st and 2nd from each group (already sorted by calculateStandings)
+    const first = {};
+    const second = {};
+    groupKeys.forEach(g => {
+        first[g] = groups[g][0];
+        second[g] = groups[g][1];
+    });
+
+    // Cross-group seeding pairings
+    const pairings = [
+        { id: 'QF-1', p1: first['A'], p2: second['D'] },
+        { id: 'QF-2', p1: first['B'], p2: second['C'] },
+        { id: 'QF-3', p1: first['C'], p2: second['B'] },
+        { id: 'QF-4', p1: first['D'], p2: second['A'] },
+    ];
+
+    return pairings.map(({ id, p1, p2 }) => ({
+        id,
+        round: 'QF',
+        p1Id: p1.id,
+        p1Name: p1.name,
+        p1Logo: p1.logo || '',
+        p2Id: p2.id,
+        p2Name: p2.name,
+        p2Logo: p2.logo || '',
+        played: false,
+        g1: { p1: null, p2: null },
+        g2: { p1: null, p2: null },
+        g3: { p1: null, p2: null },
+    }));
+};

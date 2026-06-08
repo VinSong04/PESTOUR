@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import useTournamentData from './hooks/useTournamentData';
 import MainLayout from './layouts/MainLayout';
 import PageFallback from './components/ui/PageFallback';
@@ -81,44 +82,102 @@ export default function App() {
         setSelectedSeason,
         seasons,
         tournamentStarted: activeData.settings.tournamentStarted,
+        registrationOpen: activeData.settings.registrationOpen,
         votingEnabled: activeData.settings.votingEnabled,
         lastUpdated: activeData.lastUpdated,
+    };
+
+    const renderPageContent = () => {
+        if (isVotingLocked) {
+            return (
+                <motion.div
+                    key="voting-locked"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                >
+                    <VotingPage data={activeData} onAdminAccess={() => {
+                        setCurrentPage('admin');
+                        setShowLogin(true);
+                    }} />
+                </motion.div>
+            );
+        }
+
+        let content = null;
+        switch (currentPage) {
+            case 'home':
+                content = <HomePage data={activeData} setCurrentPage={setCurrentPage} isAdmin={effectiveIsAdmin} />;
+                break;
+            case 'register':
+                content = <RegisterPage isAdmin={effectiveIsAdmin} data={activeData} />;
+                break;
+            case 'standings':
+                if (activeData.settings.tournamentStarted || isAdmin) {
+                    content = <StandingsPage standingsData={standingsData} bracketData={activeData.bracket} />;
+                }
+                break;
+            case 'matches':
+                if (activeData.settings.tournamentStarted || isAdmin) {
+                    content = <MatchesPage data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />;
+                }
+                break;
+            case 'voting':
+                content = <VotingPage data={activeData} />;
+                break;
+            case 'rules':
+                content = <RulesPage />;
+                break;
+            case 'knockout':
+                if (activeData.settings.tournamentStarted || isAdmin) {
+                    content = (
+                        <KnockoutPage
+                            data={activeData}
+                            updateData={updateData}
+                            standingsData={standingsData}
+                            isAdmin={effectiveIsAdmin}
+                        />
+                    );
+                }
+                break;
+            case 'admin':
+                if (isCurrentSeason) {
+                    content = (
+                        <AdminPage
+                            data={data}
+                            updateData={updateData}
+                            isAdmin={isAdmin}
+                            setIsAdmin={setIsAdmin}
+                        />
+                    );
+                }
+                break;
+            default:
+                content = null;
+        }
+
+        if (!content) return null;
+
+        return (
+            <motion.div
+                key={currentPage}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+            >
+                {content}
+            </motion.div>
+        );
     };
 
     return (
         <MainLayout showNavbar={!isVotingLocked} navProps={navProps}>
             <Suspense fallback={<PageFallback />}>
-                {isVotingLocked ? (
-                    <VotingPage data={activeData} onAdminAccess={() => {
-                        setCurrentPage('admin');
-                        setShowLogin(true);
-                    }} />
-                ) : (
-                    <>
-                        {currentPage === 'home' && <HomePage data={activeData} setCurrentPage={setCurrentPage} isAdmin={effectiveIsAdmin} />}
-                        {currentPage === 'register' && <RegisterPage isAdmin={effectiveIsAdmin} data={activeData} />}
-                        {currentPage === 'standings' && (activeData.settings.tournamentStarted || isAdmin) && <StandingsPage standingsData={standingsData} bracketData={activeData.bracket} />}
-                        {currentPage === 'matches' && (activeData.settings.tournamentStarted || isAdmin) && <MatchesPage data={activeData} updateData={updateData} isAdmin={effectiveIsAdmin} />}
-                        {currentPage === 'voting' && <VotingPage data={activeData} />}
-                        {currentPage === 'rules' && <RulesPage />}
-                        {currentPage === 'knockout' && (activeData.settings.tournamentStarted || isAdmin) && (
-                            <KnockoutPage
-                                data={activeData}
-                                updateData={updateData}
-                                standingsData={standingsData}
-                                isAdmin={effectiveIsAdmin}
-                            />
-                        )}
-                        {currentPage === 'admin' && isCurrentSeason && (
-                            <AdminPage
-                                data={data}
-                                updateData={updateData}
-                                isAdmin={isAdmin}
-                                setIsAdmin={setIsAdmin}
-                            />
-                        )}
-                    </>
-                )}
+                <AnimatePresence mode="wait">
+                    {renderPageContent()}
+                </AnimatePresence>
             </Suspense>
         </MainLayout>
     );

@@ -8,6 +8,7 @@ const POSTER_TYPES = [
     { id: 'schedule', label: 'Schedule', emoji: '⚽' },
     { id: 'results', label: 'Results', emoji: '🏆' },
     { id: 'standings', label: 'Standings', emoji: '📊' },
+    { id: 'knockout', label: 'Knockout', emoji: '👑' },
 ];
 
 const THEMES = [
@@ -54,6 +55,8 @@ export default function AdminPosterTab({ data }) {
         let dynamicH = 1920;
         if (posterType === 'schedule' || posterType === 'results') {
             dynamicH = 1920;
+        } else if (posterType === 'knockout') {
+            dynamicH = 1200;
         } else if (posterType === 'standings') {
             const groups = {};
             data.players.filter(p => p.group).forEach(p => {

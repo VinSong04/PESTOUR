@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Trophy, XCircle, CircleDashed, Info, Lock } from 'lucide-react';
+import { Trophy, XCircle, CircleDashed, Info, Lock, Zap } from 'lucide-react';
 import BracketMatchBox from '../components/ui/BracketMatchBox';
-import { processBracket } from '../utils/logic';
+import BracketConnectors from '../components/ui/BracketConnectors';
+import PlayerAvatar from '../components/ui/PlayerAvatar';
+import { processBracket, getBracketMatchWinner, generateKnockoutSeedings } from '../utils/logic';
 import { createEmptyGame } from '../utils/matchFactory';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
@@ -219,6 +221,7 @@ function WheelModal({ qualifiedPlayers, onClose, onComplete }) {
 export default function KnockoutView({ data, updateData, standingsData, isAdmin }) {
     const [spinnerOpen, setSpinnerOpen] = useState(false);
     const [bracketState, setBracketState] = useState(data.bracket || []);
+    const [activeRoundTab, setActiveRoundTab] = useState('qf');
 
     useEffect(() => {
         if (data.bracket && data.bracket.length > 0) {
@@ -269,6 +272,24 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
     const sfs = useMemo(() => bracketState.filter(m => m.id.startsWith('SF')), [bracketState]);
     const finalMatch = useMemo(() => bracketState.find(m => m.id.startsWith('F')), [bracketState]);
 
+    const champion = useMemo(() => {
+        return finalMatch ? getBracketMatchWinner(finalMatch) : null;
+    }, [finalMatch]);
+
+    const handleAutoSeed = () => {
+        if (bracketState.length > 0) {
+            if (!window.confirm('This will overwrite the current bracket. Continue?')) return;
+        }
+        try {
+            const qfMatches = generateKnockoutSeedings(standingsData);
+            const fullBracket = processBracket(qfMatches);
+            setBracketState(fullBracket);
+            updateData({ ...data, bracket: fullBracket });
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
     return (
         <motion.div
             className="space-y-6"
@@ -302,6 +323,14 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
                             <XCircle className="w-3.5 h-3.5" /> Clear
                         </button>
                         <button
+                            onClick={handleAutoSeed}
+                            disabled={standingsData.qualified.length < 8}
+                            className="flex-1 md:flex-none px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl text-[11px] font-bold tracking-wider uppercase transition-all disabled:opacity-40 flex items-center justify-center gap-2 relative overflow-hidden group/btn shadow-lg shadow-amber-500/20"
+                        >
+                            <Zap className="w-3.5 h-3.5" />
+                            Auto-Seed
+                        </button>
+                        <button
                             onClick={() => setSpinnerOpen(true)}
                             disabled={standingsData.qualified.length < 8 || qfs.length >= 4}
                             className="flex-1 md:flex-none px-5 py-3 bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-400 hover:to-cyan-400 text-white rounded-xl text-[11px] font-bold tracking-wider uppercase transition-all disabled:opacity-40 flex items-center justify-center gap-2 relative overflow-hidden group/btn"
@@ -328,6 +357,36 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
                 </motion.div>
             )}
 
+            {/* Champion Celebration Banner */}
+            <AnimatePresence>
+                {champion && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="glass-card rounded-3xl overflow-hidden relative border border-amber-500/20 shadow-[0_0_50px_rgba(251,191,36,0.15)]"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-amber-500/10 pointer-events-none" />
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-amber-500/10 rounded-full blur-[100px] pointer-events-none" />
+                        <div className="p-8 flex flex-col items-center gap-5 relative z-10">
+                            <motion.div
+                                animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0] }}
+                                transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+                            >
+                                <Trophy className="w-16 h-16 text-amber-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" />
+                            </motion.div>
+                            <div className="text-center">
+                                <p className="text-[10px] font-bold text-amber-400/60 tracking-[0.3em] uppercase mb-2">🏆 Tournament Champion 🏆</p>
+                                <div className="flex items-center gap-4 justify-center">
+                                    <PlayerAvatar name={champion.name} logo={champion.logo} className="w-14 h-14 text-lg rounded-xl border-2 border-amber-400/30 shadow-[0_0_20px_rgba(251,191,36,0.2)] font-outfit" />
+                                    <h3 className="text-3xl font-outfit font-black text-white tracking-wider uppercase">{champion.name}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Bracket Display */}
             <AnimatePresence mode="wait">
                 {bracketState.length > 0 ? (
@@ -336,15 +395,35 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
                         initial="hidden"
                         animate="visible"
                         exit={{ opacity: 0, y: 20 }}
-                        className="mt-12 pt-10 border-t border-white/[0.04]"
+                        className="mt-12 pt-10 border-t border-white/[0.04] space-y-6"
                     >
-                        <div className="flex flex-col lg:flex-row justify-between items-center lg:items-center w-full min-w-max overflow-x-auto gap-10 py-16 pb-24 px-8 min-h-[600px] relative glass-card rounded-3xl">
+                        {/* Round Switcher for Mobile */}
+                        <div className="flex lg:hidden bg-white/[0.03] p-1 rounded-xl border border-white/[0.04] mb-6 max-w-sm mx-auto relative z-10">
+                            {[
+                                { id: 'qf', label: 'Quarterfinals' },
+                                { id: 'sf', label: 'Semifinals' },
+                                { id: 'final', label: 'Grand Final' },
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveRoundTab(tab.id)}
+                                    className={`flex-1 py-2 text-[10px] font-bold tracking-wider uppercase rounded-lg transition-all ${activeRoundTab === tab.id ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-slate-500 hover:text-white border border-transparent'}`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Desktop Bracket Tree */}
+                        <div className="hidden lg:flex lg:flex-row justify-between items-center w-full min-w-max overflow-x-auto gap-10 py-16 pb-24 px-8 min-h-[600px] relative glass-card rounded-3xl">
                             <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none rounded-3xl"></div>
                             <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-purple-500/6 rounded-full blur-[120px] pointer-events-none"></div>
                             <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-cyan-500/6 rounded-full blur-[120px] pointer-events-none"></div>
 
+                            <BracketConnectors bracketData={bracketState} />
+
                             {/* QF Left */}
-                            <div className="flex flex-col justify-around w-full lg:w-80 shrink-0 space-y-20 z-10">
+                            <div className="flex flex-col justify-around w-80 shrink-0 space-y-20 z-10">
                                 {qfs.filter(m => m.id === 'QF-1' || m.id === 'QF-2').map((match, idx) => (
                                     <BracketMatchBox
                                         key={match.id} match={match} title={`Quarterfinal ${idx + 1}`}
@@ -355,7 +434,7 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
 
                             {/* SF-1 */}
                             {sfs.filter(m => m.id === 'SF-1').length > 0 && (
-                                <div className="flex flex-col justify-center w-full lg:w-80 shrink-0 z-10 px-4">
+                                <div className="flex flex-col justify-center w-80 shrink-0 z-10 px-4">
                                     {sfs.filter(m => m.id === 'SF-1').map(match => (
                                         <BracketMatchBox
                                             key={match.id} match={match} title="Semifinal 1"
@@ -367,7 +446,7 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
 
                             {/* Final */}
                             {finalMatch && (
-                                <div className="flex flex-col justify-center w-full lg:w-96 shrink-0 z-20 px-4 md:scale-110">
+                                <div className="flex flex-col justify-center w-96 shrink-0 z-20 px-4 scale-110">
                                     <motion.div
                                         className="text-center mb-8 relative"
                                         animate={{ y: [0, -8, 0] }}
@@ -389,7 +468,7 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
 
                             {/* SF-2 */}
                             {sfs.filter(m => m.id === 'SF-2').length > 0 && (
-                                <div className="flex flex-col justify-center w-full lg:w-80 shrink-0 z-10 px-4">
+                                <div className="flex flex-col justify-center w-80 shrink-0 z-10 px-4">
                                     {sfs.filter(m => m.id === 'SF-2').map(match => (
                                         <BracketMatchBox
                                             key={match.id} match={match} title="Semifinal 2"
@@ -400,7 +479,7 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
                             )}
 
                             {/* QF Right */}
-                            <div className="flex flex-col justify-around w-full lg:w-80 shrink-0 space-y-20 z-10">
+                            <div className="flex flex-col justify-around w-80 shrink-0 space-y-20 z-10">
                                 {qfs.filter(m => m.id === 'QF-3' || m.id === 'QF-4').map((match, idx) => (
                                     <BracketMatchBox
                                         key={match.id} match={match} title={`Quarterfinal ${idx + 3}`}
@@ -408,6 +487,72 @@ export default function KnockoutView({ data, updateData, standingsData, isAdmin 
                                     />
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Mobile Round Match List */}
+                        <div className="flex flex-col lg:hidden w-full gap-6 p-5 sm:p-6 glass-card rounded-3xl relative overflow-hidden z-10">
+                            <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none rounded-3xl"></div>
+                            
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={activeRoundTab}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="space-y-6 z-10"
+                                >
+                                    {activeRoundTab === 'qf' && (
+                                        <>
+                                            <h4 className="text-[10px] font-extrabold text-amber-400 uppercase tracking-widest text-center">Quarterfinal Matchups</h4>
+                                            <div className="space-y-6">
+                                                {qfs.map((match, idx) => (
+                                                    <BracketMatchBox
+                                                        key={match.id} match={match} title={`Quarterfinal ${idx + 1}`}
+                                                        isAdmin={isAdmin} togglePlayed={togglePlayed} handleScoreChange={handleScoreChange}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                    
+                                    {activeRoundTab === 'sf' && (
+                                        <>
+                                            <h4 className="text-[10px] font-extrabold text-amber-400 uppercase tracking-widest text-center">Semifinal Matchups</h4>
+                                            <div className="space-y-6">
+                                                {sfs.length > 0 ? (
+                                                    sfs.map((match, idx) => (
+                                                        <BracketMatchBox
+                                                            key={match.id} match={match} title={`Semifinal ${idx + 1}`}
+                                                            isAdmin={isAdmin} togglePlayed={togglePlayed} handleScoreChange={handleScoreChange}
+                                                        />
+                                                    ))
+                                                ) : (
+                                                    <p className="text-slate-500 text-xs text-center font-medium py-6">Semifinal matchups are not drawn yet.</p>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                    
+                                    {activeRoundTab === 'final' && (
+                                        <>
+                                            <h4 className="text-[10px] font-extrabold text-amber-400 uppercase tracking-widest text-center">Championship Series</h4>
+                                            <div className="space-y-6">
+                                                {finalMatch ? (
+                                                    <div className="glow-ring-gold rounded-2xl">
+                                                        <BracketMatchBox
+                                                            match={finalMatch} title="Grand Final"
+                                                            isAdmin={isAdmin} togglePlayed={togglePlayed} handleScoreChange={handleScoreChange}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-slate-500 text-xs text-center font-medium py-6">Grand Final matchup is not drawn yet.</p>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </motion.div>
+                            </AnimatePresence>
                         </div>
                     </motion.div>
                 ) : (

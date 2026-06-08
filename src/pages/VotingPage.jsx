@@ -111,8 +111,8 @@ const VotingView = ({ data, onAdminAccess }) => {
                                     className={`w-full text-left glass-card rounded-2xl p-5 flex items-center gap-5 transition-all relative overflow-hidden group
                                         ${hasVoted && !isUserChoice ? 'opacity-35' : ''}
                                         ${isSelected ? 'ring-1 ring-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.08)]' : ''}
-                                        ${!isDisabled ? 'hover:border-cyan-500/15 hover:bg-white/[0.03] cursor-pointer' : 'cursor-default'}
-                                        ${isUserChoice ? 'border-cyan-500/20 bg-cyan-500/[0.03]' : ''}
+                                        ${!isDisabled ? 'hover:border-cyan-500/15 hover:bg-white/[0.03] hover-lift cursor-pointer' : 'cursor-default'}
+                                        ${isUserChoice ? 'border-cyan-500/20 bg-cyan-500/[0.03] pulse-glow' : ''}
                                         ${isWinner ? 'border-emerald-500/20 bg-emerald-500/[0.04]' : ''}
                                     `}
                                 >
@@ -149,7 +149,11 @@ const VotingView = ({ data, onAdminAccess }) => {
                                                 animate={{ width: `${percentage}%` }}
                                                 transition={{ duration: 1.5, ease: "easeOut" }}
                                                 className={`absolute inset-y-0 left-0 ${isUserChoice ? 'bg-cyan-400' : optionColor} ${isWinner ? 'bg-emerald-400' : ''}`}
-                                            />
+                                            >
+                                                {voteId === winnerId && totalVotes > 0 && (
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
+                                                )}
+                                            </motion.div>
                                         </div>
                                     </div>
 
@@ -171,6 +175,7 @@ const VotingView = ({ data, onAdminAccess }) => {
                                             initial={{ height: 0, opacity: 0 }}
                                             animate={{ height: 'auto', opacity: 1 }}
                                             exit={{ height: 0, opacity: 0 }}
+                                            transition={{ type: "spring", stiffness: 200, damping: 20 }}
                                             className="overflow-hidden"
                                         >
                                             <div className="mt-2.5 bg-cyan-500/[0.05] border border-cyan-500/10 rounded-xl p-3.5 flex items-center justify-between gap-4">
@@ -199,9 +204,10 @@ const VotingView = ({ data, onAdminAccess }) => {
                         className="fixed inset-0 flex items-center justify-center z-50 bg-[#060a13]/85 backdrop-blur-md p-6"
                     >
                         <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 20 }}
+                            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.9, y: 20, opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 350, damping: 25 }}
                             className="glass-card rounded-3xl p-8 shadow-2xl max-w-md w-full text-center"
                         >
                             <div className="w-16 h-16 bg-cyan-500/8 rounded-2xl flex items-center justify-center mx-auto mb-5">

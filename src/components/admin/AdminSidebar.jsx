@@ -8,6 +8,7 @@ const ADMIN_TABS = [
     { id: 'matches', label: 'Matches', icon: Gamepad2, color: 'purple' },
     { id: 'roster', label: 'Registrations', icon: UserPlus, color: 'amber' },
     { id: 'season', label: 'Season', icon: Trophy, color: 'blue' },
+    { id: 'knockout', label: 'Knockout', icon: Trophy, color: 'amber' },
     { id: 'poster', label: 'Poster', icon: Image, color: 'pink' },
     { id: 'voting', label: 'Voting', icon: ThumbsUp, color: 'indigo' },
     { id: 'danger', label: 'Danger Zone', icon: Flame, color: 'rose' },

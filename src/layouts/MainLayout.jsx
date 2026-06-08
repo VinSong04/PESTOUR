@@ -1,4 +1,5 @@
 import Navbar from './Navbar';
+import ScrollToTop from '../components/ui/ScrollToTop';
 
 /**
  * MainLayout — wraps all pages with the shared Navbar and <main> content area.
@@ -32,6 +33,8 @@ export default function MainLayout({ children, showNavbar, navProps }) {
                 {children}
             </main>
 
+            <ScrollToTop />
+
             {/* ── Footer ──────────────────────────────────────────────── */}
             <footer
                 className="relative z-10 border-t border-white/[0.05] bg-[#060a13]/80 backdrop-blur-sm"
@@ -57,7 +60,7 @@ export default function MainLayout({ children, showNavbar, navProps }) {
                                     { id: 'home', label: 'Home' },
                                     { id: 'standings', label: 'Standings' },
                                     { id: 'matches', label: 'Schedule' },
-                                    { id: 'register', label: 'Register' },
+                                    ...(navProps?.registrationOpen || navProps?.isAdmin ? [{ id: 'register', label: 'Register' }] : []),
                                     { id: 'rules', label: 'Rules' },
                                 ].map((item, i, arr) => (
                                     <li key={item.id} className="flex items-center gap-1">

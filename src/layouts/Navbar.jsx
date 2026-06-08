@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getNavItems } from '../constants/navigation';
 import logo from '../assets/pallet.jpg';
 
-export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted, votingEnabled }) {
+export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMode, setIsLightMode, selectedSeason, setSelectedSeason, seasons, tournamentStarted, registrationOpen, votingEnabled }) {
     const [showNavbar, setShowNavbar] = useState(true);
     const [scrolled, setScrolled] = useState(false);
     const rafRef = useRef(null);
@@ -32,7 +32,7 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
         };
     }, [isAdmin]);
 
-    const navItems = getNavItems({ tournamentStarted, isAdmin, votingEnabled });
+    const navItems = getNavItems({ tournamentStarted, isAdmin, votingEnabled, registrationOpen });
 
     const handleNav = (id) => {
         setCurrentPage(id);
@@ -41,7 +41,8 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
     return (
         <AnimatePresence>
             {showNavbar && (
-                <motion.nav
+                <>
+                    <motion.nav
                     initial={{ y: -100 }}
                     animate={{ y: 0 }}
                     exit={{ y: -100 }}
@@ -102,31 +103,8 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                             })}
                         </div>
 
-                        {/* Mobile Nav - Compact pill buttons */}
-                        <div className="flex lg:hidden flex-1 justify-center mx-1 sm:mx-2">
-                            <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar bg-white/[0.03] rounded-xl p-0.5 border border-white/[0.04] max-w-full">
-                                {navItems.map(item => {
-                                    const isActive = currentPage === item.id;
-                                    return (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => handleNav(item.id)}
-                                            aria-label={`Navigate to ${item.label}`}
-                                            aria-current={isActive ? 'page' : undefined}
-                                            className={`relative flex items-center justify-center p-2 rounded-lg transition-all flex-shrink-0 ${isActive
-                                                ? 'text-cyan-400 bg-black/5 dark:bg-white/[0.08]'
-                                                : 'text-slate-500'
-                                                }`}
-                                        >
-                                            <item.icon className="w-4 h-4" aria-hidden="true" />
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
                         {/* Right Actions */}
-                        <div className="flex items-center gap-1 sm:gap-2 relative z-10 shrink-0">
+                        <div className="flex items-center gap-1 sm:gap-2 relative z-10 shrink-0 ml-auto lg:ml-0">
                             {seasons && seasons.length > 1 && (
                                 <div className="relative hidden sm:block">
                                     <select
@@ -170,6 +148,47 @@ export default function Navbar({ currentPage, setCurrentPage, isAdmin, isLightMo
                         </div>
                     </div>
                 </motion.nav>
+
+                {/* Floating Bottom Nav for Mobile */}
+                <motion.div
+                    initial={{ y: 100, x: "-50%", opacity: 0 }}
+                    animate={{ y: 0, x: "-50%", opacity: 1 }}
+                    exit={{ y: 100, x: "-50%", opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="lg:hidden fixed bottom-6 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md"
+                >
+                    <div className="flex items-center justify-around bg-[#060a13]/85 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl py-2 px-3">
+                        {navItems.map(item => {
+                            const isActive = currentPage === item.id;
+                            return (
+                                <motion.button
+                                    key={item.id}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => handleNav(item.id)}
+                                    aria-label={`Navigate to ${item.label}`}
+                                    aria-current={isActive ? 'page' : undefined}
+                                    className={`relative flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${isActive
+                                        ? 'text-cyan-400'
+                                        : 'text-slate-400 hover:text-slate-200'
+                                        }`}
+                                >
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="activeTabMobile"
+                                            className="absolute inset-0 bg-white/[0.06] rounded-xl border border-white/[0.04]"
+                                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                        />
+                                    )}
+                                    <item.icon className={`w-5 h-5 relative z-10 transition-colors ${isActive ? 'text-cyan-400' : ''}`} aria-hidden="true" />
+                                    <span className="text-[9px] font-semibold mt-1 tracking-wide relative z-10">
+                                        {item.label}
+                                    </span>
+                                </motion.button>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+                </>
             )}
         </AnimatePresence>
     );

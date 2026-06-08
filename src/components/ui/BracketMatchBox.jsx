@@ -34,7 +34,7 @@ export default memo(function BracketMatchBox({ match, title, isAdmin, togglePlay
     }
 
     return (
-        <div className={`relative glass-card ${isTbd ? 'opacity-50' : 'hover:border-cyan-500/10'} rounded-2xl overflow-hidden transition-all duration-500 group`}>
+        <div className={`relative glass-card ${isTbd ? 'opacity-50' : 'hover:border-cyan-500/10 hover-lift'} rounded-2xl overflow-hidden transition-all duration-500 group`}>
             {/* Left accent strip */}
             <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${roundColorClass} opacity-70`}></div>
 
@@ -73,14 +73,14 @@ export default memo(function BracketMatchBox({ match, title, isAdmin, togglePlay
                             <PlayerAvatar name={match.p1Name} logo={match.p1Logo} className={`w-9 h-9 text-[9px] rounded-lg border transition-all duration-500 ${res.p1Wins > res.p2Wins ? 'border-cyan-400/25 shadow-[0_0_10px_rgba(34,211,238,0.1)]' : 'border-white/[0.04]'}`} />
                             <div className="flex flex-col min-w-0">
                                 <span className={`font-outfit font-bold text-[12px] leading-tight transition-all duration-500 truncate ${res.p1Wins > res.p2Wins ? 'text-white' : 'text-slate-500'}`} title={match.p1Name}>{match.p1Name || 'TBD'}</span>
-                                {res.p1Wins > res.p2Wins && <span className="text-[7px] font-bold text-amber-400/60 tracking-wider">WINNER</span>}
+                                {res.p1Wins > res.p2Wins && <span className="text-[7px] font-bold text-amber-400/60 tracking-wider flex items-center gap-0.5">🏆 WINNER</span>}
                             </div>
                         </div>
                         <span className="text-[8px] font-bold tracking-[0.3em] text-slate-700 uppercase italic opacity-40">VS</span>
                         <div className="flex items-center justify-end gap-3 w-[43%] text-right min-w-0">
                             <div className="flex flex-col items-end min-w-0">
                                 <span className={`font-outfit font-bold text-[12px] leading-tight transition-all duration-500 truncate ${res.p2Wins > res.p1Wins ? 'text-white' : 'text-slate-500'}`} title={match.p2Name}>{match.p2Name || 'TBD'}</span>
-                                {res.p2Wins > res.p1Wins && <span className="text-[7px] font-bold text-amber-400/60 tracking-wider">WINNER</span>}
+                                {res.p2Wins > res.p1Wins && <span className="text-[7px] font-bold text-amber-400/60 tracking-wider flex items-center gap-0.5 justify-end">WINNER 🏆</span>}
                             </div>
                             <PlayerAvatar name={match.p2Name} logo={match.p2Logo} className={`w-9 h-9 text-[9px] rounded-lg border transition-all duration-500 ${res.p2Wins > res.p1Wins ? 'border-purple-400/25 shadow-[0_0_10px_rgba(168,85,247,0.1)]' : 'border-white/[0.04]'}`} />
                         </div>

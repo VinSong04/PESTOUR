@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default memo(function GameScoreRow({ game, label, match, p1Name, p2Name, onChange, isAdmin }) {
@@ -61,31 +61,55 @@ export default memo(function GameScoreRow({ game, label, match, p1Name, p2Name, 
 
 function ScoreInput({ val, onChange, disabled, isWinner, isLoser }) {
     const hasValue = val !== null && val !== undefined;
+    const [flash, setFlash] = useState(false);
+    const prevValRef = useRef(val);
 
-    const baseClasses = "w-12 h-12 flex items-center justify-center rounded-xl font-outfit font-bold text-xl transition-all duration-300 border";
+    useEffect(() => {
+        if (prevValRef.current !== val) {
+            setFlash(true);
+            const timer = setTimeout(() => setFlash(false), 600);
+            prevValRef.current = val;
+            return () => clearTimeout(timer);
+        }
+    }, [val]);
+
+    const baseClasses = `w-12 h-12 flex items-center justify-center rounded-xl font-outfit font-bold text-xl transition-all duration-300 border ${flash ? 'score-flash' : ''}`;
 
     if (disabled) {
         return (
-            <div className={`${baseClasses} ${hasValue
-                ? isWinner
-                    ? 'bg-cyan-500/8 text-cyan-400 border-cyan-500/20'
-                    : isLoser
-                        ? 'bg-white/[0.01] text-slate-600 border-white/[0.03]'
-                        : 'bg-white/[0.03] text-white border-white/[0.06]'
-                : 'bg-white/[0.01] text-slate-800 border-dashed border-white/[0.04]'
-                }`}>
+            <motion.div
+                animate={flash && isWinner ? {
+                    borderColor: ["rgba(52, 211, 153, 0.8)", "rgba(34, 211, 238, 0.2)"],
+                    backgroundColor: ["rgba(52, 211, 153, 0.15)", "rgba(6, 10, 19, 0.85)"],
+                    boxShadow: ["0 0 15px rgba(52, 211, 153, 0.4)", "0 0 0px rgba(0,0,0,0)"],
+                } : {}}
+                transition={{ duration: 1 }}
+                className={`${baseClasses} ${hasValue
+                    ? isWinner
+                        ? 'bg-cyan-500/8 text-cyan-400 border-cyan-500/20'
+                        : isLoser
+                            ? 'bg-white/[0.01] text-slate-600 border-white/[0.03]'
+                            : 'bg-white/[0.03] text-white border-white/[0.06]'
+                    : 'bg-white/[0.01] text-slate-800 border-dashed border-white/[0.04]'
+                    }`}
+            >
                 {hasValue ? val : '-'}
-            </div>
+            </motion.div>
         );
     }
 
     return (
-        <input
+        <motion.input
             type="number"
             min="0"
             value={hasValue ? val : ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder="-"
+            animate={flash && isWinner ? {
+                borderColor: ["rgba(52, 211, 153, 0.8)", "rgba(34, 211, 238, 0.2)"],
+                boxShadow: ["0 0 15px rgba(52, 211, 153, 0.4)", "0 0 0px rgba(0,0,0,0)"],
+            } : {}}
+            transition={{ duration: 1 }}
             className={`${baseClasses} text-center bg-white/[0.02] outline-none hide-arrows placeholder:text-slate-800 ${hasValue
                 ? isWinner
                     ? 'border-cyan-500/30 text-cyan-400 ring-2 ring-cyan-500/8'

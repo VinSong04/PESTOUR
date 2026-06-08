@@ -152,10 +152,10 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                         Filter by Week:
                     </span>
                     
-                    <div className="flex flex-wrap gap-2 items-center">
+                    <div className="flex overflow-x-auto no-scrollbar flex-nowrap gap-2 items-center w-full pb-1 -mb-1 scroll-smooth">
                         <button
                             onClick={() => setWeekFilter('ALL')}
-                            className={`px-4 py-2 text-xs font-bold tracking-wide uppercase rounded-xl transition-all duration-300 ${
+                            className={`px-4 py-2 text-xs font-bold tracking-wide uppercase rounded-xl transition-all duration-300 shrink-0 ${
                                 weekFilter === 'ALL'
                                     ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]'
                                     : 'text-slate-400 hover:text-white bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05]'
@@ -167,7 +167,7 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                             <button
                                 key={w}
                                 onClick={() => setWeekFilter(w)}
-                                className={`px-4 py-2 text-xs font-bold tracking-wide uppercase rounded-xl transition-all duration-300 ${
+                                className={`px-4 py-2 text-xs font-bold tracking-wide uppercase rounded-xl transition-all duration-300 shrink-0 ${
                                     weekFilter === w
                                         ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]'
                                         : 'text-slate-400 hover:text-white bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05]'
@@ -225,6 +225,8 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                 : match.id.startsWith('F') ? 'GRAND FINAL'
                                     : `GROUP ${match.groupId}`;
 
+                        const canExpand = isAdmin || match.played;
+
                         return (
                             <motion.div
                                 layout
@@ -233,19 +235,22 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ type: "spring", stiffness: 100, damping: 15 }}
                                 key={match.id}
+                                onClick={() => {
+                                    if (canExpand) toggleGames(match.id);
+                                }}
                                 className={`relative flex flex-col overflow-hidden w-full backdrop-blur-xl transition-all duration-500 rounded-2xl group ${match.played
                                     ? 'glass-card'
                                     : isLive
                                         ? 'bg-[#0c1220]/90 border border-cyan-500/15 shadow-[0_0_40px_rgba(34,211,238,0.04)]'
                                         : 'glass-card-hover'
-                                    }`}
+                                    } ${canExpand ? 'hover-lift cursor-pointer' : ''}`}
                             >
                                 {isLive && (
                                     <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent"></div>
                                 )}
 
                                 {/* Main Content */}
-                                <div className="flex flex-col items-center w-full px-4 sm:px-8 py-8 relative z-10">
+                                <div className="flex flex-col items-center w-full px-4 sm:px-8 py-8 relative z-10 select-none">
                                     {/* Match Pill */}
                                     <div className="flex items-center gap-3 mb-7">
                                         <div className="px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center gap-2.5">
@@ -286,7 +291,7 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                                 <PlayerAvatar name={p1Name} logo={getPlayerLogo(match.p1Id)} className={`relative w-14 h-14 sm:w-24 sm:h-24 text-sm sm:text-xl border transition-all duration-500 ${res.p1Wins > res.p2Wins ? 'border-cyan-400/30 ring-2 ring-cyan-500/10' : 'border-white/[0.06] ring-2 ring-white/[0.03]'}`} />
                                                 {res.p1Wins > res.p2Wins && match.played && (
                                                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-2 -left-2 z-30 bg-amber-500 text-slate-900 p-1 rounded-md shadow-lg">
-                                                        <Trophy className="w-3 h-3" />
+                                                        <Trophy className="w-3.5 h-3.5" />
                                                     </motion.div>
                                                 )}
                                             </motion.div>
@@ -302,7 +307,7 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                         <div className="flex flex-col items-center justify-center w-[20%] z-20">
                                             {(match.played || res.p1Wins > 0 || res.p2Wins > 0) ? (
                                                 <div className="flex flex-col items-center">
-                                                    <div className="flex items-center gap-4 bg-white/[0.03] px-6 py-4 rounded-2xl border border-white/[0.06] backdrop-blur-md">
+                                                    <div className={`flex items-center gap-4 bg-white/[0.03] px-6 py-4 rounded-2xl border border-white/[0.06] backdrop-blur-md transition-all ${isLive ? 'pulse-glow border-cyan-500/30' : ''}`}>
                                                         <span className={`text-4xl sm:text-6xl font-outfit font-black tracking-tighter transition-all duration-700 ${res.p1Wins > res.p2Wins ? 'text-cyan-400' : 'text-white'}`}>{res.p1Wins}</span>
                                                         <div className="flex flex-col items-center gap-0.5 opacity-20">
                                                             <div className="w-1 h-1 rounded-full bg-white"></div>
@@ -313,6 +318,11 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                                     {isLive && (
                                                         <div className="mt-3">
                                                             <span className="text-[9px] font-semibold text-cyan-400/60 tracking-[0.3em] uppercase animate-pulse">In Progress</span>
+                                                        </div>
+                                                    )}
+                                                    {canExpand && !expandedGames[match.id] && (
+                                                        <div className="mt-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                            <span className="text-[9px] font-bold text-slate-500 tracking-wider uppercase">Tap to see games</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -337,7 +347,7 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                                 <PlayerAvatar name={p2Name} logo={getPlayerLogo(match.p2Id)} className={`relative w-14 h-14 sm:w-24 sm:h-24 text-sm sm:text-xl border transition-all duration-500 ${res.p2Wins > res.p1Wins ? 'border-purple-400/30 ring-2 ring-purple-500/10' : 'border-white/[0.06] ring-2 ring-white/[0.03]'}`} />
                                                 {res.p2Wins > res.p1Wins && match.played && (
                                                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-2 -right-2 z-30 bg-amber-500 text-slate-900 p-1 rounded-md shadow-lg">
-                                                        <Trophy className="w-3 h-3" />
+                                                        <Trophy className="w-3.5 h-3.5" />
                                                     </motion.div>
                                                 )}
                                             </motion.div>
@@ -346,8 +356,11 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                 </div>
 
                                 {/* Game Details */}
-                                {(isAdmin || match.played) && (
-                                    <div className="w-full bg-white/[0.01] border-t border-white/[0.03] p-4 sm:p-5 flex flex-col items-center relative z-20">
+                                {canExpand && (
+                                    <div 
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-full bg-white/[0.01] border-t border-white/[0.03] p-4 sm:p-5 flex flex-col items-center relative z-20"
+                                    >
                                         <div className="flex justify-center items-center gap-3 mb-3">
                                             {isAdmin && (
                                                 <button
@@ -375,7 +388,7 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                                     initial={{ opacity: 0, height: 0 }}
                                                     animate={{ opacity: 1, height: 'auto' }}
                                                     exit={{ opacity: 0, height: 0 }}
-                                                    transition={{ duration: 0.3 }}
+                                                    transition={{ type: "spring", stiffness: 200, damping: 24 }}
                                                     className="w-full max-w-2xl mx-auto overflow-hidden"
                                                 >
                                                     <div className="space-y-2.5 pt-3 pb-2">
@@ -387,6 +400,7 @@ export default function MatchesView({ data, updateData, isAdmin }) {
                                                                     initial={{ opacity: 0, height: 0 }}
                                                                     animate={{ opacity: 1, height: 'auto' }}
                                                                     exit={{ opacity: 0, height: 0 }}
+                                                                    transition={{ type: "spring", stiffness: 200, damping: 24 }}
                                                                     className="overflow-hidden overflow-visible!"
                                                                 >
                                                                     <GameScoreRow game="g3" label="G3" match={match} p1Name="" p2Name="" onChange={handleScoreChange} isAdmin={isAdmin} />

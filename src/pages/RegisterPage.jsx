@@ -257,7 +257,7 @@ export default function RegisterView({ data }) {
     };
 
     // Input field shared classes
-    const inputCls = "w-full bg-white/[0.03] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-white/[0.04] transition-all font-semibold placeholder:text-slate-700 text-[15px]";
+    const inputCls = "w-full bg-white/[0.02] border border-white/[0.06] text-white px-5 py-4 rounded-xl outline-none focus:border-cyan-500/30 focus:bg-[#070d19] focus:ring-2 focus:ring-cyan-500/10 transition-all font-semibold placeholder:text-slate-700 text-[15px]";
     const labelCls = "text-[10px] font-semibold text-slate-500 uppercase tracking-[0.15em] ml-1 flex items-center gap-1.5";
 
     return (
@@ -366,13 +366,19 @@ export default function RegisterView({ data }) {
                                         <QrCode className="w-3.5 h-3.5 text-cyan-500/50" />
                                         Step 1: Pay Entry Fee ({settings.entryFee || '$2.00'})
                                     </label>
-                                    <div className="flex flex-col items-center p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+                                    <div className="flex flex-col items-center p-6 rounded-2xl border border-cyan-500/10 bg-white/[0.02] shadow-[0_0_30px_rgba(34,211,238,0.02)] pulse-glow relative overflow-hidden group/qr">
+                                        {/* Moving scanner line */}
+                                        <motion.div
+                                            animate={{ y: ["-100%", "280%"] }}
+                                            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                                            className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-40 z-20 pointer-events-none"
+                                        />
                                         <img
                                             src={paymentQrImage}
                                             alt="ABA KHQR - VINSONG CHHORN"
-                                            className="w-full max-w-[320px] rounded-xl border border-white/10 shadow-lg"
+                                            className="w-full max-w-[320px] rounded-xl border border-white/10 shadow-lg relative z-10 transition-transform duration-500 group-hover/qr:scale-[1.02]"
                                         />
-                                        <p className="text-slate-400 text-sm text-center mt-4 font-medium leading-relaxed" style={{ fontFamily: '"Suwannaphum", "Outfit", sans-serif' }}>
+                                        <p className="text-slate-400 text-sm text-center mt-4 font-medium leading-relaxed relative z-10" style={{ fontFamily: '"Suwannaphum", "Outfit", sans-serif' }}>
                                             Scan this KHQR with your mobile banking app to pay the <strong className="text-amber-400">{settings.entryFee || '$2.00'}</strong> entry fee.
                                         </p>
                                     </div>
@@ -394,15 +400,18 @@ export default function RegisterView({ data }) {
                                     />
 
                                     {!screenshot ? (
-                                        <div
+                                        <motion.div
                                             onClick={() => fileInputRef.current?.click()}
                                             onDrop={handleDrop}
                                             onDragOver={handleDragOver}
                                             onDragLeave={handleDragLeave}
-                                            className={`relative flex flex-col items-center justify-center p-10 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300 ${isDragging
-                                                ? 'border-cyan-400/50 bg-cyan-500/[0.06] shadow-[0_0_30px_rgba(6,182,212,0.08)]'
-                                                : 'border-white/[0.08] bg-white/[0.01] hover:border-white/[0.15] hover:bg-white/[0.02]'
-                                                }`}
+                                            animate={{
+                                                scale: isDragging ? 1.02 : 1,
+                                                borderColor: isDragging ? "rgba(34, 211, 238, 0.4)" : "rgba(255, 255, 255, 0.08)",
+                                                backgroundColor: isDragging ? "rgba(34, 211, 238, 0.04)" : "rgba(255, 255, 255, 0.01)",
+                                            }}
+                                            transition={{ duration: 0.2 }}
+                                            className="relative flex flex-col items-center justify-center p-10 rounded-2xl border border-dashed cursor-pointer hover:border-white/[0.15] hover:bg-white/[0.02] transition-colors"
                                         >
                                             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-colors ${isDragging ? 'bg-cyan-500/15 border border-cyan-500/20' : 'bg-white/[0.04] border border-white/[0.06]'
                                                 }`}>
@@ -410,7 +419,7 @@ export default function RegisterView({ data }) {
                                             </div>
                                             <p className="text-sm font-semibold text-slate-300 mb-1">Drop your transaction receipt here</p>
                                             <p className="text-xs text-slate-600">or click to browse (JPG, PNG — max 5MB)</p>
-                                        </div>
+                                        </motion.div>
                                     ) : (
                                         <div className="relative rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
                                             <div className="flex items-center gap-4">

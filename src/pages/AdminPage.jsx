@@ -21,6 +21,7 @@ import AdminSeasonTab from '../components/admin/AdminSeasonTab';
 import AdminPosterTab from '../components/admin/AdminPosterTab';
 import AdminVotingTab from '../components/admin/AdminVotingTab';
 import AdminDangerTab from '../components/admin/AdminDangerTab';
+import AdminKnockoutTab from '../components/admin/AdminKnockoutTab';
 
 export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     const [password, setPassword] = useState('');
@@ -41,15 +42,16 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     useEffect(() => { setSettings(data.settings); setPlayers(data.players); }, [data]);
 
     const statCards = useMemo(() => [
-        { label: 'Registrations', value: registrations.length, icon: UserPlus, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
-        { label: 'Payments', value: `${paidRegistrations.length}/${registrations.length}`, icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-        { label: 'Players', value: approvedPlayers.length, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-        { label: 'Matches', value: `${data.matches.filter(m => m.played).length}/${data.matches.length}`, icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+        { label: 'Registrations', value: registrations.length, icon: UserPlus, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', hoverBorder: 'hover:border-amber-500/30' },
+        { label: 'Payments', value: `${paidRegistrations.length}/${registrations.length}`, icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', hoverBorder: 'hover:border-emerald-500/30' },
+        { label: 'Players', value: approvedPlayers.length, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', hoverBorder: 'hover:border-blue-500/30' },
+        { label: 'Matches', value: `${data.matches.filter(m => m.played).length}/${data.matches.length}`, icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', hoverBorder: 'hover:border-purple-500/30' },
     ], [registrations, approvedPlayers, paidRegistrations, data.matches]);
 
     // Handlers
     const handleLogin = async (e) => {
         e.preventDefault(); setIsLoading(true); setPassError(false);
+        await new Promise(resolve => setTimeout(resolve, 50));
         try {
             if (password === 'admin123') { setIsAdmin(true); setPassword(''); }
             else { await signInWithEmailAndPassword(auth, "admin@pestour.com", password); setIsAdmin(true); setPassword(''); }
@@ -163,23 +165,50 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
     // --- LOGIN SCREEN ---
     if (!isAdmin) {
         return (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
-                className="max-w-md mx-auto mt-20 p-10 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-[32px] shadow-2xl relative overflow-hidden">
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={passError 
+                    ? { opacity: 1, scale: 1, x: [-10, 10, -10, 10, -5, 5, -2, 2, 0] } 
+                    : { opacity: 1, scale: 1 }
+                } 
+                transition={{ 
+                    x: { duration: 0.4 },
+                    default: { duration: 0.5 }
+                }}
+                className="max-w-md mx-auto mt-20 p-10 glass-card rounded-[32px] shadow-2xl relative overflow-hidden group/lock"
+            >
                 <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none" />
                 <div className="flex justify-center mb-8 relative z-10">
-                    <div className="w-20 h-20 bg-purple-500/10 rounded-2xl flex items-center justify-center border border-purple-500/20 shadow-[0_0_30px_rgba(168,85,247,0.15)]">
+                    <motion.div 
+                        whileHover={{ scale: 1.05 }}
+                        className="w-20 h-20 bg-purple-500/10 rounded-2xl flex items-center justify-center border border-purple-500/20 shadow-[0_0_30px_rgba(168,85,247,0.15)] group-hover/lock:shadow-[0_0_40px_rgba(168,85,247,0.3)] transition-all duration-300"
+                    >
                         <Lock className="w-10 h-10 text-purple-400" />
-                    </div>
+                    </motion.div>
                 </div>
                 <h2 className="text-3xl font-outfit font-black text-center mb-2 text-white tracking-tighter uppercase relative z-10">Admin Portal</h2>
                 <p className="text-slate-400 text-center text-sm mb-8 relative z-10">Authentication required</p>
                 <form onSubmit={handleLogin} className="space-y-5 relative z-10">
-                    <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)}
-                        className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-5 py-4 text-center text-lg text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-purple-500/50 transition-colors" required />
+                    <input 
+                        type="password" 
+                        placeholder="Password" 
+                        value={password} 
+                        onChange={e => { setPassword(e.target.value); setPassError(false); }}
+                        className="w-full bg-slate-950/40 border border-white/10 rounded-xl px-5 py-4 text-center text-lg text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/10 focus:bg-slate-950/70 transition-all" 
+                        required 
+                    />
                     {passError && <p className="text-rose-400 text-xs text-center font-bold uppercase tracking-widest animate-pulse">Invalid credentials</p>}
-                    <motion.button whileHover={!isLoading ? { scale: 1.02 } : {}} whileTap={!isLoading ? { scale: 0.98 } : {}} type="submit" disabled={isLoading}
-                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all disabled:opacity-50">
-                        {isLoading ? 'Authenticating...' : 'Unlock Dashboard'}
+                    <motion.button 
+                        whileHover={!isLoading ? { scale: 1.02 } : {}} 
+                        whileTap={!isLoading ? { scale: 0.98 } : {}} 
+                        type="submit" 
+                        disabled={isLoading}
+                        className="w-full relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white font-bold uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_35px_rgba(168,85,247,0.65)] transition-all duration-300 disabled:opacity-50"
+                    >
+                        <span className="relative z-10 flex items-center justify-center gap-2">
+                            {isLoading ? 'Authenticating...' : 'Unlock Dashboard'}
+                        </span>
+                        {!isLoading && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] animate-[shimmer_3s_infinite]"></div>}
                     </motion.button>
                 </form>
             </motion.div>
@@ -214,6 +243,7 @@ export default function AdminView({ data, updateData, isAdmin, setIsAdmin }) {
                     {activeTab === 'roster' && <AdminRegistrationsTab key="roster" registrations={registrations} onApprove={handleApproveReg} onConfirmPayment={handleConfirmPayment} onDelete={handleDeleteReg} />}
                     {activeTab === 'season' && <AdminSeasonTab key="season" approvedPlayers={approvedPlayers} currentPlayers={data.players} onDrawGroups={handleDrawGroups} updateData={updateData} data={data} />}
                     {activeTab === 'poster' && <AdminPosterTab key="poster" data={data} settings={data.settings} />}
+                    {activeTab === 'knockout' && <AdminKnockoutTab key="knockout" data={data} updateData={updateData} />}
                     {activeTab === 'voting' && <AdminVotingTab key="voting" settings={settings} setSettings={setSettings} onSave={handleSaveSettings} isSaved={isSavedSettings} onResetVotes={handleResetVotes} />}
                     {activeTab === 'danger' && <AdminDangerTab key="danger" onReset={handleReset} />}
                 </AnimatePresence>

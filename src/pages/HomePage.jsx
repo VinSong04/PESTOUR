@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { BarChart3, Gamepad2, Trophy, UserPlus, Sparkles, ChevronRight, Zap, TrendingUp } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import logo from '../assets/pallet.jpg';
 import { staggerContainerDelayed as containerVariants, springItemHero as itemVariants } from '../constants/animations';
 
@@ -13,6 +14,28 @@ export default function HomeView({ data, setCurrentPage, isAdmin }) {
     const allTotal = totalMatches + bracketTotal;
     const progressPercent = allTotal === 0 ? 0 : Math.round((allPlayed / allTotal) * 100);
     const remaining = allTotal - allPlayed;
+
+    // Stable configuration for floating particles to avoid hydration mismatches
+    const particles = useMemo(() => {
+        return [...Array(15)].map((_, i) => ({
+            id: i,
+            left: `${(i * 7 + 13) % 100}%`,
+            top: `${(i * 9 + 21) % 100}%`,
+            ty: -(i * 4 + 30),
+            tx: ((i * 11) % 60) - 30,
+            duration: ((i * 1.5) % 8) + 10,
+            scale: ((i * 0.1) % 0.8) + 0.8,
+            opacity: ((i * 0.05) % 0.4) + 0.15,
+        }));
+    }, []);
+
+    // Parallax scroll transforms for background glow orbs
+    const { scrollY } = useScroll();
+    const yGlow1 = useTransform(scrollY, [0, 500], [0, -80]);
+    const yGlow2 = useTransform(scrollY, [0, 500], [0, 60]);
+
+    // Character-by-character typewriter structure
+    const taglineLetters = useMemo(() => Array.from(data.settings.tagline || ''), [data.settings.tagline]);
 
     return (
         <motion.div
@@ -28,8 +51,39 @@ export default function HomeView({ data, setCurrentPage, isAdmin }) {
             >
                 {/* Animated Background Mesh */}
                 <div className="absolute inset-0 mesh-gradient pointer-events-none"></div>
-                <div className="absolute top-[-20%] left-[10%] w-[400px] h-[400px] bg-cyan-500/8 blur-[120px] rounded-full pointer-events-none group-hover:bg-cyan-500/12 transition-all duration-1000"></div>
-                <div className="absolute bottom-[-20%] right-[10%] w-[350px] h-[350px] bg-purple-500/8 blur-[100px] rounded-full pointer-events-none group-hover:bg-purple-500/12 transition-all duration-1000"></div>
+                <motion.div
+                    style={{ y: yGlow1 }}
+                    className="absolute top-[-20%] left-[10%] w-[400px] h-[400px] bg-cyan-500/8 blur-[120px] rounded-full pointer-events-none group-hover:bg-cyan-500/12 transition-all duration-1000"
+                />
+                <motion.div
+                    style={{ y: yGlow2 }}
+                    className="absolute bottom-[-20%] right-[10%] w-[350px] h-[350px] bg-purple-500/8 blur-[100px] rounded-full pointer-events-none group-hover:bg-purple-500/12 transition-all duration-1000"
+                />
+
+                {/* Floating particles */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                    {particles.map((p) => (
+                        <motion.div
+                            key={p.id}
+                            className="absolute w-1.5 h-1.5 rounded-full bg-cyan-400/30"
+                            style={{
+                                left: p.left,
+                                top: p.top,
+                            }}
+                            animate={{
+                                y: [0, p.ty, 0],
+                                x: [0, p.tx, 0],
+                                scale: [0.8, p.scale, 0.8],
+                                opacity: [0.1, p.opacity, 0.1],
+                            }}
+                            transition={{
+                                duration: p.duration,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                            }}
+                        />
+                    ))}
+                </div>
 
                 {/* Dot Grid */}
                 <div className="absolute inset-0 dot-grid opacity-30 pointer-events-none"></div>
@@ -74,36 +128,49 @@ export default function HomeView({ data, setCurrentPage, isAdmin }) {
                         variants={itemVariants}
                         className="text-slate-400 text-lg sm:text-xl font-medium mb-8 tracking-wide w-full max-w-xl px-4"
                     >
-                        {data.settings.tagline}
+                        {taglineLetters.map((char, i) => (
+                            <motion.span
+                                key={i}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.6 + i * 0.02, duration: 0.01 }}
+                            >
+                                {char}
+                            </motion.span>
+                        ))}
                     </motion.p>
 
                     {/* Player count badge — social proof */}
-                    <motion.div
-                        variants={itemVariants}
-                        className="mb-8 inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-amber-500/20 bg-amber-500/[0.06] backdrop-blur-sm"
-                        aria-label="Join 200+ players competing this season"
-                    >
-                        <span className="text-lg">🏆</span>
-                        <span className="text-sm font-semibold text-amber-300/90 tracking-wide">
-                            Join <strong className="text-amber-400">200+</strong> players competing this season
-                        </span>
-                    </motion.div>
+                    {(data.settings.registrationOpen || isAdmin) && (
+                        <motion.div
+                            variants={itemVariants}
+                            className="mb-8 inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-amber-500/20 bg-amber-500/[0.06] backdrop-blur-sm"
+                            aria-label="Join 200+ players competing this season"
+                        >
+                            <span className="text-lg">🏆</span>
+                            <span className="text-sm font-semibold text-amber-300/90 tracking-wide">
+                                Join <strong className="text-amber-400">200+</strong> players competing this season
+                            </span>
+                        </motion.div>
+                    )}
 
                     {/* CTAs */}
                     <motion.div
                         variants={itemVariants}
                         className="flex flex-col sm:flex-row items-center gap-3.5 w-full justify-center max-w-[680px] mx-auto"
                     >
-                        <motion.button
-                            whileHover={{ scale: 1.02, boxShadow: "0 0 40px rgba(34,211,238,0.15)" }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => setCurrentPage('register')}
-                            className="w-full sm:w-auto flex-1 flex items-center justify-center gap-3 py-4 px-8 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold tracking-wide transition-all text-[15px] relative overflow-hidden group/btn"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover/btn:translate-x-[200%] transition-transform duration-1000"></div>
-                            <UserPlus className="w-[18px] h-[18px] relative z-10" />
-                            <span className="relative z-10">Register Now</span>
-                        </motion.button>
+                        {(data.settings.registrationOpen || isAdmin) && (
+                            <motion.button
+                                whileHover={{ scale: 1.02, boxShadow: "0 0 40px rgba(34,211,238,0.15)" }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setCurrentPage('register')}
+                                className="w-full sm:w-auto flex-1 flex items-center justify-center gap-3 py-4 px-8 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold tracking-wide transition-all text-[15px] relative overflow-hidden group/btn"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover/btn:translate-x-[200%] transition-transform duration-1000"></div>
+                                <UserPlus className="w-[18px] h-[18px] relative z-10" />
+                                <span className="relative z-10">Register Now</span>
+                            </motion.button>
+                        )}
 
                         {isLive ? (
                             <>

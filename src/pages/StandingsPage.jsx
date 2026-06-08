@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { Trophy, Crown } from 'lucide-react';
+import { Trophy, Crown, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
 import BracketMatchBox from '../components/ui/BracketMatchBox';
+import BracketConnectors from '../components/ui/BracketConnectors';
 import PlayerAvatar from '../components/ui/PlayerAvatar';
 import { processBracket } from '../utils/logic';
 import { motion } from 'framer-motion';
@@ -34,31 +35,63 @@ export default function StandingsView({ standingsData, bracketData }) {
                                 <th className="px-4 py-3 font-semibold tracking-wider">PLAYER</th>
                                 <th className="px-2.5 py-3 font-semibold text-center">MP</th>
                                 <th className="px-2.5 py-3 font-semibold text-center">W-L</th>
-                                <th className="px-2.5 py-3 font-semibold text-center">GF</th>
-                                <th className="px-2.5 py-3 font-semibold text-center">GA</th>
-                                <th className="px-2.5 py-3 font-semibold text-center">GD</th>
+                                <th className="px-2.5 py-3 font-semibold text-center hidden sm:table-cell">GF</th>
+                                <th className="px-2.5 py-3 font-semibold text-center hidden sm:table-cell">GA</th>
+                                <th className="px-2.5 py-3 font-semibold text-center hidden sm:table-cell">GD</th>
                                 <th className="px-4 py-3 font-bold text-slate-300 text-center tracking-wider">PTS</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/[0.03]">
                             {players.map((p, idx) => {
                                 let leftBorder = "border-l-[3px] border-l-transparent";
+                                let rowBg = "hover:bg-white/[0.02]";
+
                                 if (!isBestThird) {
-                                    if (idx < 2) leftBorder = "border-l-[3px] border-l-emerald-500/60";
-                                    else if (idx === 2) leftBorder = "border-l-[3px] border-l-amber-500/60";
+                                    if (idx < 2) {
+                                        leftBorder = "border-l-[3px] border-l-emerald-500/60";
+                                        rowBg = "bg-gradient-to-r from-emerald-500/[0.02] to-transparent hover:from-emerald-500/[0.04]";
+                                    } else if (idx === 2) {
+                                        leftBorder = "border-l-[3px] border-l-amber-500/60";
+                                        rowBg = "bg-gradient-to-r from-amber-500/[0.01] to-transparent hover:from-amber-500/[0.03]";
+                                    } else {
+                                        rowBg = "bg-gradient-to-r from-rose-500/[0.005] to-transparent hover:from-rose-500/[0.02]";
+                                    }
                                 } else {
-                                    if (idx < 2) leftBorder = "border-l-[3px] border-l-emerald-500/60";
-                                    else leftBorder = "border-l-[3px] border-l-rose-500/60";
+                                    if (idx < 2) {
+                                        leftBorder = "border-l-[3px] border-l-emerald-500/60";
+                                        rowBg = "bg-gradient-to-r from-emerald-500/[0.02] to-transparent hover:from-emerald-500/[0.04]";
+                                    } else {
+                                        leftBorder = "border-l-[3px] border-l-rose-500/60";
+                                        rowBg = "bg-gradient-to-r from-rose-500/[0.01] to-transparent hover:from-rose-500/[0.03]";
+                                    }
                                 }
 
                                 return (
-                                    <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group/row">
+                                    <tr key={p.id} className={`transition-colors group/row ${rowBg}`}>
                                         <td className={`px-4 py-3.5 font-bold text-slate-500 text-center ${leftBorder} font-mono text-xs`}>{idx + 1}</td>
-                                        <td className="px-4 py-3.5 min-w-[180px]">
+                                        <td className="px-4 py-3.5 min-w-[140px] sm:min-w-[180px]">
                                             <div className="flex items-center gap-3">
                                                 <PlayerAvatar name={p.name} logo={p.logo} className="w-8 h-8 text-[10px]" />
                                                 <div className="flex flex-col">
-                                                    <span className="font-semibold text-slate-200 text-[14px] group-hover/row:text-white transition-colors leading-tight">{p.name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold text-slate-200 text-[14px] group-hover/row:text-white transition-colors leading-tight">{p.name}</span>
+                                                        {!isBestThird && (
+                                                            idx < 2 ? (
+                                                                <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider scale-90 origin-left animate-pulse">Q</span>
+                                                            ) : idx === 2 ? (
+                                                                <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wider scale-90 origin-left">PO</span>
+                                                            ) : (
+                                                                <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-white/[0.02] text-slate-500 border border-white/[0.04] uppercase tracking-wider scale-90 origin-left">ELIM</span>
+                                                            )
+                                                        )}
+                                                        {isBestThird && (
+                                                            idx < 2 ? (
+                                                                <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider scale-90 origin-left animate-pulse">Q</span>
+                                                            ) : (
+                                                                <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-white/[0.02] text-slate-500 border border-white/[0.04] uppercase tracking-wider scale-90 origin-left">ELIM</span>
+                                                            )
+                                                        )}
+                                                    </div>
                                                     {isBestThird && (
                                                         <span className="text-[9px] text-slate-600 font-semibold tracking-wider uppercase mt-0.5">
                                                             GROUP {p.group}
@@ -72,9 +105,9 @@ export default function StandingsView({ standingsData, bracketData }) {
                                         </td>
                                         <td className="px-2.5 py-3.5 text-center text-slate-500 font-medium text-xs">{p.played}</td>
                                         <td className="px-2.5 py-3.5 text-center text-slate-500 font-medium text-xs whitespace-nowrap">{p.w}-{p.l}</td>
-                                        <td className="px-2.5 py-3.5 text-center text-slate-500 font-mono text-xs">{p.gf}</td>
-                                        <td className="px-2.5 py-3.5 text-center text-slate-500 font-mono text-xs">{p.ga}</td>
-                                        <td className={`px-2.5 py-3.5 text-center font-mono text-xs font-semibold ${p.gd > 0 ? 'text-emerald-400' : p.gd < 0 ? 'text-rose-400' : 'text-slate-500'}`}>
+                                        <td className="px-2.5 py-3.5 text-center text-slate-500 font-mono text-xs hidden sm:table-cell">{p.gf}</td>
+                                        <td className="px-2.5 py-3.5 text-center text-slate-500 font-mono text-xs hidden sm:table-cell">{p.ga}</td>
+                                        <td className={`px-2.5 py-3.5 text-center font-mono text-xs font-semibold hidden sm:table-cell ${p.gd > 0 ? 'text-emerald-400' : p.gd < 0 ? 'text-rose-400' : 'text-slate-500'}`}>
                                             {p.gd > 0 ? `+${p.gd}` : p.gd}
                                         </td>
                                         <td className="px-4 py-3.5 text-center font-bold text-cyan-400 text-base font-outfit">{p.pts}</td>
@@ -100,15 +133,50 @@ export default function StandingsView({ standingsData, bracketData }) {
 
     return (
         <motion.div
-            className="space-y-16"
+            className="space-y-12"
             initial="hidden"
             animate="visible"
             variants={containerVariants}
         >
             <div className="grid lg:grid-cols-2 gap-5 mt-4">
                 {Object.keys(standingsData.groups).sort().map((grp, idx) => (
-                    <div key={grp}>{renderTable(standingsData.groups[grp], `GROUP ${grp}`, false, accentColors[idx % accentColors.length])}</div>
+                    <div key={grp} className="min-w-0">{renderTable(standingsData.groups[grp], `GROUP ${grp}`, false, accentColors[idx % accentColors.length])}</div>
                 ))}
+            </div>
+
+            {/* Best Third Standings & Legend */}
+            <div className="grid lg:grid-cols-3 gap-5 items-start">
+                <div className="lg:col-span-2">
+                    {standingsData.thirds && standingsData.thirds.length > 0 && (
+                        renderTable(standingsData.thirds, "Best Third Place Rankings", true, "amber")
+                    )}
+                </div>
+                <div className="glass-card rounded-2xl p-5 space-y-4 self-stretch flex flex-col justify-center">
+                    <h4 className="font-outfit font-bold text-xs tracking-wider text-slate-400 uppercase">Standings Legend</h4>
+                    <div className="space-y-3.5">
+                        <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 flex items-center justify-center rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold uppercase animate-pulse">Q</span>
+                            <div className="text-xs">
+                                <span className="font-bold text-slate-300 block">Qualified</span>
+                                <span className="text-slate-500 text-[10px]">Top 2 advance to Knockout</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 flex items-center justify-center rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-extrabold uppercase">PO</span>
+                            <div className="text-xs">
+                                <span className="font-bold text-slate-300 block">Playoff / Wildcard</span>
+                                <span className="text-slate-500 text-[10px]">Best thirds qualify/playoff</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 flex items-center justify-center rounded bg-white/[0.02] text-slate-500 border border-white/[0.04] text-[9px] font-extrabold uppercase">ELIM</span>
+                            <div className="text-xs">
+                                <span className="font-bold text-slate-300 block">Eliminated</span>
+                                <span className="text-slate-500 text-[10px]">Does not advance to next stage</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Knockout Bracket */}
@@ -126,6 +194,8 @@ export default function StandingsView({ standingsData, bracketData }) {
                         <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none rounded-3xl"></div>
                         <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-purple-500/6 rounded-full blur-[120px] pointer-events-none"></div>
                         <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-cyan-500/6 rounded-full blur-[120px] pointer-events-none"></div>
+
+                        <BracketConnectors bracketData={bracket} />
 
                         {/* QF Left */}
                         <div className="flex flex-col justify-around w-full lg:w-80 shrink-0 space-y-20 z-10">

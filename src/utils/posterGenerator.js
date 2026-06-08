@@ -1,5 +1,5 @@
 import { getFlagUrl } from '../constants/countries';
-import { assignSchedules, calculateStandings } from './logic';
+import { assignSchedules, calculateStandings, processBracket, getBracketMatchWinner, getSeriesResult } from './logic';
 
 
 const preloadFlags = async (data) => {
@@ -258,7 +258,7 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
     
     ctx.font = 'bold 18px Arial, sans-serif';
     ctx.fillStyle = '#fbbf24';
-    const typeLabel = type === 'schedule' ? 'FIXTURE LIVE' : type === 'results' ? 'MATCH RESULTS' : 'LEADERBOARD';
+    const typeLabel = type === 'schedule' ? 'FIXTURE LIVE' : type === 'results' ? 'MATCH RESULTS' : type === 'knockout' ? 'KNOCKOUT PHASE' : 'LEADERBOARD';
     ctx.fillText(typeLabel, W - 50, 62);
     
     ctx.font = 'bold 13px Arial, sans-serif';
@@ -277,6 +277,7 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
     let sectionTitle = '';
     if (type === 'schedule') sectionTitle = '⚽  UPCOMING MATCHES';
     else if (type === 'results') sectionTitle = '🏆  LATEST RESULTS';
+    else if (type === 'knockout') sectionTitle = '🏆  KNOCKOUT BRACKET';
     else sectionTitle = '📊  GROUP STANDINGS';
 
     drawSkewedBanner(40, 180, 480, 55, posterAccent);
@@ -543,6 +544,164 @@ export const renderClassicPoster = async (ctx, W, H, logo, type, data, config) =
             });
             gy += 25;
         });
+    } else if (type === 'knockout') {
+        const bracketList = data.bracket && data.bracket.length > 0 ? processBracket(data.bracket) : [];
+        if (bracketList.length === 0) {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 26px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('NO BRACKET GENERATED YET', W / 2, H / 2);
+        } else {
+            const qfs = bracketList.filter(m => m.id.startsWith('QF'));
+            const sfs = bracketList.filter(m => m.id.startsWith('SF'));
+            const finalMatch = bracketList.find(m => m.id.startsWith('F'));
+
+            const startX = 60;
+            const colWidth = (W - 120) / 3;
+            const startY = 260;
+            const usableH = H - startY - 140;
+
+            const y_qf = [
+                startY + (usableH / 8) * 1,
+                startY + (usableH / 8) * 3,
+                startY + (usableH / 8) * 5,
+                startY + (usableH / 8) * 7
+            ];
+            const y_sf = [
+                (y_qf[0] + y_qf[1]) / 2,
+                (y_qf[2] + y_qf[3]) / 2
+            ];
+            const y_f = [
+                (y_sf[0] + y_sf[1]) / 2
+            ];
+
+            const boxW = 260;
+            const boxH = 90;
+
+            const getFlagForPlayer = (playerName) => {
+                if (!playerName) return null;
+                const player = data.players.find(p => p.name === playerName);
+                return player ? player._flagImg : null;
+            };
+
+            const drawMatchBox = (m, x, y) => {
+                if (!m) return;
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.lineWidth = 2;
+                roundRect(x, y - boxH / 2, boxW, boxH, 12);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + boxW, y);
+                ctx.stroke();
+
+                const drawPlayerRow = (playerName, isP1, res) => {
+                    const rowY = y + (isP1 ? -boxH / 4 : boxH / 4);
+                    const flag = getFlagForPlayer(playerName);
+                    const isWinner = res.isFinished && (isP1 ? res.p1Wins > res.p2Wins : res.p2Wins > res.p1Wins);
+                    
+                    ctx.save();
+                    if (isWinner) {
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.font = 'bold 17px Arial, sans-serif';
+                    } else {
+                        ctx.fillStyle = playerName ? '#ffffff' : 'rgba(255, 255, 255, 0.4)';
+                        ctx.font = 'bold 15px Arial, sans-serif';
+                    }
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+
+                    let nameX = x + 15;
+                    if (flag) {
+                        const radius = 12;
+                        drawCircleImage(ctx, flag, nameX, rowY - radius, radius);
+                        nameX += 34;
+                    }
+                    ctx.fillText(truncateText(ctx, playerName || 'TBD', 150), nameX, rowY);
+                    ctx.restore();
+
+                    ctx.save();
+                    ctx.font = 'bold 18px Arial, sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'middle';
+                    if (m.played) {
+                        ctx.fillStyle = isWinner ? '#fbbf24' : '#94a3b8';
+                        ctx.fillText(isP1 ? res.p1Wins : res.p2Wins, x + boxW - 15, rowY);
+                    } else {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.fillText('-', x + boxW - 15, rowY);
+                    }
+                    ctx.restore();
+                };
+
+                const res = getSeriesResult(m);
+                drawPlayerRow(m.p1Name, true, res);
+                drawPlayerRow(m.p2Name, false, res);
+            };
+
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 2;
+
+            for (let i = 0; i < 4; i++) {
+                const qfX = startX + boxW;
+                const qfY = y_qf[i];
+                const sfX = startX + colWidth;
+                const sfY = y_sf[Math.floor(i / 2)];
+                const midX = qfX + (colWidth - boxW) / 2;
+
+                ctx.beginPath();
+                ctx.moveTo(qfX, qfY);
+                ctx.lineTo(midX, qfY);
+                ctx.lineTo(midX, sfY);
+                ctx.lineTo(sfX, sfY);
+                ctx.stroke();
+            }
+
+            for (let i = 0; i < 2; i++) {
+                const sfX = startX + colWidth + boxW;
+                const sfY = y_sf[i];
+                const fX = startX + colWidth * 2;
+                const fY = y_f[0];
+                const midX = sfX + (colWidth - boxW) / 2;
+
+                ctx.beginPath();
+                ctx.moveTo(sfX, sfY);
+                ctx.lineTo(midX, sfY);
+                ctx.lineTo(midX, fY);
+                ctx.lineTo(fX, fY);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            qfs.forEach((m, i) => drawMatchBox(m, startX, y_qf[i]));
+            sfs.forEach((m, i) => drawMatchBox(m, startX + colWidth, y_sf[i]));
+            if (finalMatch) {
+                drawMatchBox(finalMatch, startX + colWidth * 2, y_f[0]);
+
+                const champion = getBracketMatchWinner(finalMatch);
+                if (champion) {
+                    const champY = y_f[0] + boxH + 80;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = 'bold 24px Arial, sans-serif';
+                    ctx.fillText('🏆 CHAMPION 🏆', startX + colWidth * 2 + boxW / 2, champY);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 28px Arial, sans-serif';
+                    ctx.fillText(champion.name.toUpperCase(), startX + colWidth * 2 + boxW / 2, champY + 45);
+                    ctx.restore();
+                }
+            }
+        }
     }
 
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -749,10 +908,8 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
     ctx.fillStyle = '#fbbf24';
     ctx.fillText(posterSubtitle, 190, 125);
     ctx.shadowBlur = 0;
-    ctx.restore();
-
-    const typeLabel = type === 'schedule' ? 'FIXTURE LIVE' : type === 'results' ? 'MATCH RESULTS' : 'LEADERBOARD';
-    const typeBadgeColor = type === 'schedule' ? '#00d4ff' : type === 'results' ? '#4ade80' : '#c084fc';
+    const typeLabel = type === 'schedule' ? 'FIXTURE LIVE' : type === 'results' ? 'MATCH RESULTS' : type === 'knockout' ? 'KNOCKOUT PHASE' : 'LEADERBOARD';
+    const typeBadgeColor = type === 'schedule' ? '#00d4ff' : type === 'results' ? '#4ade80' : type === 'knockout' ? '#fbbf24' : '#c084fc';
     ctx.save();
     roundRect(W - 280, 45, 220, 38, 19);
     ctx.fillStyle = `${typeBadgeColor}15`;
@@ -801,6 +958,7 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
     let sectionLabel = '';
     if (type === 'schedule') { sectionEmoji = '⚽'; sectionLabel = 'UPCOMING MATCHES'; }
     else if (type === 'results') { sectionEmoji = '🏆'; sectionLabel = 'LATEST RESULTS'; }
+    else if (type === 'knockout') { sectionEmoji = '🏆'; sectionLabel = 'KNOCKOUT BRACKET'; }
     else { sectionEmoji = '📊'; sectionLabel = 'GROUP STANDINGS'; }
 
     ctx.save();
@@ -1166,6 +1324,163 @@ export const renderNeonPoster = async (ctx, W, H, logo, type, data, config) => {
             });
             gy += 28;
         });
+    } else if (type === 'knockout') {
+        const bracketList = data.bracket && data.bracket.length > 0 ? processBracket(data.bracket) : [];
+        if (bracketList.length === 0) {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 26px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('NO BRACKET GENERATED YET', W / 2, H / 2);
+        } else {
+            const qfs = bracketList.filter(m => m.id.startsWith('QF'));
+            const sfs = bracketList.filter(m => m.id.startsWith('SF'));
+            const finalMatch = bracketList.find(m => m.id.startsWith('F'));
+
+            const startX = 60;
+            const colWidth = (W - 120) / 3;
+            const startY = 260;
+            const usableH = H - startY - 140;
+
+            const y_qf = [
+                startY + (usableH / 8) * 1,
+                startY + (usableH / 8) * 3,
+                startY + (usableH / 8) * 5,
+                startY + (usableH / 8) * 7
+            ];
+            const y_sf = [
+                (y_qf[0] + y_qf[1]) / 2,
+                (y_qf[2] + y_qf[3]) / 2
+            ];
+            const y_f = [
+                (y_sf[0] + y_sf[1]) / 2
+            ];
+
+            const boxW = 260;
+            const boxH = 90;
+
+            const getFlagForPlayer = (playerName) => {
+                if (!playerName) return null;
+                const player = data.players.find(p => p.name === playerName);
+                return player ? player._flagImg : null;
+            };
+
+            const drawMatchBox = (m, x, y) => {
+                if (!m) return;
+                const res = getSeriesResult(m);
+                const borderCol = m.played ? 'rgba(74,222,128,0.35)' : 'rgba(0,212,255,0.2)';
+                drawGlassCard(x, y - boxH / 2, boxW, boxH, 12, borderCol);
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + boxW, y);
+                ctx.stroke();
+
+                const drawPlayerRow = (playerName, isP1, res) => {
+                    const rowY = y + (isP1 ? -boxH / 4 : boxH / 4);
+                    const flag = getFlagForPlayer(playerName);
+                    const isWinner = res.isFinished && (isP1 ? res.p1Wins > res.p2Wins : res.p2Wins > res.p1Wins);
+                    
+                    ctx.save();
+                    if (isWinner) {
+                        ctx.shadowColor = '#fbbf24';
+                        ctx.shadowBlur = 8;
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.font = 'bold 17px Arial, sans-serif';
+                    } else {
+                        ctx.fillStyle = playerName ? '#ffffff' : 'rgba(255, 255, 255, 0.4)';
+                        ctx.font = 'bold 15px Arial, sans-serif';
+                    }
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+
+                    let nameX = x + 15;
+                    if (flag) {
+                        const radius = 12;
+                        drawCircleImage(ctx, flag, nameX, rowY - radius, radius);
+                        nameX += 34;
+                    }
+                    ctx.fillText(truncateText(ctx, playerName || 'TBD', 150), nameX, rowY);
+                    ctx.restore();
+
+                    ctx.save();
+                    ctx.font = 'bold 18px Arial, sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'middle';
+                    if (m.played) {
+                        if (isWinner) {
+                            ctx.shadowColor = '#4ade80';
+                            ctx.shadowBlur = 8;
+                            ctx.fillStyle = '#4ade80';
+                        } else {
+                            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                        }
+                        ctx.fillText(isP1 ? res.p1Wins : res.p2Wins, x + boxW - 15, rowY);
+                    } else {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                        ctx.fillText('-', x + boxW - 15, rowY);
+                    }
+                    ctx.restore();
+                };
+
+                drawPlayerRow(m.p1Name, true, res);
+                drawPlayerRow(m.p2Name, false, res);
+            };
+
+            ctx.save();
+            for (let i = 0; i < 4; i++) {
+                const qfX = startX + boxW;
+                const qfY = y_qf[i];
+                const sfX = startX + colWidth;
+                const sfY = y_sf[Math.floor(i / 2)];
+                const midX = qfX + (colWidth - boxW) / 2;
+                const neonColor = '#00d4ff';
+
+                drawNeonLine(qfX, qfY, midX, qfY, neonColor, 2);
+                drawNeonLine(midX, qfY, midX, sfY, neonColor, 2);
+                drawNeonLine(midX, sfY, sfX, sfY, neonColor, 2);
+            }
+
+            for (let i = 0; i < 2; i++) {
+                const sfX = startX + colWidth + boxW;
+                const sfY = y_sf[i];
+                const fX = startX + colWidth * 2;
+                const fY = y_f[0];
+                const midX = sfX + (colWidth - boxW) / 2;
+                const neonColor = '#fbbf24';
+
+                drawNeonLine(sfX, sfY, midX, sfY, neonColor, 2);
+                drawNeonLine(midX, sfY, midX, fY, neonColor, 2);
+                drawNeonLine(midX, fY, fX, fY, neonColor, 2);
+            }
+            ctx.restore();
+
+            qfs.forEach((m, i) => drawMatchBox(m, startX, y_qf[i]));
+            sfs.forEach((m, i) => drawMatchBox(m, startX + colWidth, y_sf[i]));
+            if (finalMatch) {
+                drawMatchBox(finalMatch, startX + colWidth * 2, y_f[0]);
+
+                const champion = getBracketMatchWinner(finalMatch);
+                if (champion) {
+                    const champY = y_f[0] + boxH + 80;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.shadowColor = '#fbbf24';
+                    ctx.shadowBlur = 12;
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = 'bold 24px Arial, sans-serif';
+                    ctx.fillText('🏆 CHAMPION 🏆', startX + colWidth * 2 + boxW / 2, champY);
+                    
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 8;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 28px Arial, sans-serif';
+                    ctx.fillText(champion.name.toUpperCase(), startX + colWidth * 2 + boxW / 2, champY + 45);
+                    ctx.restore();
+                }
+            }
+        }
     }
 
     const footH = 80;

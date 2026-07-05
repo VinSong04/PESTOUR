@@ -95,7 +95,7 @@ export const calculateStandings = (players, matches) => {
         return a.name.localeCompare(b.name);
     });
 
-    qualified = allPlayers.slice(0, 8).map(p => ({ ...p, seedType: `Seed ${p.groupRank}` }));
+    qualified = allPlayers.filter(p => p.groupRank <= 3).map(p => ({ ...p, seedType: `Seed ${p.groupRank}` }));
 
     const thirds = Object.values(groups).map(g => g[2]).filter(Boolean).sort(sortFn);
 
@@ -103,6 +103,7 @@ export const calculateStandings = (players, matches) => {
 
     return { groups, thirds, qualified };
 };
+
 
 export const getBracketMatchWinner = (match) => {
     if (!match || !match.played) return null;
@@ -116,7 +117,31 @@ export const processBracket = (bracket) => {
     if (!bracket || bracket.length === 0) return [];
 
     let fullBracket = [...bracket];
-    if (fullBracket.length === 4) {
+
+    const hasPO = fullBracket.some(m => m.id.startsWith('PO'));
+    const hasQF = fullBracket.some(m => m.id.startsWith('QF'));
+    const hasSF = fullBracket.some(m => m.id.startsWith('SF'));
+    const hasF  = fullBracket.some(m => m.id.startsWith('F'));
+
+    // Auto-scaffold missing rounds
+    // If we have PO but no QF, create QF shells
+    if (hasPO && !hasQF) {
+        for (let i = 1; i <= 4; i++) {
+            fullBracket.push(createEmptyBracketMatch(`QF-${i}`, 'QF', `TBD`, `TBD (PO${i})`));
+        }
+    }
+    // If we have QF but no SF, create SF shells
+    if ((hasQF || hasPO) && !hasSF) {
+        fullBracket.push(createEmptyBracketMatch('SF-1', 'SF', 'TBD (QF1)', 'TBD (QF2)'));
+        fullBracket.push(createEmptyBracketMatch('SF-2', 'SF', 'TBD (QF3)', 'TBD (QF4)'));
+    }
+    // If we have SF but no F, create F shell
+    if ((hasSF || hasQF || hasPO) && !hasF) {
+        fullBracket.push(createEmptyBracketMatch('F-1', 'F', 'TBD (SF1)', 'TBD (SF2)'));
+    }
+
+    // Legacy: if exactly 4 QF matches and no SF/F (old format), scaffold those
+    if (!hasPO && hasQF && fullBracket.filter(m => m.id.startsWith('QF')).length === 4 && !hasSF) {
         fullBracket.push(createEmptyBracketMatch('SF-1', 'SF', 'TBD (QF1)', 'TBD (QF2)'));
         fullBracket.push(createEmptyBracketMatch('SF-2', 'SF', 'TBD (QF3)', 'TBD (QF4)'));
         fullBracket.push(createEmptyBracketMatch('F-1', 'F', 'TBD (SF1)', 'TBD (SF2)'));
@@ -128,6 +153,21 @@ export const processBracket = (bracket) => {
         if (idx !== -1) fullBracket[idx] = { ...fullBracket[idx], ...changes };
     };
 
+    // Propagate PO winners → QF AWAY (p2) slots
+    for (let i = 1; i <= 4; i++) {
+        const poMatch = getM(`PO-${i}`);
+        const qfMatch = getM(`QF-${i}`);
+        if (poMatch && qfMatch) {
+            const poWinner = getBracketMatchWinner(poMatch);
+            updateM(`QF-${i}`, {
+                p2Id: poWinner ? poWinner.id : null,
+                p2Name: poWinner ? poWinner.name : `TBD (PO${i})`,
+                p2Logo: poWinner ? poWinner.logo : ''
+            });
+        }
+    }
+
+    // Propagate QF winners → SF slots
     const qf1W = getBracketMatchWinner(getM('QF-1'));
     const qf2W = getBracketMatchWinner(getM('QF-2'));
     const qf3W = getBracketMatchWinner(getM('QF-3'));
@@ -142,6 +182,7 @@ export const processBracket = (bracket) => {
         p2Id: qf4W ? qf4W.id : null, p2Name: qf4W ? qf4W.name : 'TBD (QF4)', p2Logo: qf4W ? qf4W.logo : ''
     });
 
+    // Propagate SF winners → Final
     const sf1W = getBracketMatchWinner(getM('SF-1'));
     const sf2W = getBracketMatchWinner(getM('SF-2'));
 
@@ -196,55 +237,43 @@ export const assignSchedules = (matches, players) => {
     });
 };
 
-/**
- * Generate knockout bracket seedings from group standings.
- * Cross-group seeding:
- *   QF-1: A1 vs D2     QF-3: C1 vs B2
- *   QF-2: B1 vs C2     QF-4: D1 vs A2
- * This ensures group winners from the same half don't meet until the Final.
- *
- * @param {object} standingsData - Result of calculateStandings()
- * @returns {Array} Array of 4 QF bracket match objects
- */
-export const generateKnockoutSeedings = (standingsData) => {
-    const { groups } = standingsData;
-    const groupKeys = ['A', 'B', 'C', 'D'];
-
-    // Validate that all 4 groups exist and have at least 2 players
-    for (const key of groupKeys) {
-        if (!groups[key] || groups[key].length < 2) {
-            throw new Error(`Group ${key} does not have enough players for knockout seeding.`);
-        }
+export const generateSkeletonBracket = () => {
+    let dummy = [];
+    for (let i = 1; i <= 4; i++) {
+        dummy.push(createEmptyBracketMatch(`PO-${i}`, 'PO', `N/A`, `N/A`));
     }
+    for (let i = 1; i <= 4; i++) {
+        dummy.push(createEmptyBracketMatch(`QF-${i}`, 'QF', `N/A`, `N/A`));
+    }
+    dummy.push(createEmptyBracketMatch('SF-1', 'SF', `N/A`, `N/A`));
+    dummy.push(createEmptyBracketMatch('SF-2', 'SF', `N/A`, `N/A`));
+    dummy.push(createEmptyBracketMatch('F-1', 'F', `N/A`, `N/A`));
+    return dummy;
+};
 
-    // Extract 1st and 2nd from each group (already sorted by calculateStandings)
-    const first = {};
-    const second = {};
-    groupKeys.forEach(g => {
-        first[g] = groups[g][0];
-        second[g] = groups[g][1];
+/**
+ * Categorize qualified players into Auto-Qualifiers (Rank 1) and Playoffs (Rank 2 & 3).
+ * Returns both flat pools and per-group breakdown for the spinner draw system.
+ * @param {object} standingsData - The standings data from calculateStandings
+ * @returns {object} { aq: Array, po: Array, perGroup: { A: { aq, rank2, rank3 }, ... } }
+ */
+export const categorizeQualified = (standingsData) => {
+    if (!standingsData || !standingsData.qualified || !standingsData.groups) {
+        return { aq: [], po: [], perGroup: {} };
+    }
+    const aq = standingsData.qualified.filter(p => p.groupRank === 1);
+    const po = standingsData.qualified.filter(p => p.groupRank === 2 || p.groupRank === 3);
+
+    // Build per-group breakdown from the sorted group standings
+    const perGroup = {};
+    Object.keys(standingsData.groups).sort().forEach(grpKey => {
+        const grpPlayers = standingsData.groups[grpKey];
+        perGroup[grpKey] = {
+            aq: grpPlayers[0] || null,    // Rank 1 — Auto-Quarterfinalist
+            rank2: grpPlayers[1] || null,  // Rank 2 — Playoff HOME
+            rank3: grpPlayers[2] || null,  // Rank 3 — Playoff AWAY
+        };
     });
 
-    // Cross-group seeding pairings
-    const pairings = [
-        { id: 'QF-1', p1: first['A'], p2: second['D'] },
-        { id: 'QF-2', p1: first['B'], p2: second['C'] },
-        { id: 'QF-3', p1: first['C'], p2: second['B'] },
-        { id: 'QF-4', p1: first['D'], p2: second['A'] },
-    ];
-
-    return pairings.map(({ id, p1, p2 }) => ({
-        id,
-        round: 'QF',
-        p1Id: p1.id,
-        p1Name: p1.name,
-        p1Logo: p1.logo || '',
-        p2Id: p2.id,
-        p2Name: p2.name,
-        p2Logo: p2.logo || '',
-        played: false,
-        g1: { p1: null, p2: null },
-        g2: { p1: null, p2: null },
-        g3: { p1: null, p2: null },
-    }));
+    return { aq, po, perGroup };
 };

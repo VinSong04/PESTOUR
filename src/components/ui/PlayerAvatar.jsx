@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { getFlagUrl } from '../../constants/countries';
+import { memo, useState, useEffect } from 'react';
+import { COUNTRY_CODES } from '../../constants/countries';
 
 // Eager load all player images from the assets folder using Vite
 const avatarModules = import.meta.glob('../../assets/*.{png,jpg,jpeg,webp}', { eager: true });
@@ -54,24 +54,41 @@ const getAvatarColor = (name) => {
 };
 
 export default memo(function PlayerAvatar({ name, logo, className = "w-8 h-8 text-xs" }) {
+    const [imgError, setImgError] = useState(false);
+
+    useEffect(() => {
+        setImgError(false);
+    }, [logo, name]);
+
     // Priority 1: Use provided logo. If it's not a URL/base64, try to map it as a country flag.
     let displayUrl = null;
+    let countryCode = null;
 
     if (logo) {
         if (logo.startsWith('http') || logo.startsWith('data:')) {
             displayUrl = logo;
         } else {
-            displayUrl = getFlagUrl(logo);
+            countryCode = COUNTRY_CODES[logo.toLowerCase().trim()];
+            if (countryCode) {
+                displayUrl = `https://flagcdn.com/w160/${countryCode}.png`;
+            }
         }
     }
 
-    if (displayUrl) {
-        const defaultRounding = className.includes('rounded-') ? '' : 'rounded-full';
-        const objectFit = displayUrl.includes('flagcdn') ? 'object-cover scale-110' : 'object-contain scale-[1.3] drop-shadow-md';
+    const defaultRounding = className.includes('rounded-') ? '' : 'rounded-full';
 
+    if (displayUrl && !imgError) {
+        const objectFit = displayUrl.includes('flagcdn') ? 'object-cover scale-110' : 'object-contain scale-[1.3] drop-shadow-md';
         return (
             <div className={`flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/10 shadow-sm ${defaultRounding} ${className}`}>
-                <img src={displayUrl} alt={name || 'Player avatar'} className={`w-full h-full ${objectFit}`} loading="lazy" decoding="async" />
+                <img 
+                    src={displayUrl} 
+                    alt={name || 'Player avatar'} 
+                    className={`w-full h-full ${objectFit}`} 
+                    loading="lazy" 
+                    decoding="async" 
+                    onError={() => setImgError(true)}
+                />
             </div>
         );
     }
@@ -79,19 +96,46 @@ export default memo(function PlayerAvatar({ name, logo, className = "w-8 h-8 tex
     // Priority 2: Match static asset file
     const url = getAvatarUrl(name);
 
-    if (url) {
+    if (url && !imgError) {
         return (
-            <div className={`flex-shrink-0 flex items-center justify-center ${className.replace(/rounded-\w+/, '').replace(/shadow-\w+/, '').replace(/border\b/, '')}`}>
-                <img src={url} alt={name || 'Player avatar'} className="w-full h-full object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" loading="lazy" decoding="async" />
+            <div className={`flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/10 shadow-sm ${defaultRounding} ${className}`}>
+                <img 
+                    src={url} 
+                    alt={name || 'Player avatar'} 
+                    className="w-full h-full object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
+                    loading="lazy" 
+                    decoding="async"
+                    onError={() => setImgError(true)}
+                />
             </div>
         );
     }
 
-    const initials = name && !name.startsWith('TBD') ? name.substring(0, 2).toUpperCase() : '?';
+    // Priority 3: Flag Emoji
+    const isEmoji = logo && /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u.test(logo);
+    
+    if (countryCode || isEmoji) {
+        let emojiFlag = logo;
+        if (countryCode && !countryCode.includes('-')) {
+            // Convert 2-letter code to emoji flag
+            emojiFlag = countryCode.toUpperCase().replace(/./g, char => String.fromCodePoint(char.charCodeAt(0) + 127397));
+        }
+        
+        if (emojiFlag) {
+            return (
+                <div className={`flex-shrink-0 flex items-center justify-center bg-slate-800 border border-white/10 shadow-sm ${defaultRounding} ${className}`}>
+                    <span className="text-[1.2em]">{emojiFlag}</span>
+                </div>
+            );
+        }
+    }
+
+    // Priority 4: Initials Badge
+    const initials = name && !name.startsWith('TBD') && name !== 'N/A' && !name.startsWith('Winner') ? name.substring(0, 2).toUpperCase() : '?';
     const color = getAvatarColor(name);
 
     return (
-        <div className={`rounded-full ${color} flex-shrink-0 flex items-center justify-center font-black text-white shadow-md border border-[#ffffff10] ${className}`}>
+        <div className={`flex-shrink-0 flex items-center justify-center font-black text-white shadow-md border border-[#ffffff10] ${defaultRounding} ${color} ${className}`}>
             {initials}
         </div>
     );

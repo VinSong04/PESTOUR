@@ -40,12 +40,28 @@ export default function useTournamentData() {
         let unsubscribeDb;
         let unsubscribeAuth;
 
+        // Safety timeout: if loading takes too long, force proceed with defaults
+        const loadingTimeout = setTimeout(() => {
+            if (!data) {
+                console.warn('Loading timeout reached — using default data');
+                setData(INITIAL_DATA);
+            }
+            setLoading(false);
+            setAuthInitialized(true);
+        }, 5000);
+
         unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (user && !user.isAnonymous) {
                 setIsAdmin(user.email === 'admin@pestour.com' || user.email === 'admin@admin.com');
             } else {
                 setIsAdmin(false);
-                if (!user) signInAnonymously(auth).catch(console.error);
+                if (!user) {
+                    signInAnonymously(auth).catch((err) => {
+                        console.error('Anonymous auth failed:', err);
+                        // Still mark auth as initialized even on failure
+                        setAuthInitialized(true);
+                    });
+                }
             }
             setAuthInitialized(true);
         });
@@ -68,13 +84,16 @@ export default function useTournamentData() {
                 setData(INITIAL_DATA);
             }
             setLoading(false);
+            clearTimeout(loadingTimeout);
         }, (error) => {
             console.error("Firebase DB Error:", error);
             setData(INITIAL_DATA);
             setLoading(false);
+            clearTimeout(loadingTimeout);
         });
 
         return () => {
+            clearTimeout(loadingTimeout);
             if (unsubscribeDb) unsubscribeDb();
             if (unsubscribeAuth) unsubscribeAuth();
         };

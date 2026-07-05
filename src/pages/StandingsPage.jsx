@@ -3,7 +3,7 @@ import { Trophy, Crown, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-rea
 import BracketMatchBox from '../components/ui/BracketMatchBox';
 import BracketConnectors from '../components/ui/BracketConnectors';
 import PlayerAvatar from '../components/ui/PlayerAvatar';
-import { processBracket } from '../utils/logic';
+import { processBracket, generateSkeletonBracket } from '../utils/logic';
 import { motion } from 'framer-motion';
 import { staggerContainer as containerVariants, springItem as itemVariants } from '../constants/animations';
 
@@ -47,14 +47,14 @@ export default function StandingsView({ standingsData, bracketData }) {
                                 let rowBg = "hover:bg-white/[0.02]";
 
                                 if (!isBestThird) {
-                                    if (idx < 2) {
+                                    if (idx === 0) {
                                         leftBorder = "border-l-[3px] border-l-emerald-500/60";
                                         rowBg = "bg-gradient-to-r from-emerald-500/[0.02] to-transparent hover:from-emerald-500/[0.04]";
-                                    } else if (idx === 2) {
+                                    } else if (idx === 1 || idx === 2) {
                                         leftBorder = "border-l-[3px] border-l-amber-500/60";
                                         rowBg = "bg-gradient-to-r from-amber-500/[0.01] to-transparent hover:from-amber-500/[0.03]";
                                     } else {
-                                        rowBg = "bg-gradient-to-r from-rose-500/[0.005] to-transparent hover:from-rose-500/[0.02]";
+                                        rowBg = "bg-gradient-to-r from-slate-500/[0.005] to-transparent hover:from-slate-500/[0.02]";
                                     }
                                 } else {
                                     if (idx < 2) {
@@ -76,9 +76,9 @@ export default function StandingsView({ standingsData, bracketData }) {
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-semibold text-slate-200 text-[14px] group-hover/row:text-white transition-colors leading-tight">{p.name}</span>
                                                         {!isBestThird && (
-                                                            idx < 2 ? (
-                                                                <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider scale-90 origin-left animate-pulse">Q</span>
-                                                            ) : idx === 2 ? (
+                                                            idx === 0 ? (
+                                                                <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider scale-90 origin-left animate-pulse">AQ</span>
+                                                            ) : (idx === 1 || idx === 2) ? (
                                                                 <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wider scale-90 origin-left">PO</span>
                                                             ) : (
                                                                 <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-white/[0.02] text-slate-500 border border-white/[0.04] uppercase tracking-wider scale-90 origin-left">ELIM</span>
@@ -121,13 +121,14 @@ export default function StandingsView({ standingsData, bracketData }) {
         );
     };
 
-    const bracket = useMemo(
-        () => bracketData && bracketData.length > 0 ? processBracket(bracketData) : [],
+    const displayBracket = useMemo(
+        () => bracketData && bracketData.length > 0 ? processBracket(bracketData) : generateSkeletonBracket(),
         [bracketData]
     );
-    const qfs = useMemo(() => bracket.filter(m => m.id.startsWith('QF')), [bracket]);
-    const sfs = useMemo(() => bracket.filter(m => m.id.startsWith('SF')), [bracket]);
-    const finalMatch = useMemo(() => bracket.find(m => m.id.startsWith('F')), [bracket]);
+    const pos = useMemo(() => displayBracket.filter(m => m.id.startsWith('PO')), [displayBracket]);
+    const qfs = useMemo(() => displayBracket.filter(m => m.id.startsWith('QF')), [displayBracket]);
+    const sfs = useMemo(() => displayBracket.filter(m => m.id.startsWith('SF')), [displayBracket]);
+    const finalMatch = useMemo(() => displayBracket.find(m => m.id.startsWith('F')), [displayBracket]);
 
     const accentColors = ["cyan", "amber", "emerald", "rose", "purple", "cyan"];
 
@@ -155,24 +156,24 @@ export default function StandingsView({ standingsData, bracketData }) {
                     <h4 className="font-outfit font-bold text-xs tracking-wider text-slate-400 uppercase">Standings Legend</h4>
                     <div className="space-y-3.5">
                         <div className="flex items-center gap-3">
-                            <span className="w-6 h-6 flex items-center justify-center rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold uppercase animate-pulse">Q</span>
+                            <span className="w-6 h-6 flex items-center justify-center rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold uppercase animate-pulse">👑</span>
                             <div className="text-xs">
-                                <span className="font-bold text-slate-300 block">Qualified</span>
-                                <span className="text-slate-500 text-[10px]">Top 2 advance to Knockout</span>
+                                <span className="font-bold text-slate-300 block">AQ — Auto-Quarterfinalist</span>
+                                <span className="text-slate-500 text-[10px]">Ranked #1, advances directly to Quarterfinal</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className="w-6 h-6 flex items-center justify-center rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-extrabold uppercase">PO</span>
+                            <span className="w-6 h-6 flex items-center justify-center rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-extrabold uppercase">🟧</span>
                             <div className="text-xs">
-                                <span className="font-bold text-slate-300 block">Playoff / Wildcard</span>
-                                <span className="text-slate-500 text-[10px]">Best thirds qualify/playoff</span>
+                                <span className="font-bold text-slate-300 block">PO — Qualified for Playoff</span>
+                                <span className="text-slate-500 text-[10px]">Ranked #2-3, must win playoff to reach Quarterfinal</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className="w-6 h-6 flex items-center justify-center rounded bg-white/[0.02] text-slate-500 border border-white/[0.04] text-[9px] font-extrabold uppercase">ELIM</span>
+                            <span className="w-6 h-6 flex items-center justify-center rounded bg-white/[0.02] text-slate-500 border border-white/[0.04] text-[9px] font-extrabold uppercase">⬜</span>
                             <div className="text-xs">
-                                <span className="font-bold text-slate-300 block">Eliminated</span>
-                                <span className="text-slate-500 text-[10px]">Does not advance to next stage</span>
+                                <span className="font-bold text-slate-300 block">ELIM — Eliminated</span>
+                                <span className="text-slate-500 text-[10px]">Ranked #4-5, does not advance</span>
                             </div>
                         </div>
                     </div>
@@ -180,42 +181,48 @@ export default function StandingsView({ standingsData, bracketData }) {
             </div>
 
             {/* Knockout Bracket */}
-            {bracket.length > 0 && (
-                <motion.div variants={itemVariants} className="mt-20 pt-16 border-t border-white/[0.04]">
-                    <h2 className="text-2xl font-outfit font-bold flex items-center justify-center sm:justify-start gap-4 mb-12 text-white">
+            <motion.div variants={itemVariants} className="mt-20 pt-16 border-t border-white/[0.04]">
+                <h2 className="text-2xl font-outfit font-bold flex items-center justify-center sm:justify-start gap-4 mb-12 text-white">
                         <div className="p-3 bg-amber-500/8 rounded-xl border border-amber-500/10">
                             <Trophy className="text-amber-400 w-6 h-6" />
                         </div>
                         <span>KNOCKOUT BRACKET</span>
                     </h2>
 
-                    <div className="flex flex-col lg:flex-row justify-between items-center lg:items-center w-full min-w-max overflow-x-auto gap-10 py-16 pb-24 px-8 min-h-[600px] relative glass-card rounded-3xl">
+                    <div className="hidden lg:flex flex-row items-center w-full min-w-max overflow-x-auto gap-12 py-16 pb-24 px-8 min-h-[600px] relative glass-card rounded-3xl">
                         {/* Background Effects */}
                         <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none rounded-3xl"></div>
                         <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-purple-500/6 rounded-full blur-[120px] pointer-events-none"></div>
                         <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-cyan-500/6 rounded-full blur-[120px] pointer-events-none"></div>
 
-                        <BracketConnectors bracketData={bracket} />
+                        <BracketConnectors bracketData={displayBracket} />
 
-                        {/* QF Left */}
-                        <div className="flex flex-col justify-around w-full lg:w-80 shrink-0 space-y-20 z-10">
-                            {qfs.filter(m => m.id === 'QF-1' || m.id === 'QF-2').map((match, idx) => (
-                                <BracketMatchBox key={match.id} match={match} title={`Quarterfinal ${idx + 1}`} isAdmin={false} hideGames={true} />
-                            ))}
-                        </div>
-
-                        {/* SF-1 */}
-                        {sfs.filter(m => m.id === 'SF-1').length > 0 && (
-                            <div className="flex flex-col justify-center w-full lg:w-80 shrink-0 z-10 px-4">
-                                {sfs.filter(m => m.id === 'SF-1').map(match => (
-                                    <BracketMatchBox key={match.id} match={match} title="Semifinal 1" isAdmin={false} hideGames={true} />
+                        {/* Round 1: PO */}
+                        {pos.length > 0 && (
+                            <div className="flex flex-col justify-around w-80 shrink-0 space-y-12 z-10">
+                                {pos.map((match, idx) => (
+                                    <BracketMatchBox key={match.id} match={match} title={`Playoff ${idx + 1}`} isAdmin={false} hideGames={true} />
                                 ))}
                             </div>
                         )}
 
-                        {/* Final */}
+                        {/* Round 2: QF */}
+                        <div className="flex flex-col justify-around w-80 shrink-0 space-y-16 z-10">
+                            {qfs.map((match, idx) => (
+                                <BracketMatchBox key={match.id} match={match} title={`Quarterfinal ${idx + 1}`} isAdmin={false} hideGames={true} />
+                            ))}
+                        </div>
+
+                        {/* Round 3: SF */}
+                        <div className="flex flex-col justify-around w-80 shrink-0 space-y-32 z-10">
+                            {sfs.map((match, idx) => (
+                                <BracketMatchBox key={match.id} match={match} title={`Semifinal ${idx + 1}`} isAdmin={false} hideGames={true} />
+                            ))}
+                        </div>
+
+                        {/* Round 4: Final */}
                         {finalMatch && (
-                            <div className="flex flex-col justify-center w-full lg:w-96 shrink-0 z-20 px-4 md:scale-110">
+                            <div className="flex flex-col justify-center w-96 shrink-0 z-20 px-4">
                                 <motion.div
                                     className="text-center mb-8 relative"
                                     animate={{ y: [0, -8, 0] }}
@@ -231,25 +238,8 @@ export default function StandingsView({ standingsData, bracketData }) {
                                 </div>
                             </div>
                         )}
-
-                        {/* SF-2 */}
-                        {sfs.filter(m => m.id === 'SF-2').length > 0 && (
-                            <div className="flex flex-col justify-center w-full lg:w-80 shrink-0 z-10 px-4">
-                                {sfs.filter(m => m.id === 'SF-2').map(match => (
-                                    <BracketMatchBox key={match.id} match={match} title="Semifinal 2" isAdmin={false} hideGames={true} />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* QF Right */}
-                        <div className="flex flex-col justify-around w-full lg:w-80 shrink-0 space-y-20 z-10">
-                            {qfs.filter(m => m.id === 'QF-3' || m.id === 'QF-4').map((match, idx) => (
-                                <BracketMatchBox key={match.id} match={match} title={`Quarterfinal ${idx + 3}`} isAdmin={false} hideGames={true} />
-                            ))}
-                        </div>
                     </div>
                 </motion.div>
-            )}
         </motion.div>
     );
 }

@@ -1,14 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   base: '/',
-  // Global esbuild options — applied to both dev transforms and prod minification
-  esbuild: {
-    drop: ['console', 'debugger'],  // Strip console.log and debugger in production
-    legalComments: 'none',          // Strip license comments for smaller output
-  },
+  // Only strip console/debugger in production, keep for dev debugging
+  esbuild: mode === 'production' ? {
+    drop: ['console', 'debugger'],
+    legalComments: 'none',
+  } : {},
   build: {
     // Enable code splitting for lazy-loaded components
     rollupOptions: {
@@ -39,4 +39,4 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'framer-motion'],
   },
-});
+}));

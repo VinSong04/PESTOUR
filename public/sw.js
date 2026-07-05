@@ -1,5 +1,5 @@
 // PES TOUR Service Worker — stale-while-revalidate strategy
-const CACHE_NAME = 'pestour-v1';
+const CACHE_NAME = 'pestour-v3';
 
 // App shell files to pre-cache on install
 const APP_SHELL = [
@@ -37,7 +37,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: stale-while-revalidate for all requests
+// Fetch handler
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
@@ -46,26 +46,35 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) return;
 
+  // Navigation / HTML requests: network-first so we always get the latest
+  // index.html with correct hashed bundle references
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Cache the latest HTML for offline fallback
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  // All other assets: stale-while-revalidate
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.match(event.request).then((cached) => {
-        // Fetch from network (stale-while-revalidate)
         const fetchPromise = fetch(event.request)
           .then((response) => {
-            // Cache valid responses
             if (response && response.status === 200 && response.type === 'basic') {
               cache.put(event.request, response.clone());
             }
             return response;
           })
-          .catch(() => {
-            // If network fails and we have a cached HTML page, serve index.html
-            if (event.request.destination === 'document') {
-              return cache.match('/index.html');
-            }
-          });
+          .catch(() => cached);
 
-        // Return cached version immediately, update in background
         return cached || fetchPromise;
       });
     })

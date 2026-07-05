@@ -44,8 +44,8 @@ export default function StandingsView({ standingsData, bracketData }) {
                             {players.map((p, idx) => {
                                 let leftBorder = "border-l-[3px] border-l-transparent";
                                 if (!isBestThird) {
-                                    if (idx < 2) leftBorder = "border-l-[3px] border-l-emerald-500/60";
-                                    else if (idx === 2) leftBorder = "border-l-[3px] border-l-amber-500/60";
+                                    if (idx === 0) leftBorder = "border-l-[3px] border-l-emerald-500/60";
+                                    else if (idx === 1 || idx === 2) leftBorder = "border-l-[3px] border-l-amber-500/60";
                                 } else {
                                     if (idx < 2) leftBorder = "border-l-[3px] border-l-emerald-500/60";
                                     else leftBorder = "border-l-[3px] border-l-rose-500/60";

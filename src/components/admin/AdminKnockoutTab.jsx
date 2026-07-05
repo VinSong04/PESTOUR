@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Trophy, Zap, Trash2, CheckCircle2, CircleDashed, Crown, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { calculateStandings, generateKnockoutSeedings, processBracket, getBracketMatchWinner, getSeriesResult } from '../../utils/logic';
+import { calculateStandings, processBracket, getBracketMatchWinner, getSeriesResult } from '../../utils/logic';
 import GameScoreRow from '../ui/GameScoreRow';
 import PlayerAvatar from '../ui/PlayerAvatar';
 
@@ -23,20 +23,7 @@ export default function AdminKnockoutTab({ data, updateData }) {
         setTimeout(() => setToast(null), 3000);
     };
 
-    const handleGenerateBracket = () => {
-        if (bracket.length > 0) {
-            if (!window.confirm('This will overwrite the current bracket. Continue?')) return;
-        }
-
-        try {
-            const qfMatches = generateKnockoutSeedings(standingsData);
-            const fullBracket = processBracket(qfMatches);
-            updateData({ ...data, bracket: fullBracket });
-            showToast('Knockout bracket generated from group standings!');
-        } catch (err) {
-            showToast(err.message, 'error');
-        }
-    };
+    // Bracket generation is now handled via the public Knockout page using the Spin Wheel.
 
     const handleClearBracket = () => {
         if (!window.confirm('Clear the entire knockout bracket? This cannot be undone.')) return;
@@ -72,9 +59,10 @@ export default function AdminKnockoutTab({ data, updateData }) {
     const champion = finalMatch ? getBracketMatchWinner(finalMatch) : null;
 
     // Round labels
-    const roundOrder = ['QF', 'SF', 'F'];
-    const roundLabels = { QF: 'Quarterfinals', SF: 'Semifinals', F: 'Grand Final' };
+    const roundOrder = ['PO', 'QF', 'SF', 'F'];
+    const roundLabels = { PO: 'Playoffs', QF: 'Quarterfinals', SF: 'Semifinals', F: 'Grand Final' };
     const roundColors = {
+        PO: { bg: 'bg-teal-500/8', border: 'border-teal-500/15', text: 'text-teal-400', accent: 'from-teal-500 to-emerald-500' },
         QF: { bg: 'bg-purple-500/8', border: 'border-purple-500/15', text: 'text-purple-400', accent: 'from-purple-500 to-indigo-500' },
         SF: { bg: 'bg-amber-500/8', border: 'border-amber-500/15', text: 'text-amber-400', accent: 'from-amber-500 to-orange-500' },
         F:  { bg: 'bg-yellow-500/8', border: 'border-yellow-500/15', text: 'text-yellow-400', accent: 'from-yellow-400 to-amber-500' },
@@ -118,7 +106,7 @@ export default function AdminKnockoutTab({ data, updateData }) {
                         <p className="text-xs font-medium text-slate-500 mt-1.5 ml-1">
                             {bracket.length > 0
                                 ? `${bracket.filter(m => m.played).length}/${bracket.length} matches completed`
-                                : 'Generate the bracket from group standings or spin draw.'
+                                : 'Bracket empty. Go to the public Knockout page to spin the draw!'
                             }
                         </p>
                     </div>
@@ -132,14 +120,11 @@ export default function AdminKnockoutTab({ data, updateData }) {
                                 <Trash2 className="w-3.5 h-3.5" /> Clear
                             </button>
                         )}
-                        <button
-                            onClick={handleGenerateBracket}
-                            disabled={!hasEnoughPlayers}
-                            className="flex-1 md:flex-none px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl text-[11px] font-bold tracking-wider uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
-                        >
-                            <Zap className="w-3.5 h-3.5" />
-                            {bracket.length > 0 ? 'Regenerate' : 'Generate'} from Standings
-                        </button>
+                        {bracket.length === 0 && (
+                            <div className="flex-1 md:flex-none px-5 py-2.5 bg-amber-500/10 text-amber-400 rounded-xl text-[11px] font-bold tracking-wider uppercase border border-amber-500/20 flex items-center justify-center gap-2">
+                                <Sparkles className="w-3.5 h-3.5" /> Use Public Page to Draw
+                            </div>
+                        )}
                     </div>
                 </div>
 
